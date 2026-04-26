@@ -1,5 +1,5 @@
 import React, { useState, createContext, useContext } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX } from "lucide-react";
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
@@ -38,13 +38,22 @@ const Toggle = ({ checked, onChange }) => (
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats } = useContext(AppContext);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [notifications, setNotifications] = useState(false);
-  const [projects, setProjects] = useState([
-    { name: "E-Commerce Backend", desc: "Node.js API with Express and MongoDB. Last edited 2 days ago." },
-    { name: "React Portfolio", desc: "Personal portfolio website built with React and Framer Motion." }
-  ]);
+  const [projects, setProjects] = useState(() => {
+    const saved = localStorage.getItem("nexus_projects");
+    return saved ? JSON.parse(saved) : [
+      { name: "E-Commerce Backend", desc: "Node.js API with Express and MongoDB. Last edited 2 days ago." },
+      { name: "React Portfolio", desc: "Personal portfolio website built with React and Framer Motion." }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("nexus_projects", JSON.stringify(projects));
+  }, [projects]);
+
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
 
@@ -73,7 +82,7 @@ function AppContent() {
         </div>
 
         <div className="new-chat-container">
-          <button className="new-chat-btn" onClick={() => window.location.href = '/'}>
+          <button className="new-chat-btn" onClick={() => navigate('/')}>
             <Plus size={18} />
             New Chat
           </button>
@@ -94,7 +103,7 @@ function AppContent() {
             <div style={{ color: 'var(--text-secondary)', fontSize: '14px', padding: '10px 14px', fontStyle: 'italic' }}>No recent chats yet</div>
           ) : (
             recentChats.map((chat) => (
-              <div key={chat.id} className="chat-history-item" onClick={() => window.location.href = '/'}>
+              <div key={chat.id} className="chat-history-item" onClick={() => navigate('/')}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{chat.title}</span>
               </div>
             ))
@@ -245,19 +254,19 @@ function AppContent() {
             <div className="page-view">
               <h2 style={{ fontSize: '36px', marginBottom: '12px', fontWeight: '800' }}>Dashboard Overview</h2>
               <div className="dashboard-grid">
-                <div className="dashboard-card" onClick={() => window.location.href = '/'}>
+                <div className="dashboard-card" onClick={() => navigate('/')}>
                   <div className="dashboard-card-title"><MessageSquare size={22} color="var(--accent)" /> AI Chat</div>
                   <div className="dashboard-card-desc">Continue your conversation with Nexus.</div>
                 </div>
-                <div className="dashboard-card" onClick={() => window.location.href = '/code'}>
+                <div className="dashboard-card" onClick={() => navigate('/code')}>
                   <div className="dashboard-card-title"><Code size={22} color="var(--accent)" /> Code Generation</div>
                   <div className="dashboard-card-desc">Write, debug, and optimize code faster.</div>
                 </div>
-                <div className="dashboard-card" onClick={() => window.location.href = '/content'}>
+                <div className="dashboard-card" onClick={() => navigate('/content')}>
                   <div className="dashboard-card-title"><PenTool size={22} color="var(--accent)" /> Writing Assistant</div>
                   <div className="dashboard-card-desc">Draft emails, essays, and articles.</div>
                 </div>
-                <div className="dashboard-card" onClick={() => window.location.href = '/settings'}>
+                <div className="dashboard-card" onClick={() => navigate('/settings')}>
                   <div className="dashboard-card-title"><Settings size={22} color="var(--accent)" /> Preferences</div>
                   <div className="dashboard-card-desc">Manage your account and app settings.</div>
                 </div>
@@ -273,7 +282,14 @@ function AppContent() {
 function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [ttsEnabled, setTtsEnabled] = useState(false);
-  const [recentChats, setRecentChats] = useState([]);
+  const [recentChats, setRecentChats] = useState(() => {
+    const saved = localStorage.getItem("nexus_chats");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("nexus_chats", JSON.stringify(recentChats));
+  }, [recentChats]);
 
   const addRecentChat = (question) => {
     const title = question.length > 36 ? question.substring(0, 36) + '…' : question;
