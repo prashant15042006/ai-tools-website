@@ -7,7 +7,8 @@ import fs from "fs";
 
 dotenv.config();
 
-console.log("ZAI API KEY:", process.env.ZAI_API_KEY);
+// dotenv.config() is handled above
+
 
 // ===============================
 // 🚀 EXPRESS INIT
@@ -21,15 +22,23 @@ const PORT = 5000;
 // ===============================
 // 🔐 FIREBASE INIT
 // ===============================
-const serviceAccount = JSON.parse(
-  fs.readFileSync("./serviceAccountKey.json", "utf-8")
-);
+let db;
+try {
+  const serviceAccount = JSON.parse(
+    fs.readFileSync("./serviceAccountKey.json", "utf-8")
+  );
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
 
-const db = admin.firestore();
+  db = admin.firestore();
+  console.log("✅ Firebase initialized successfully");
+} catch (err) {
+  console.error("❌ Firebase Initialization Error:", err.message);
+  console.warn("Server will continue without database persistence.");
+}
+
 
 // ===============================
 // 🔥 COMMON AI FUNCTION
@@ -62,32 +71,44 @@ const SYSTEM_PROMPT = `You are **Nexus AI**, an elite, executive-grade artificia
 
 
 const callZAI = async (message) => {
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.ZAI_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "http://localhost:3000",
-      "X-Title": "AI Workspace",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-001",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: message }
-      ],
-      max_tokens: 2000,
-    }),
-  });
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.ZAI_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://nexus-ai-workspace.vercel.app", // Professional referer
+        "X-Title": "Nexus AI",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-001",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
 
-  const data = await response.json();
+    const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.error?.message || "ZAI API Error");
+    if (!response.ok) {
+      console.error("OpenRouter Error Details:", JSON.stringify(data, null, 2));
+      throw new Error(data.error?.message || `API Error: ${response.status}`);
+    }
+
+    if (!data.choices || data.choices.length === 0) {
+      throw new Error("No response choices returned from AI provider.");
+    }
+
+    return data.choices[0].message.content;
+  } catch (err) {
+    console.error("callZAI Exception:", err.message);
+    throw err;
   }
-
-  return data.choices?.[0]?.message?.content || "No response";
 };
+
 
 // ===============================
 // 💬 CHAT API
@@ -102,14 +123,16 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = await callZAI(message);
 
-    try {
-      await db.collection("chats").add({
-        message,
-        reply,
-        createdAt: new Date(),
-      });
-    } catch (dbError) {
-      console.warn("Could not save to Firebase:", dbError.message);
+    if (db) {
+      try {
+        await db.collection("chats").add({
+          message,
+          reply,
+          createdAt: new Date(),
+        });
+      } catch (dbError) {
+        console.warn("Could not save to Firebase:", dbError.message);
+      }
     }
 
     res.json({ success: true, reply });
@@ -167,6 +190,7 @@ app.post("/api/content", async (req, res) => {
 // ===============================
 app.get("/api/tasks", async (req, res) => {
   try {
+    if (!db) return res.status(503).json({ error: "Database not available" });
     const snapshot = await db.collection("tasks").get();
 
     const tasks = snapshot.docs.map(doc => ({
@@ -184,6 +208,7 @@ app.get("/api/tasks", async (req, res) => {
 app.post("/api/tasks", async (req, res) => {
   try {
     const { text } = req.body;
+    if (!db) return res.status(503).json({ error: "Database not available" });
 
     if (!text) {
       return res.status(400).json({ error: "Task text required" });
@@ -205,6 +230,7 @@ app.post("/api/tasks", async (req, res) => {
 app.put("/api/tasks/:id", async (req, res) => {
   try {
     const id = req.params.id;
+    if (!db) return res.status(503).json({ error: "Database not available" });
 
     const taskRef = db.collection("tasks").doc(id);
     const doc = await taskRef.get();
@@ -226,6 +252,7 @@ app.put("/api/tasks/:id", async (req, res) => {
 
 app.delete("/api/tasks/:id", async (req, res) => {
   try {
+    if (!db) return res.status(503).json({ error: "Database not available" });
     await db.collection("tasks").doc(req.params.id).delete();
     res.json({ success: true });
   } catch {

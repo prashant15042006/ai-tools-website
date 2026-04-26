@@ -64,9 +64,16 @@ function Chat() {
         body: JSON.stringify({ message: text }),
       });
       const data = await response.json();
-      const reply = data.reply || "No reply from AI";
-      setMessages((prev) => [...prev, { text: reply, sender: "ai" }]);
-      speak(reply);
+      
+      if (data.success) {
+        const reply = data.reply;
+        setMessages((prev) => [...prev, { text: reply, sender: "ai" }]);
+        speak(reply);
+      } else {
+        const errMsg = data.error || "No reply from AI";
+        setMessages((prev) => [...prev, { text: `⚠️ **AI Error:** ${errMsg}`, sender: "ai" }]);
+      }
+
     } catch (error) {
       setMessages((prev) => [
         ...prev,
