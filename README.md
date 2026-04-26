@@ -12,7 +12,9 @@ A premium, world-class AI dashboard featuring Chat, Code Generation, and Content
 ### 1. Backend Setup
 1. `cd backend`
 2. `npm install`
-3. `npm start`
+3. Create a `.env` file and add `ZAI_API_KEY=YOUR_OPENROUTER_API_KEY`
+4. `npm start`
+
 
 ### 2. Frontend Setup
 1. `cd frontend`
