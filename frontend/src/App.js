@@ -1,4 +1,5 @@
-import React, { useState, createContext, useContext } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
+
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX } from "lucide-react";
 import Chat from "./Chat";
