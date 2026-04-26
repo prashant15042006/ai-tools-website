@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Markdown Styles */
+.prose h1, .prose h2, .prose h3 {
+  @apply text-slate-100 font-semibold mt-6 mb-2;
+}
+.prose p {
+  @apply mb-4 leading-relaxed;
+}
+.prose ul {
+  @apply list-disc pl-6 mb-4;
+}
+.prose ol {
+  @apply list-decimal pl-6 mb-4;
+}
+.prose code {
+  @apply bg-slate-900 px-1 rounded font-mono text-sm;
+}
+.prose pre {
+  @apply bg-slate-950 p-4 rounded-lg overflow-x-auto border border-slate-800 mb-4;
+}
+.prose pre code {
+  @apply bg-transparent p-0 text-slate-200;
+}
+.prose strong {
+  @apply text-slate-50 font-semibold;
+}
+
+/* Global body setup */
+body {
+  @apply font-sans;
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+}
+
+/* Dark / Light Themes */
+.dark {
+  @apply bg-slate-900 text-white;
+}
+.light {
+  @apply bg-gray-100 text-black;
+}
+
+/* Sidebar */
+.sidebar {
+  @apply flex flex-col justify-between w-[220px] p-5 transition-all duration-300;
+}
+.sidebar h2 {
+  @apply text-blue-400 mb-4 font-bold;
+}
+.sidebar ul {
+  @apply list-none p-0;
+}
+.sidebar li {
+  @apply my-3 cursor-pointer text-gray-300 transition-colors;
+}
+.sidebar li:hover {
+  @apply text-blue-400;
+}
+
+/* Main content */
+.app-container {
+  @apply flex h-screen;
+}
+.main-content {
+  @apply flex-1 p-6;
+}
+h1 {
+  @apply border-b border-gray-700 pb-2;
+}
+
+/* Chat UI */
+.chat-container {
+  @apply flex flex-col h-[80vh] bg-[#1e1e1e] rounded-lg p-3;
+}
+.chat-window {
+  @apply flex-1 overflow-y-auto p-3 bg-[#121212] rounded-md mb-3;
+}
+.chat-bubble {
+  @apply max-w-[70%] p-3 my-2 rounded-xl leading-relaxed;
+}
+.chat-bubble.user {
+  @apply bg-blue-500 text-white ml-auto text-right;
+}
+.chat-bubble.ai {
+  @apply bg-gray-700 text-white mr-auto text-left;
+}
+
+/* Chat input bar */
+.chat-input-bar {
+  @apply flex gap-2;
+}
+.chat-input-bar input {
+  @apply flex-1 p-2 rounded-md outline-none bg-gray-800 text-white;
+}
+.chat-input-bar button {
+  @apply bg-green-600 text-white px-4 py-2 rounded-md cursor-pointer transition;
+}
+.chat-input-bar button:hover {
+  @apply bg-green-700;
+}

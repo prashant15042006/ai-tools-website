@@ -1,0 +1,234 @@
+import React, { useState, useRef, useEffect, useContext } from "react";
+import ReactMarkdown from "react-markdown";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
+import { AppContext } from "./App";
+
+function Chat() {
+  const { ttsEnabled, addRecentChat } = useContext(AppContext);
+  const ttsEnabledRef = useRef(ttsEnabled);
+  useEffect(() => {
+    ttsEnabledRef.current = ttsEnabled;
+    if (!ttsEnabled) window.speechSynthesis.cancel();
+  }, [ttsEnabled]);
+
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
+
+  const speak = (text) => {
+    if (!ttsEnabledRef.current) return;
+    window.speechSynthesis.cancel();
+    const cleaned = text.replace(/[#*`>_~[\]]/g, "").trim();
+    const utterance = new SpeechSynthesisUtterance(cleaned);
+    utterance.lang = "hi-IN";
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const sendMessage = async (text = input) => {
+    if (!text.trim() || loading) return;
+    addRecentChat(text);
+
+    const urlPattern = /https?:\/\/[^\s]+/g;
+    const urls = text.match(urlPattern);
+    if (urls && urls.length > 0) {
+      urls.forEach((url) => window.open(url, "_blank"));
+      setMessages((prev) => [
+        ...prev,
+        { text, sender: "user" },
+        { text: "Opened **" + urls.length + "** link(s) in new tab(s).", sender: "ai" },
+      ]);
+      setInput("");
+      return;
+    }
+
+    setMessages((prev) => [...prev, { text, sender: "user" }]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+      const data = await response.json();
+      const reply = data.reply || "No reply from AI";
+      setMessages((prev) => [...prev, { text: reply, sender: "ai" }]);
+      speak(reply);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { text: "Error connecting to backend. Make sure server is running.", sender: "ai" },
+      ]);
+    }
+    setLoading(false);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setInput((prev) => prev + text);
+    } catch (err) {
+      alert("Clipboard access denied. Please allow clipboard permissions.");
+    }
+  };
+
+  const startListening = () => {
+    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+      alert("Speech recognition is not supported. Use Chrome or Edge.");
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "hi-IN";
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((r) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  };
+
+  const LinkRenderer = ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: "#60a5fa", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}
+    >
+      {children} <ExternalLink size={12} />
+    </a>
+  );
+
+  return (
+    <div className="chat-container">
+      <div className="chat-history-scroll">
+        {messages.length === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "8vh" }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Sparkles size={32} color="white" />
+            </div>
+            <h2 style={{ fontSize: "28px", fontWeight: "700", color: "var(--text-primary)" }}>How can I help you today?</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "16px", maxWidth: "480px", textAlign: "center" }}>
+              Ask anything, paste a link to open it, or try a suggestion below.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginTop: "16px", maxWidth: "620px", width: "100%" }}>
+              {[
+                { title: "Explain quantum computing", sub: "in simple terms" },
+                { title: "Write a Python script", sub: "to scrape a website" },
+                { title: "Translate to English", sub: "paste any text" },
+                { title: "Debug my code", sub: "paste your code here" },
+              ].map((s, i) => (
+                <div
+                  key={i}
+                  className="dashboard-card"
+                  onClick={() => sendMessage(s.title + " " + s.sub)}
+                  style={{ padding: "18px", cursor: "pointer" }}
+                >
+                  <div style={{ fontSize: "15px", fontWeight: "600" }}>{s.title}</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg, index) => (
+          <React.Fragment key={index}>
+            <div className={`chat-message-row ${msg.sender === "user" ? "user-row" : "ai-row"}`}>
+              <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`}>
+                {msg.sender === "user" ? "You" : <Bot size={20} color="white" />}
+              </div>
+              <div className="message-body">
+                <div className="message-sender">
+                  {msg.sender === "user" ? "You" : "Nexus AI"}
+                </div>
+                <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
+                  {msg.sender === "user" ? (
+                    msg.text
+                  ) : (
+                    <ReactMarkdown components={{ a: LinkRenderer }}>{msg.text}</ReactMarkdown>
+                  )}
+                </div>
+              </div>
+            </div>
+            <hr className="message-divider" />
+          </React.Fragment>
+        ))}
+
+        {loading && (
+          <>
+            <div className="chat-message-row ai-row">
+              <div className="message-avatar ai-av">
+                <Bot size={20} color="white" />
+              </div>
+              <div className="message-body">
+                <div className="message-sender">Nexus AI</div>
+                <div className="typing-indicator">
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                </div>
+              </div>
+            </div>
+            <hr className="message-divider" />
+          </>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="input-container">
+        <div className="input-box-wrapper">
+          <button className="action-btn" title="Paste from Clipboard" onClick={handlePaste}>
+            <ClipboardPaste size={24} />
+          </button>
+          <textarea
+            className="chat-textarea"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isListening ? "Listening... speak now" : "Message Nexus..."}
+            rows="1"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+          />
+          <button
+            className={`action-btn ${isListening ? "listening" : ""}`}
+            title={isListening ? "Listening..." : "Voice Input"}
+            style={{ marginRight: "10px" }}
+            onClick={startListening}
+          >
+            <Mic size={24} />
+          </button>
+          <button className="send-btn" onClick={() => sendMessage()} disabled={loading || !input.trim()}>
+            <Send size={22} />
+          </button>
+        </div>
+        <div className="disclaimer">Nexus can make mistakes. Verify important info.</div>
+      </div>
+    </div>
+  );
+}
+
+export default Chat;
