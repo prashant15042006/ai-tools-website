@@ -12,8 +12,7 @@ A premium, world-class AI dashboard featuring Chat, Code Generation, and Content
 ### 1. Backend Setup
 1. `cd backend`
 2. `npm install`
-3. Create a `.env` file with your `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`.
-4. `npm start`
+3. `npm start`
 
 ### 2. Frontend Setup
 1. `cd frontend`
