@@ -5,7 +5,9 @@ import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Searc
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
 import ContentGenerator from "./ContentGenerator";
+import ImageGenerator from "./ImageGenerator";
 import "./App.css";
+import { Image as ImageIcon } from "lucide-react";
 
 // Global context for dark mode & TTS
 export const AppContext = createContext();
@@ -57,6 +59,7 @@ function AppContent() {
 
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const handleCreateProject = () => {
     if (newProjectName.trim()) {
@@ -94,6 +97,7 @@ function AppContent() {
           <SidebarItem to="/" icon={MessageSquare} label="Chat" isActive={location.pathname === "/"} />
           <SidebarItem to="/code" icon={Code} label="Code" isActive={location.pathname === "/code"} />
           <SidebarItem to="/content" icon={PenTool} label="Write" isActive={location.pathname === "/content"} />
+          <SidebarItem to="/image" icon={ImageIcon} label="Create" isActive={location.pathname === "/image"} />
           <SidebarItem to="/projects" icon={FolderOpen} label="Projects" isActive={location.pathname === "/projects"} />
           <SidebarItem to="/settings" icon={Settings} label="Settings" isActive={location.pathname === "/settings"} />
           <SidebarItem to="/menu" icon={Layout} label="Dashboard" isActive={location.pathname === "/menu"} />
@@ -133,6 +137,7 @@ function AppContent() {
               {location.pathname === "/" && "Omniscient Chat"}
               {location.pathname === "/code" && "Code Generation"}
               {location.pathname === "/content" && "Writing Assistant"}
+              {location.pathname === "/image" && "Image Forge"}
               {location.pathname === "/projects" && "Projects"}
               {location.pathname === "/settings" && "Settings"}
               {location.pathname === "/menu" && "Dashboard"}
@@ -164,42 +169,61 @@ function AppContent() {
           <Route path="/" element={<Chat />} />
           <Route path="/code" element={<CodeGenerator />} />
           <Route path="/content" element={<ContentGenerator />} />
+          <Route path="/image" element={<ImageGenerator />} />
 
           {/* Projects Page */}
           <Route path="/projects" element={
             <div className="page-view">
-              <h2 style={{ fontSize: '36px', marginBottom: '12px', fontWeight: '800' }}>Your Projects</h2>
-              <div className="dashboard-grid">
-                {projects.map((proj, idx) => (
-                  <div key={idx} className="dashboard-card">
-                    <div className="dashboard-card-title"><FolderOpen size={22} color="var(--accent)" /> {proj.name}</div>
-                    <div className="dashboard-card-desc">{proj.desc}</div>
-                  </div>
-                ))}
-                {isCreatingProject ? (
-                  <div className="dashboard-card" style={{ borderStyle: 'solid', borderColor: 'var(--accent)' }}>
-                    <div className="dashboard-card-title" style={{ fontSize: '18px' }}>New Project Name</div>
-                    <input
-                      type="text"
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="e.g. Finance App"
-                      style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: '17px', outline: 'none', width: '100%' }}
-                      autoFocus
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject(); }}
-                    />
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                      <button onClick={handleCreateProject} style={{ flex: 1, padding: '12px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: '600' }}>Save</button>
-                      <button onClick={() => setIsCreatingProject(false)} style={{ flex: 1, padding: '12px', background: 'var(--border-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px' }}>Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="dashboard-card" onClick={() => setIsCreatingProject(true)} style={{ borderStyle: 'dashed', borderColor: 'var(--text-secondary)', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                    <Plus size={28} color="var(--text-secondary)" />
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '17px' }}>Create New Project</span>
-                  </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '36px', fontWeight: '800' }}>{selectedProject ? selectedProject.name : "Your Projects"}</h2>
+                {selectedProject && (
+                  <button onClick={() => setSelectedProject(null)} style={{ padding: '8px 16px', background: 'var(--bg-hover)', border: 'none', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>Back to List</button>
                 )}
               </div>
+              
+              {!selectedProject ? (
+                <div className="dashboard-grid">
+                  {projects.map((proj, idx) => (
+                    <div key={idx} className="dashboard-card" onClick={() => setSelectedProject(proj)}>
+                      <div className="dashboard-card-title"><FolderOpen size={22} color="var(--accent)" /> {proj.name}</div>
+                      <div className="dashboard-card-desc">{proj.desc}</div>
+                    </div>
+                  ))}
+                  {isCreatingProject ? (
+                    <div className="dashboard-card" style={{ borderStyle: 'solid', borderColor: 'var(--accent)' }}>
+                      <div className="dashboard-card-title" style={{ fontSize: '18px' }}>New Project Name</div>
+                      <input
+                        type="text"
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        placeholder="e.g. Finance App"
+                        className="chat-textarea"
+                        style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: '17px', outline: 'none', width: '100%', marginBottom: '10px' }}
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject(); }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleCreateProject} style={{ flex: 1, padding: '12px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: '600' }}>Save</button>
+                        <button onClick={() => setIsCreatingProject(false)} style={{ flex: 1, padding: '12px', background: 'var(--border-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="dashboard-card" onClick={() => setIsCreatingProject(true)} style={{ borderStyle: 'dashed', borderColor: 'var(--text-secondary)', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                      <Plus size={28} color="var(--text-secondary)" />
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '17px' }}>Create New Project</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ background: 'var(--bg-sidebar)', padding: '40px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
+                  <h3 style={{ marginBottom: '16px', color: 'var(--accent)' }}>Project Overview</h3>
+                  <p style={{ fontSize: '18px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{selectedProject.desc}</p>
+                  <div style={{ marginTop: '32px', display: 'flex', gap: '16px' }}>
+                    <button onClick={() => navigate('/code')} style={{ padding: '14px 28px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>Generate Code</button>
+                    <button style={{ padding: '14px 28px', background: 'var(--bg-hover)', color: 'var(--text-primary)', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>Manage Files</button>
+                  </div>
+                </div>
+              )}
             </div>
           } />
 

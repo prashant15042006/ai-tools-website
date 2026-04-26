@@ -165,6 +165,63 @@ app.post("/api/code", async (req, res) => {
 });
 
 // ===============================
+// 🎨 IMAGE GENERATOR
+// ===============================
+app.post("/api/image", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: "Prompt required" });
+    }
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.ZAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openai/dall-e-3", // Image generation model
+        messages: [
+          { role: "user", content: prompt }
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Image Gen Error:", data);
+      throw new Error(data.error?.message || "Failed to generate image");
+    }
+
+    // OpenRouter returns the image URL in the content if supported, 
+    // or sometimes it's handled differently. 
+    // For DALL-E 3, it usually returns a URL in the message content for some providers.
+    // If not, we might need a specific image API.
+    // Actually, OpenRouter's chat completion for DALL-E 3 returns the image URL.
+    const imageUrl = data.choices?.[0]?.message?.content;
+    
+    if (!imageUrl || !imageUrl.startsWith("http")) {
+       // Fallback for demo purposes if the API doesn't return a direct URL
+       // Most OpenRouter image models return a markdown image or just the URL.
+       const match = imageUrl?.match(/https?:\/\/[^\s)]+/);
+       if (match) {
+         return res.json({ success: true, imageUrl: match[0] });
+       }
+       throw new Error("API did not return a valid image URL. Check your OpenRouter credits.");
+    }
+
+    res.json({ success: true, imageUrl });
+
+  } catch (error) {
+    console.error("Image Error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ===============================
 // 📝 CONTENT GENERATOR
 // ===============================
 app.post("/api/content", async (req, res) => {

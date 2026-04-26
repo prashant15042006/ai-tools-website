@@ -482,14 +482,14 @@ body {
   flex-direction: row-reverse; /* Avatar on the right */
   justify-content: flex-start; /* Align to the end of the flex-direction (which is right side) */
   background-color: rgba(99, 102, 241, 0.12);
-  border-bottom-right-radius: 4px; /* Special corner for user */
+  border-radius: 28px; /* All corners rounded */
 }
 
 .chat-message-row.ai-row {
   flex-direction: row; /* Avatar on the left */
   justify-content: flex-start;
   background-color: var(--bg-bubble-ai);
-  border-bottom-left-radius: 4px; /* Special corner for AI */
+  border-radius: 28px; /* All corners rounded */
 }
 
 .user-row .message-body {
@@ -552,18 +552,18 @@ body {
 }
 
 .message-content {
-  font-size: 24px; /* Increased from 22px */
+  font-size: 24px;
   line-height: 1.7;
-  color: #ffffff;
+  color: var(--text-primary); /* Use variable instead of hardcoded white */
   word-wrap: break-word;
   overflow-wrap: break-word;
   letter-spacing: 0.3px;
 }
 
 .message-content.user-text {
-  font-size: 24px; /* Increased */
+  font-size: 24px;
   white-space: pre-wrap;
-  color: #ffffff;
+  color: var(--text-primary); /* Use variable instead of hardcoded white */
 }
 
 .message-divider {
