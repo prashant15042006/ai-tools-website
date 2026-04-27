@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
 import { AppContext } from "./App";
+   
 
 function Chat() {
   const { ttsEnabled, addRecentChat } = useContext(AppContext);
@@ -39,10 +40,12 @@ function Chat() {
   const sendMessage = async (text = input) => {
     if (!text.trim() || loading) return;
     addRecentChat(text);
-
-    setMessages((prev) => [...prev, { text, sender: "user" }]);
-    setInput("");
     setLoading(true);
+    setInput("");
+
+    const userMsgId = Date.now();
+    const aiMsgId = Date.now() + 1;
+    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
     try {
       const response = await fetch("http://localhost:5000/api/chat", {
@@ -58,16 +61,13 @@ function Chat() {
       let aiReply = "";
       let buffer = "";
 
-      // Add a placeholder message for the AI
-      setMessages((prev) => [...prev, { text: "", sender: "ai" }]);
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
-        buffer = lines.pop(); // Keep partial line in buffer
+        buffer = lines.pop();
 
         for (const line of lines) {
           const trimmed = line.trim();
@@ -81,27 +81,23 @@ function Chat() {
             if (data.error) throw new Error(data.error);
             if (data.content) {
               aiReply += data.content;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1].text = aiReply;
-                return updated;
-              });
+              setMessages((prev) => 
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: aiReply } : msg)
+              );
             }
-          } catch (e) {
-            // Fragmented JSON
-          }
+          } catch (e) { }
         }
       }
       speak(aiReply);
 
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { text: `⚠️ **Error:** ${error.message}`, sender: "ai" },
-      ]);
+      setMessages((prev) => 
+        prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${error.message}` } : msg)
+      );
     }
     setLoading(false);
   };
+
 
 
   const handlePaste = async () => {

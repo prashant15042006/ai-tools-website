@@ -41,9 +41,9 @@ function ContentGenerator() {
     if (!text.trim() || loading) return;
     addRecentChat("Write: " + text);
 
-    setMessages((prev) => [...prev, { text, sender: "user" }]);
-    setInput("");
-    setLoading(true);
+    const userMsgId = Date.now();
+    const aiMsgId = Date.now() + 1;
+    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
     try {
       const response = await fetch("http://localhost:5000/api/chat", {
@@ -58,8 +58,6 @@ function ContentGenerator() {
       const decoder = new TextDecoder();
       let aiReply = "";
       let buffer = "";
-
-      setMessages((prev) => [...prev, { text: "", sender: "ai" }]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -80,21 +78,22 @@ function ContentGenerator() {
             if (data.error) throw new Error(data.error);
             if (data.content) {
               aiReply += data.content;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1].text = aiReply;
-                return updated;
-              });
+              setMessages((prev) => 
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: aiReply } : msg)
+              );
             }
           } catch (e) { }
         }
       }
       speak(aiReply);
     } catch (error) {
-      setMessages((prev) => [...prev, { text: `⚠️ **Error:** ${error.message}`, sender: "ai" }]);
+      setMessages((prev) => 
+        prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${error.message}` } : msg)
+      );
     }
     setLoading(false);
   };
+
 
 
   const handlePaste = async () => {
