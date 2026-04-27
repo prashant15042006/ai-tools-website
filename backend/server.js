@@ -71,8 +71,14 @@ const SYSTEM_PROMPT = `You are **Nexus AI**, an elite, executive-grade artificia
 
 
 const callZAI = async (message) => {
-  // We'll try the primary model first, then a fallback if it fails
-  const models = ["google/gemini-2.0-flash-001", "google/gemini-flash-1.5"];
+  // Broad list of models to ensure reliability. 
+  // We start with the most reliable/fastest ones.
+  const models = [
+    "google/gemini-flash-1.5", 
+    "google/gemini-2.0-flash-001",
+    "google/gemini-2.0-flash-exp",
+    "openai/gpt-4o-mini"
+  ];
   let lastError = null;
 
   for (const model of models) {
@@ -83,8 +89,8 @@ const callZAI = async (message) => {
         headers: {
           Authorization: `Bearer ${process.env.ZAI_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:3000", // Standard for local development
-          "X-Title": "Nexus AI Workspace",
+          "HTTP-Referer": "https://nexus-ai.io", // Use a generic professional domain
+          "X-Title": "Nexus Workspace",
         },
         body: JSON.stringify({
           model: model,
@@ -100,8 +106,15 @@ const callZAI = async (message) => {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error(`❌ ${model} failed:`, data.error?.message || response.status);
-        lastError = data.error?.message || `API Error: ${response.status}`;
+        let errorMsg = data.error?.message || `API Error: ${response.status}`;
+        console.error(`❌ ${model} failed:`, errorMsg);
+        
+        // If it's a credit issue, we can stop early
+        if (errorMsg.toLowerCase().includes("balance") || errorMsg.toLowerCase().includes("credit")) {
+           throw new Error("Insufficient OpenRouter balance. Please top up your account.");
+        }
+        
+        lastError = errorMsg;
         continue; // Try next model
       }
 
