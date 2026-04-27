@@ -41,12 +41,12 @@ function CodeGenerator() {
     if (!text.trim() || loading) return;
     addRecentChat("Code: " + text);
 
-    const userMsgId = Date.now();
-    const aiMsgId = Date.now() + 1;
+    const userMsgId = Date.now() + Math.random();
+    const aiMsgId = Date.now() + Math.random();
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
     try {
-      const response = await fetch("http://localhost:5000/api/chat", {
+      const response = await fetch("http://localhost:5001/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: "Generate code: " + text }),
