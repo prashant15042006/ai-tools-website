@@ -31,7 +31,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 5000;
+const PORT = 5001;
 
 // ===============================
 // 🔐 FIREBASE INIT
@@ -139,41 +139,99 @@ const callZAI = async (message) => {
   throw new Error(lastError || "All models failed. Please verify your API key and credits at openrouter.ai");
 };
 
+const callZAIStream = async (message, res) => {
+  const models = [
+    "google/gemini-2.0-flash-001",
+    "google/gemini-flash-1.5",
+    "meta-llama/llama-3.1-8b-instruct:free"
+  ];
 
+  for (const model of models) {
+    try {
+      console.log(`🚀 Streaming with model: ${model}`);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.ZAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: model,
+          stream: true,
+          messages: [{ role: "user", content: message }],
+        }),
+      });
 
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error(`❌ ${model} failed:`, errData.error?.message || response.status);
+        continue;
+      }
+
+      // Stream the response to the client
+      response.body.on("data", (chunk) => {
+        const lines = chunk.toString().split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const dataStr = line.slice(6);
+            if (dataStr === "[DONE]") {
+              res.write("data: [DONE]\n\n");
+              continue;
+            }
+            try {
+              const data = JSON.parse(dataStr);
+              const content = data.choices?.[0]?.delta?.content || "";
+              if (content) {
+                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+              }
+            } catch (e) {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
+      });
+
+      return new Promise((resolve) => {
+        response.body.on("end", () => {
+          res.end();
+          resolve();
+        });
+      });
+
+    } catch (err) {
+      console.error(`❌ Exception with ${model}:`, err.message);
+    }
+  }
+  res.status(500).write(`data: ${JSON.stringify({ error: "All models failed to respond." })}\n\n`);
+  res.end();
+};
 
 // ===============================
-// 💬 CHAT API
+// 💬 CHAT API (STREAMING)
 // ===============================
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "Message required" });
 
-    if (!message) {
-      return res.status(400).json({ error: "Message required" });
-    }
+    // Set headers for SSE (Server-Sent Events)
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
-    const reply = await callZAI(message);
-
-    if (db) {
-      try {
-        await db.collection("chats").add({
-          message,
-          reply,
-          createdAt: new Date(),
-        });
-      } catch (dbError) {
-        console.warn("Could not save to Firebase:", dbError.message);
-      }
-    }
-
-    res.json({ success: true, reply });
+    await callZAIStream(message, res);
 
   } catch (error) {
     console.error("Chat Error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
   }
 });
+
 
 // ===============================
 // ⚡ CODE GENERATOR

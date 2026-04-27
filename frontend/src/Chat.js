@@ -40,19 +40,6 @@ function Chat() {
     if (!text.trim() || loading) return;
     addRecentChat(text);
 
-    const urlPattern = /https?:\/\/[^\s]+/g;
-    const urls = text.match(urlPattern);
-    if (urls && urls.length > 0) {
-      urls.forEach((url) => window.open(url, "_blank"));
-      setMessages((prev) => [
-        ...prev,
-        { text, sender: "user" },
-        { text: "Opened **" + urls.length + "** link(s) in new tab(s).", sender: "ai" },
-      ]);
-      setInput("");
-      return;
-    }
-
     setMessages((prev) => [...prev, { text, sender: "user" }]);
     setInput("");
     setLoading(true);
@@ -63,25 +50,55 @@ function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
       });
-      const data = await response.json();
-      
-      if (data.success) {
-        const reply = data.reply;
-        setMessages((prev) => [...prev, { text: reply, sender: "ai" }]);
-        speak(reply);
-      } else {
-        const errMsg = data.error || "No reply from AI";
-        setMessages((prev) => [...prev, { text: `⚠️ **AI Error:** ${errMsg}`, sender: "ai" }]);
-      }
 
+      if (!response.ok) throw new Error("Backend connection failed");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let aiReply = "";
+
+      // Add a placeholder message for the AI
+      setMessages((prev) => [...prev, { text: "", sender: "ai" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const dataStr = line.slice(6);
+            if (dataStr === "[DONE]") continue;
+
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.error) throw new Error(data.error);
+              if (data.content) {
+                aiReply += data.content;
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1].text = aiReply;
+                  return updated;
+                });
+              }
+            } catch (e) {
+              // Fragmented JSON, ignore
+            }
+          }
+        }
+      }
+      speak(aiReply);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { text: "Error connecting to backend. Make sure server is running.", sender: "ai" },
+        { text: `⚠️ **Error:** ${error.message}`, sender: "ai" },
       ]);
     }
     setLoading(false);
   };
+
 
   const handlePaste = async () => {
     try {
