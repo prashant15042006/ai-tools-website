@@ -71,43 +71,56 @@ const SYSTEM_PROMPT = `You are **Nexus AI**, an elite, executive-grade artificia
 
 
 const callZAI = async (message) => {
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.ZAI_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://nexus-ai-workspace.vercel.app", // Professional referer
-        "X-Title": "Nexus AI",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: message }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
+  // We'll try the primary model first, then a fallback if it fails
+  const models = ["google/gemini-2.0-flash-001", "google/gemini-flash-1.5"];
+  let lastError = null;
 
-    const data = await response.json();
+  for (const model of models) {
+    try {
+      console.log(`🚀 Attempting AI call with model: ${model}`);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.ZAI_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "http://localhost:3000", // Standard for local development
+          "X-Title": "Nexus AI Workspace",
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: message }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+      });
 
-    if (!response.ok) {
-      console.error("OpenRouter Error Details:", JSON.stringify(data, null, 2));
-      throw new Error(data.error?.message || `API Error: ${response.status}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(`❌ ${model} failed:`, data.error?.message || response.status);
+        lastError = data.error?.message || `API Error: ${response.status}`;
+        continue; // Try next model
+      }
+
+      if (!data.choices || data.choices.length === 0) {
+        console.error(`❌ ${model} returned no choices`);
+        lastError = "No response choices returned from AI provider.";
+        continue;
+      }
+
+      return data.choices[0].message.content;
+    } catch (err) {
+      console.error(`❌ Exception with ${model}:`, err.message);
+      lastError = err.message;
     }
-
-    if (!data.choices || data.choices.length === 0) {
-      throw new Error("No response choices returned from AI provider.");
-    }
-
-    return data.choices[0].message.content;
-  } catch (err) {
-    console.error("callZAI Exception:", err.message);
-    throw err;
   }
+
+  throw new Error(lastError || "All AI models failed to respond. Please check your OpenRouter credits.");
 };
+
 
 
 // ===============================
