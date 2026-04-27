@@ -453,6 +453,14 @@ app.get("/api/health", (req, res) => {
 // ===============================
 // 🚀 START SERVER
 // ===============================
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🔥 Server running on http://localhost:${PORT}`);
-});
+}).on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`\n❌ Error: Port ${PORT} is already in use.`);
+    console.error(`💡 FIX: Type 'npx kill-port ${PORT}' in your terminal and try again.\n`);
+    process.exit(1);
+  } else {
+    console.error("❌ Server Error:", err.message);
+  }
+});
