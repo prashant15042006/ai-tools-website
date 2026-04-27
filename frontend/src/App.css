@@ -203,11 +203,12 @@ body {
 }
 
 .logo-text {
-  font-size: 36px; /* Increased from 30px */
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
   white-space: nowrap;
 }
+
 
 .close-sidebar-btn {
   background: transparent;
@@ -240,14 +241,15 @@ body {
   background: var(--accent);
   color: white;
   border: none;
-  padding: 16px;
+  padding: 12px;
   border-radius: 12px;
-  font-size: 18px; /* Increased from 15px */
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
+
 
 .new-chat-btn:hover {
   background: #4f46e5;
@@ -264,29 +266,31 @@ body {
 }
 
 .sidebar-section-title {
-  font-size: 16px; /* Adjusted for better hierarchy */
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   color: var(--text-secondary);
-  margin: 24px 0 12px 12px;
+  margin: 20px 0 8px 12px;
   font-weight: 700;
 }
+
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  margin-bottom: 6px;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  border-radius: 8px;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 18px; /* Increased from 14px */
+  font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
   cursor: pointer;
   white-space: nowrap;
 }
+
 
 .menu-item:hover {
   background-color: var(--bg-hover);
@@ -301,18 +305,19 @@ body {
 .chat-history-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 18px;
-  margin-bottom: 4px;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   color: var(--text-secondary);
-  font-size: 16px; /* Increased from 14px */
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 
 .chat-history-item:hover {
   background-color: var(--bg-hover);
@@ -374,10 +379,11 @@ body {
 }
 
 .page-title {
-  font-size: 20px; /* Increased from 16px */
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.1px;
 }
+
 
 .header-actions {
   display: flex;
