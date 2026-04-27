@@ -56,6 +56,7 @@ function Chat() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiReply = "";
+      let buffer = "";
 
       // Add a placeholder message for the AI
       setMessages((prev) => [...prev, { text: "", sender: "ai" }]);
@@ -64,32 +65,35 @@ function Chat() {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // Keep partial line in buffer
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const dataStr = line.slice(6);
-            if (dataStr === "[DONE]") continue;
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          
+          const dataStr = trimmed.slice(6);
+          if (dataStr === "[DONE]") continue;
 
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.error) throw new Error(data.error);
-              if (data.content) {
-                aiReply += data.content;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1].text = aiReply;
-                  return updated;
-                });
-              }
-            } catch (e) {
-              // Fragmented JSON, ignore
+          try {
+            const data = JSON.parse(dataStr);
+            if (data.error) throw new Error(data.error);
+            if (data.content) {
+              aiReply += data.content;
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1].text = aiReply;
+                return updated;
+              });
             }
+          } catch (e) {
+            // Fragmented JSON
           }
         }
       }
       speak(aiReply);
+
     } catch (error) {
       setMessages((prev) => [
         ...prev,

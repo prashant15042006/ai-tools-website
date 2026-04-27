@@ -163,38 +163,47 @@ const callZAIStream = async (message, res) => {
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        console.error(`❌ ${model} failed:`, errData.error?.message || response.status);
+        const errText = await response.text();
+        console.error(`❌ ${model} failed:`, errText);
         continue;
       }
 
-      // Stream the response to the client
+      let buffer = "";
       response.body.on("data", (chunk) => {
-        const lines = chunk.toString().split("\n");
+        buffer += chunk.toString();
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // Keep the last (potentially partial) line in buffer
+
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const dataStr = line.slice(6);
-            if (dataStr === "[DONE]") {
-              res.write("data: [DONE]\n\n");
-              continue;
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          
+          const dataStr = trimmed.slice(6);
+          if (dataStr === "[DONE]") {
+            res.write("data: [DONE]\n\n");
+            continue;
+          }
+          
+          try {
+            const data = JSON.parse(dataStr);
+            const content = data.choices?.[0]?.delta?.content || "";
+            if (content) {
+              res.write(`data: ${JSON.stringify({ content })}\n\n`);
             }
-            try {
-              const data = JSON.parse(dataStr);
-              const content = data.choices?.[0]?.delta?.content || "";
-              if (content) {
-                res.write(`data: ${JSON.stringify({ content })}\n\n`);
-              }
-            } catch (e) {
-              // Ignore parse errors for incomplete chunks
-            }
+          } catch (e) {
+            // Partial JSON, though pop() should have handled most cases
           }
         }
       });
 
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         response.body.on("end", () => {
           res.end();
           resolve();
+        });
+        response.body.on("error", (err) => {
+          console.error("Stream error:", err);
+          reject(err);
         });
       });
 
@@ -202,9 +211,13 @@ const callZAIStream = async (message, res) => {
       console.error(`❌ Exception with ${model}:`, err.message);
     }
   }
-  res.status(500).write(`data: ${JSON.stringify({ error: "All models failed to respond." })}\n\n`);
-  res.end();
+  
+  if (!res.writableEnded) {
+    res.write(`data: ${JSON.stringify({ error: "All AI models failed to respond. Please check your OpenRouter credits." })}\n\n`);
+    res.end();
+  }
 };
+
 
 // ===============================
 // 💬 CHAT API (STREAMING)
