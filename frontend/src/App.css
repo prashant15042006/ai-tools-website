@@ -552,18 +552,18 @@ body {
 }
 
 .message-content {
-  font-size: 24px;
-  line-height: 1.7;
-  color: var(--text-primary); /* Use variable instead of hardcoded white */
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-primary);
   word-wrap: break-word;
   overflow-wrap: break-word;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .message-content.user-text {
-  font-size: 24px;
+  font-size: 17px;
   white-space: pre-wrap;
-  color: var(--text-primary); /* Use variable instead of hardcoded white */
+  color: var(--text-primary);
 }
 
 .message-divider {

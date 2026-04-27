@@ -79,10 +79,17 @@ function ContentGenerator() {
             if (data.content) {
               const content = data.content;
               aiReply += content;
+              
               setMessages((prev) => 
                 prev.map(msg => msg.id === aiMsgId ? { ...msg, text: msg.text + content } : msg)
               );
+
+              // Small delay to make it feel like real typing
+              if (content.length > 3) {
+                await new Promise(r => setTimeout(r, 20));
+              }
             }
+
 
           } catch (e) { }
         }
