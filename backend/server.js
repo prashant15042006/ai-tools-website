@@ -5,9 +5,23 @@ import fetch from "node-fetch";
 import admin from "firebase-admin";
 import fs from "fs";
 
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Try to load .env from the current directory (backend/)
+dotenv.config({ path: path.join(__dirname, ".env") });
+
+// Fallback to root .env if not found
 dotenv.config();
 
-// dotenv.config() is handled above
+if (!process.env.ZAI_API_KEY) {
+  console.error("❌ CRITICAL: ZAI_API_KEY is not defined in .env file!");
+} else {
+  console.log("✅ API Key detected (ends with ...", process.env.ZAI_API_KEY.slice(-5), ")");
+}
 
 
 // ===============================
@@ -71,68 +85,60 @@ const SYSTEM_PROMPT = `You are **Nexus AI**, an elite, executive-grade artificia
 
 
 const callZAI = async (message) => {
-  // Broad list of models to ensure reliability. 
-  // We start with the most reliable/fastest ones.
   const models = [
-    "google/gemini-flash-1.5", 
     "google/gemini-2.0-flash-001",
-    "google/gemini-2.0-flash-exp",
-    "openai/gpt-4o-mini"
+    "google/gemini-flash-1.5",
+    "google/gemini-pro",
+    "meta-llama/llama-3.1-8b-instruct:free", // Free fallback
+    "auto" // Let OpenRouter decide
   ];
   let lastError = null;
 
   for (const model of models) {
     try {
-      console.log(`🚀 Attempting AI call with model: ${model}`);
+      console.log(`🚀 Requesting model: ${model}`);
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.ZAI_API_KEY}`,
+          "Authorization": `Bearer ${process.env.ZAI_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://nexus-ai.io", // Use a generic professional domain
-          "X-Title": "Nexus Workspace",
         },
         body: JSON.stringify({
           model: model,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: message }
           ],
-          temperature: 0.7,
-          max_tokens: 2000,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        let errorMsg = data.error?.message || `API Error: ${response.status}`;
+        let errorMsg = data.error?.message || `Status ${response.status}`;
         console.error(`❌ ${model} failed:`, errorMsg);
         
-        // If it's a credit issue, we can stop early
         if (errorMsg.toLowerCase().includes("balance") || errorMsg.toLowerCase().includes("credit")) {
-           throw new Error("Insufficient OpenRouter balance. Please top up your account.");
+           throw new Error("INSUFFICIENT_BALANCE: Your OpenRouter account is empty. Please add credits.");
         }
         
         lastError = errorMsg;
-        continue; // Try next model
-      }
-
-      if (!data.choices || data.choices.length === 0) {
-        console.error(`❌ ${model} returned no choices`);
-        lastError = "No response choices returned from AI provider.";
         continue;
       }
 
-      return data.choices[0].message.content;
+      if (data.choices?.[0]?.message?.content) {
+        return data.choices[0].message.content;
+      }
+      
+      continue;
     } catch (err) {
-      console.error(`❌ Exception with ${model}:`, err.message);
+      if (err.message.startsWith("INSUFFICIENT_BALANCE")) throw err;
       lastError = err.message;
     }
   }
 
-  throw new Error(lastError || "All AI models failed to respond. Please check your OpenRouter credits.");
+  throw new Error(lastError || "All models failed. Please verify your API key and credits at openrouter.ai");
 };
+
 
 
 
