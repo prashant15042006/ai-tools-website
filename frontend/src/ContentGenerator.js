@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, PenTool } from "lucide-react";
+import { Send, ClipboardPaste, Mic, ExternalLink, PenTool } from "lucide-react";
+
 import { AppContext } from "./App";
 
 function ContentGenerator() {
