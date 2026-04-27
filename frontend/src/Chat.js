@@ -80,11 +80,13 @@ function Chat() {
             const data = JSON.parse(dataStr);
             if (data.error) throw new Error(data.error);
             if (data.content) {
-              aiReply += data.content;
+              const content = data.content;
+              aiReply += content;
               setMessages((prev) => 
-                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: aiReply } : msg)
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: msg.text + content } : msg)
               );
             }
+
           } catch (e) { }
         }
       }
