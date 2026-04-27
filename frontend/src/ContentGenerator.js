@@ -46,23 +46,56 @@ function ContentGenerator() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/content", {
+      const response = await fetch("http://localhost:5000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text }),
+        body: JSON.stringify({ message: "Write: " + text }),
       });
-      const data = await response.json();
-      const reply = data.result || "No reply from AI";
-      setMessages((prev) => [...prev, { text: reply, sender: "ai" }]);
-      speak(reply);
+
+      if (!response.ok) throw new Error("Backend connection failed");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let aiReply = "";
+      let buffer = "";
+
+      setMessages((prev) => [...prev, { text: "", sender: "ai" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          const dataStr = trimmed.slice(6);
+          if (dataStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(dataStr);
+            if (data.error) throw new Error(data.error);
+            if (data.content) {
+              aiReply += data.content;
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1].text = aiReply;
+                return updated;
+              });
+            }
+          } catch (e) { }
+        }
+      }
+      speak(aiReply);
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { text: "Error connecting to backend. Make sure server is running.", sender: "ai" },
-      ]);
+      setMessages((prev) => [...prev, { text: `⚠️ **Error:** ${error.message}`, sender: "ai" }]);
     }
     setLoading(false);
   };
+
 
   const handlePaste = async () => {
     try {

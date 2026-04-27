@@ -143,17 +143,19 @@ const callZAIStream = async (message, res) => {
   const models = [
     "google/gemini-2.0-flash-001",
     "google/gemini-flash-1.5",
-    "meta-llama/llama-3.1-8b-instruct:free"
+    "openai/gpt-4o-mini"
   ];
 
   for (const model of models) {
     try {
-      console.log(`🚀 Streaming with model: ${model}`);
+      console.log(`🚀 [STREAM] Attempting model: ${model}`);
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${process.env.ZAI_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexus-ai.io",
+          "X-Title": "Nexus Workspace",
         },
         body: JSON.stringify({
           model: model,
@@ -164,59 +166,80 @@ const callZAIStream = async (message, res) => {
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`❌ ${model} failed:`, errText);
+        console.error(`❌ [STREAM] ${model} failed:`, errText);
         continue;
       }
 
       let buffer = "";
-      response.body.on("data", (chunk) => {
-        buffer += chunk.toString();
-        const lines = buffer.split("\n");
-        buffer = lines.pop(); // Keep the last (potentially partial) line in buffer
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-          
-          const dataStr = trimmed.slice(6);
-          if (dataStr === "[DONE]") {
-            res.write("data: [DONE]\n\n");
-            continue;
-          }
-          
-          try {
-            const data = JSON.parse(dataStr);
-            const content = data.choices?.[0]?.delta?.content || "";
-            if (content) {
-              res.write(`data: ${JSON.stringify({ content })}\n\n`);
-            }
-          } catch (e) {
-            // Partial JSON, though pop() should have handled most cases
-          }
-        }
-      });
+      let fullReply = "";
 
       return new Promise((resolve, reject) => {
-        response.body.on("end", () => {
+        response.body.on("data", (chunk) => {
+          buffer += chunk.toString();
+          let lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
+            
+            const dataStr = trimmed.slice(6);
+            if (dataStr === "[DONE]") {
+              res.write("data: [DONE]\n\n");
+              continue;
+            }
+            
+            try {
+              const data = JSON.parse(dataStr);
+              const content = data.choices?.[0]?.delta?.content || "";
+              if (content) {
+                fullReply += content;
+                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+              }
+            } catch (e) {
+              // Fragmented JSON
+            }
+          }
+        });
+
+        response.body.on("end", async () => {
+          console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
+          
+          // Save to database if available
+          if (db && fullReply) {
+            try {
+              await db.collection("chats").add({
+                message,
+                reply: fullReply,
+                createdAt: new Date(),
+                model: model
+              });
+            } catch (dbErr) {
+              console.warn("DB Save error:", dbErr.message);
+            }
+          }
+          
           res.end();
           resolve();
         });
+
         response.body.on("error", (err) => {
-          console.error("Stream error:", err);
+          console.error("❌ [STREAM] Body error:", err.message);
           reject(err);
         });
       });
 
     } catch (err) {
-      console.error(`❌ Exception with ${model}:`, err.message);
+      console.error(`❌ [STREAM] Exception with ${model}:`, err.message);
     }
   }
   
   if (!res.writableEnded) {
-    res.write(`data: ${JSON.stringify({ error: "All AI models failed to respond. Please check your OpenRouter credits." })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: "All AI models failed to respond. Please check your connection and OpenRouter balance." })}\n\n`);
     res.end();
   }
 };
+
 
 
 // ===============================
