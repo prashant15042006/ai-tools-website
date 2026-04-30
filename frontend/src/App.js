@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX } from "lucide-react";
+import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, Edit3 } from "lucide-react";
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
 import ContentGenerator from "./ContentGenerator";
@@ -65,6 +65,32 @@ function AppContent() {
       setProjects([...projects, { name: newProjectName, desc: "Newly created project. Start adding files." }]);
       setNewProjectName("");
       setIsCreatingProject(false);
+    }
+  };
+
+  const handleDeleteProject = (e, idx) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      const updated = projects.filter((_, i) => i !== idx);
+      setProjects(updated);
+      if (selectedProject === projects[idx]) setSelectedProject(null);
+    }
+  };
+
+  const [editingIdx, setEditingIdx] = useState(-1);
+  const [editingName, setEditingName] = useState("");
+
+  const startRename = (e, idx) => {
+    e.stopPropagation();
+    setEditingIdx(idx);
+    setEditingName(projects[idx].name);
+  };
+
+  const handleRename = () => {
+    if (editingName.trim()) {
+      const updated = projects.map((p, i) => i === editingIdx ? { ...p, name: editingName } : p);
+      setProjects(updated);
+      setEditingIdx(-1);
     }
   };
 
@@ -181,7 +207,27 @@ function AppContent() {
                 <div className="dashboard-grid">
                   {projects.map((proj, idx) => (
                     <div key={idx} className="dashboard-card" onClick={() => setSelectedProject(proj)}>
-                      <div className="dashboard-card-title"><FolderOpen size={22} color="var(--accent)" /> {proj.name}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        {editingIdx === idx ? (
+                          <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+                            <input 
+                              type="text" 
+                              value={editingName} 
+                              onChange={(e) => setEditingName(e.target.value)}
+                              style={{ flex: 1, background: 'var(--bg-hover)', border: '1px solid var(--accent)', borderRadius: '4px', color: 'white', padding: '4px 8px', fontSize: '14px' }}
+                              autoFocus
+                              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+                            />
+                            <button onClick={(e) => { e.stopPropagation(); handleRename(); }} style={{ padding: '4px 8px', background: 'var(--accent)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }}>OK</button>
+                          </div>
+                        ) : (
+                          <div className="dashboard-card-title"><FolderOpen size={22} color="var(--accent)" /> {proj.name}</div>
+                        )}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button className="icon-btn" onClick={(e) => startRename(e, idx)} title="Rename"><Edit3 size={16} /></button>
+                          <button className="icon-btn" onClick={(e) => handleDeleteProject(e, idx)} title="Delete" style={{ color: '#ef4444' }}><Trash2 size={16} /></button>
+                        </div>
+                      </div>
                       <div className="dashboard-card-desc">{proj.desc}</div>
                     </div>
                   ))}
