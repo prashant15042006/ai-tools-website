@@ -1,15 +1,15 @@
 :root {
-  --bg-main: #0f182e; /* Deep navy */
-  --bg-sidebar: #020617; /* Darker charcoal */
-  --bg-hover: #1e293b;
-  --bg-bubble-user: #3b82f6; /* Blue */
+  --bg-main: #0a0f1e; /* Deeper navy */
+  --bg-sidebar: #050814; /* Darker charcoal */
+  --bg-hover: #162033;
+  --bg-bubble-user: #4f46e5; /* Indigo */
   --bg-bubble-ai: #1e293b;
-  --bg-input: rgba(20, 31, 49, 0.7); /* Glass effect base */
-  --text-primary: #f8fafc;
+  --bg-input: rgba(15, 23, 42, 0.8);
+  --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --border-color: #334155;
-  --accent: #6366f1; /* Indigo */
-  --font-main: 'Inter', 'Poppins', sans-serif;
+  --border-color: #1e293b;
+  --accent: #6366f1;
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* ===== LIGHT MODE OVERRIDES ===== */
@@ -310,7 +310,7 @@ body {
   margin-bottom: 2px;
   border-radius: 8px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 15px; /* Increased as requested */
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;

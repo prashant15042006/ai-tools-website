@@ -197,8 +197,14 @@ function Chat() {
                 <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
                   {msg.sender === "user" ? (
                     msg.text
-                  ) : (
+                  ) : msg.text ? (
                     <ReactMarkdown components={{ a: LinkRenderer }}>{msg.text}</ReactMarkdown>
+                  ) : (
+                    <div className="typing-indicator">
+                      <div className="typing-dot"></div>
+                      <div className="typing-dot"></div>
+                      <div className="typing-dot"></div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -207,24 +213,6 @@ function Chat() {
           </React.Fragment>
         ))}
 
-        {loading && (
-          <>
-            <div className="chat-message-row ai-row">
-              <div className="message-avatar ai-av">
-                <Bot size={20} color="white" />
-              </div>
-              <div className="message-body">
-                <div className="message-sender">Nexus AI</div>
-                <div className="typing-indicator">
-                  <div className="typing-dot"></div>
-                  <div className="typing-dot"></div>
-                  <div className="typing-dot"></div>
-                </div>
-              </div>
-            </div>
-            <hr className="message-divider" />
-          </>
-        )}
         <div ref={messagesEndRef} />
       </div>
 

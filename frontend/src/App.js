@@ -5,16 +5,14 @@ import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Searc
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
 import ContentGenerator from "./ContentGenerator";
-import ImageGenerator from "./ImageGenerator";
 import "./App.css";
-import { Image as ImageIcon } from "lucide-react";
 
 // Global context for dark mode & TTS
 export const AppContext = createContext();
 
-const SidebarItem = ({ to, icon: Icon, label, isActive }) => (
+const SidebarItem = ({ to, icon: Icon, label, isActive, color }) => (
   <Link to={to} className={`menu-item ${isActive ? "active" : ""}`}>
-    <Icon size={20} />
+    <Icon size={20} style={{ color: color || 'inherit' }} />
     <span>{label}</span>
   </Link>
 );
@@ -45,6 +43,7 @@ function AppContent() {
   const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats } = useContext(AppContext);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [notifications, setNotifications] = useState(false);
+  const [chatKey, setChatKey] = useState(0);
   const [projects, setProjects] = useState(() => {
     const saved = localStorage.getItem("nexus_projects");
     return saved ? JSON.parse(saved) : [
@@ -86,7 +85,7 @@ function AppContent() {
         </div>
 
         <div className="new-chat-container">
-          <button className="new-chat-btn" onClick={() => navigate('/')}>
+          <button className="new-chat-btn" onClick={() => { setChatKey(prev => prev + 1); navigate('/'); }}>
             <Plus size={18} />
             New Chat
           </button>
@@ -94,13 +93,12 @@ function AppContent() {
 
         <div className="sidebar-scrollable">
           <div className="sidebar-section-title">Menu</div>
-          <SidebarItem to="/" icon={MessageSquare} label="Chat" isActive={location.pathname === "/"} />
-          <SidebarItem to="/code" icon={Code} label="Code" isActive={location.pathname === "/code"} />
-          <SidebarItem to="/content" icon={PenTool} label="Write" isActive={location.pathname === "/content"} />
-          <SidebarItem to="/image" icon={ImageIcon} label="Create" isActive={location.pathname === "/image"} />
-          <SidebarItem to="/projects" icon={FolderOpen} label="Projects" isActive={location.pathname === "/projects"} />
-          <SidebarItem to="/settings" icon={Settings} label="Settings" isActive={location.pathname === "/settings"} />
-          <SidebarItem to="/menu" icon={Layout} label="Dashboard" isActive={location.pathname === "/menu"} />
+          <SidebarItem to="/" icon={MessageSquare} label="Chat" isActive={location.pathname === "/"} color="#3b82f6" />
+          <SidebarItem to="/code" icon={Code} label="Code" isActive={location.pathname === "/code"} color="#10b981" />
+          <SidebarItem to="/content" icon={PenTool} label="Write" isActive={location.pathname === "/content"} color="#a855f7" />
+          <SidebarItem to="/projects" icon={FolderOpen} label="Projects" isActive={location.pathname === "/projects"} color="#f59e0b" />
+          <SidebarItem to="/settings" icon={Settings} label="Settings" isActive={location.pathname === "/settings"} color="#94a3b8" />
+          <SidebarItem to="/menu" icon={Layout} label="Dashboard" isActive={location.pathname === "/menu"} color="#ec4899" />
 
           <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '16px 0' }} />
           <div className="sidebar-section-title">Recent Chats</div>
@@ -134,10 +132,9 @@ function AppContent() {
               </button>
             )}
             <h1 className="page-title">
-              {location.pathname === "/" && "Omniscient Chat"}
+              {location.pathname === "/" && "Nexus Chat"}
               {location.pathname === "/code" && "Code Generation"}
               {location.pathname === "/content" && "Writing Assistant"}
-              {location.pathname === "/image" && "Image Forge"}
               {location.pathname === "/projects" && "Projects"}
               {location.pathname === "/settings" && "Settings"}
               {location.pathname === "/menu" && "Dashboard"}
@@ -166,10 +163,9 @@ function AppContent() {
 
         {/* Routes Container */}
         <Routes location={location}>
-          <Route path="/" element={<Chat />} />
+          <Route path="/" element={<Chat key={chatKey} />} />
           <Route path="/code" element={<CodeGenerator />} />
           <Route path="/content" element={<ContentGenerator />} />
-          <Route path="/image" element={<ImageGenerator />} />
 
           {/* Projects Page */}
           <Route path="/projects" element={
@@ -280,19 +276,19 @@ function AppContent() {
               <h2 style={{ fontSize: '36px', marginBottom: '12px', fontWeight: '800' }}>Dashboard Overview</h2>
               <div className="dashboard-grid">
                 <div className="dashboard-card" onClick={() => navigate('/')}>
-                  <div className="dashboard-card-title"><MessageSquare size={22} color="var(--accent)" /> AI Chat</div>
+                  <div className="dashboard-card-title"><MessageSquare size={22} color="#3b82f6" /> AI Chat</div>
                   <div className="dashboard-card-desc">Continue your conversation with Nexus.</div>
                 </div>
                 <div className="dashboard-card" onClick={() => navigate('/code')}>
-                  <div className="dashboard-card-title"><Code size={22} color="var(--accent)" /> Code Generation</div>
+                  <div className="dashboard-card-title"><Code size={22} color="#10b981" /> Code Generation</div>
                   <div className="dashboard-card-desc">Write, debug, and optimize code faster.</div>
                 </div>
                 <div className="dashboard-card" onClick={() => navigate('/content')}>
-                  <div className="dashboard-card-title"><PenTool size={22} color="var(--accent)" /> Writing Assistant</div>
+                  <div className="dashboard-card-title"><PenTool size={22} color="#a855f7" /> Writing Assistant</div>
                   <div className="dashboard-card-desc">Draft emails, essays, and articles.</div>
                 </div>
                 <div className="dashboard-card" onClick={() => navigate('/settings')}>
-                  <div className="dashboard-card-title"><Settings size={22} color="var(--accent)" /> Preferences</div>
+                  <div className="dashboard-card-title"><Settings size={22} color="#94a3b8" /> Preferences</div>
                   <div className="dashboard-card-desc">Manage your account and app settings.</div>
                 </div>
               </div>
