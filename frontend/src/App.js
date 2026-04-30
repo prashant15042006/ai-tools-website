@@ -196,8 +196,8 @@ function AppContent() {
           {/* Projects Page */}
           <Route path="/projects" element={
             <div className="page-view">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '36px', fontWeight: '800' }}>{selectedProject ? selectedProject.name : "Your Projects"}</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: '800' }}>{selectedProject ? selectedProject.name : "Your Projects"}</h2>
                 {selectedProject && (
                   <button onClick={() => setSelectedProject(null)} style={{ padding: '8px 16px', background: 'var(--bg-hover)', border: 'none', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>Back to List</button>
                 )}
@@ -233,33 +233,33 @@ function AppContent() {
                   ))}
                   {isCreatingProject ? (
                     <div className="dashboard-card" style={{ borderStyle: 'solid', borderColor: 'var(--accent)' }}>
-                      <div className="dashboard-card-title" style={{ fontSize: '18px' }}>New Project Name</div>
+                      <div className="dashboard-card-title" style={{ fontSize: '14px' }}>New Project Name</div>
                       <input
                         type="text"
                         value={newProjectName}
                         onChange={(e) => setNewProjectName(e.target.value)}
                         placeholder="e.g. Finance App"
                         className="chat-textarea"
-                        style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: '17px', outline: 'none', width: '100%', marginBottom: '10px' }}
+                        style={{ padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', width: '100%', marginBottom: '10px' }}
                         autoFocus
                         onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject(); }}
                       />
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={handleCreateProject} style={{ flex: 1, padding: '12px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: '600' }}>Save</button>
-                        <button onClick={() => setIsCreatingProject(false)} style={{ flex: 1, padding: '12px', background: 'var(--border-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px' }}>Cancel</button>
+                        <button onClick={handleCreateProject} style={{ flex: 1, padding: '8px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>Save</button>
+                        <button onClick={() => setIsCreatingProject(false)} style={{ flex: 1, padding: '8px', background: 'var(--border-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>Cancel</button>
                       </div>
                     </div>
                   ) : (
-                    <div className="dashboard-card" onClick={() => setIsCreatingProject(true)} style={{ borderStyle: 'dashed', borderColor: 'var(--text-secondary)', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                      <Plus size={28} color="var(--text-secondary)" />
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '17px' }}>Create New Project</span>
+                    <div className="dashboard-card" onClick={() => setIsCreatingProject(true)} style={{ borderStyle: 'dashed', borderColor: 'var(--text-secondary)', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                      <Plus size={24} color="var(--text-secondary)" />
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Create New Project</span>
                     </div>
                   )}
                 </div>
               ) : (
-                <div style={{ background: 'var(--bg-sidebar)', padding: '40px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
+                <div style={{ background: 'var(--bg-sidebar)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
                   <h3 style={{ marginBottom: '16px', color: 'var(--accent)' }}>Project Overview</h3>
-                  <p style={{ fontSize: '18px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{selectedProject.desc}</p>
+                  <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{selectedProject.desc}</p>
                   <div style={{ marginTop: '32px', display: 'flex', gap: '16px' }}>
                     <button onClick={() => navigate('/code')} style={{ padding: '14px 28px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>Generate Code</button>
                     <button style={{ padding: '14px 28px', background: 'var(--bg-hover)', color: 'var(--text-primary)', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer' }}>Manage Files</button>
@@ -272,8 +272,8 @@ function AppContent() {
           {/* Settings Page */}
           <Route path="/settings" element={
             <div className="page-view">
-              <h2 style={{ fontSize: '36px', marginBottom: '12px', fontWeight: '800' }}>Settings</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '32px' }}>Manage your Nexus preferences</p>
+              <h2 style={{ fontSize: '24px', marginBottom: '12px', fontWeight: '800' }}>Settings</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '32px' }}>Manage your Nexus preferences</p>
               <div style={{ maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
                 {/* Dark Mode */}
@@ -319,7 +319,7 @@ function AppContent() {
           {/* Dashboard Page */}
           <Route path="/menu" element={
             <div className="page-view">
-              <h2 style={{ fontSize: '36px', marginBottom: '12px', fontWeight: '800' }}>Dashboard Overview</h2>
+              <h2 style={{ fontSize: '24px', marginBottom: '12px', fontWeight: '800' }}>Dashboard Overview</h2>
               <div className="dashboard-grid">
                 <div className="dashboard-card" onClick={() => navigate('/')}>
                   <div className="dashboard-card-title"><MessageSquare size={22} color="#3b82f6" /> AI Chat</div>

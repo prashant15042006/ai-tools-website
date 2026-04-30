@@ -159,11 +159,11 @@ function Chat() {
             <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Sparkles size={32} color="white" />
             </div>
-            <h2 style={{ fontSize: "28px", fontWeight: "700", color: "var(--text-primary)" }}>How can I help you today?</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "16px", maxWidth: "480px", textAlign: "center" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: "700", color: "var(--text-primary)" }}>How can I help you today?</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "14px", maxWidth: "480px", textAlign: "center" }}>
               Ask anything, paste a link to open it, or try a suggestion below.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginTop: "16px", maxWidth: "620px", width: "100%" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "16px", maxWidth: "560px", width: "100%" }}>
               {[
                 { title: "Explain quantum computing", sub: "in simple terms" },
                 { title: "Write a Python script", sub: "to scrape a website" },
@@ -176,8 +176,8 @@ function Chat() {
                   onClick={() => sendMessage(s.title + " " + s.sub)}
                   style={{ padding: "18px", cursor: "pointer" }}
                 >
-                  <div style={{ fontSize: "15px", fontWeight: "600" }}>{s.title}</div>
-                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{s.sub}</div>
+                  <div style={{ fontSize: "14px", fontWeight: "600" }}>{s.title}</div>
+                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>{s.sub}</div>
                 </div>
               ))}
             </div>
