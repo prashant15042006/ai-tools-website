@@ -28,10 +28,18 @@ if (!process.env.ZAI_API_KEY) {
 // 🚀 EXPRESS INIT
 // ===============================
 const app = express();
-app.use(cors());
+
+// Configure CORS for production
+app.use(cors({
+  origin: "*", // Allows access from any domain (including Vercel)
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
 
-const PORT = 5001;
+// Use Render's PORT or default to 5001
+const PORT = process.env.PORT || 5001;
 
 // ===============================
 // 🔐 FIREBASE INIT

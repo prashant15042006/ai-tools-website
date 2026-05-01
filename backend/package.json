@@ -4,9 +4,11 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "prestart": "npx -y kill-port 5001",
     "start": "node server.js",
     "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "cors": "^2.8.5",

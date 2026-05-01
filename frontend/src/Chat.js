@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
 import { AppContext } from "./App";
+import API_BASE_URL from "./apiConfig";
    
 
 function Chat() {
@@ -48,7 +49,7 @@ function Chat() {
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
     try {
-      const response = await fetch("http://localhost:5001/api/chat", {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),

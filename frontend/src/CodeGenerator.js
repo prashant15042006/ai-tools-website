@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Send, ClipboardPaste, Mic, ExternalLink, Code } from "lucide-react";
 
 import { AppContext } from "./App";
+import API_BASE_URL from "./apiConfig";
 
 function CodeGenerator() {
   const { ttsEnabled, addRecentChat } = useContext(AppContext);
@@ -46,7 +47,7 @@ function CodeGenerator() {
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
     try {
-      const response = await fetch("http://localhost:5001/api/chat", {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: "Generate code: " + text }),
