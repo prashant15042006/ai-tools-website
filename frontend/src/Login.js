@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { auth, googleProvider } from "./firebase";
-import { signInWithPopup, updateProfile } from "firebase/auth";
+import { signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Mail, ArrowRight, User } from "lucide-react";
 
