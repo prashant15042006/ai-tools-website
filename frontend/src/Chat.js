@@ -6,7 +6,7 @@ import API_BASE_URL from "./apiConfig";
    
 
 function Chat() {
-  const { ttsEnabled, addRecentChat } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user } = useContext(AppContext);
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
     ttsEnabledRef.current = ttsEnabled;
@@ -52,7 +52,10 @@ function Chat() {
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ 
+          message: text,
+          userName: user?.displayName || user?.email?.split('@')[0] || "User"
+        }),
       });
 
       if (!response.ok) throw new Error("Backend connection failed");
@@ -157,28 +160,48 @@ function Chat() {
       <div className="chat-history-scroll">
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "8vh" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Sparkles size={32} color="white" />
+            <div style={{ width: "84px", height: "84px", borderRadius: "50%", background: "linear-gradient(135deg, #2563eb, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 30px rgba(37, 99, 235, 0.4)" }}>
+              <Sparkles size={40} color="white" />
             </div>
-            <h2 style={{ fontSize: "20px", fontWeight: "700", color: "var(--text-primary)" }}>How can I help you today?</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "14px", maxWidth: "480px", textAlign: "center" }}>
-              Ask anything, paste a link to open it, or try a suggestion below.
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "16px", maxWidth: "560px", width: "100%" }}>
+            <div style={{ textAlign: "center" }}>
+              <h2 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", letterSpacing: "-1px" }}>Welcome to Nexus!</h2>
+              <p style={{ color: "var(--text-secondary)", fontSize: "16px", marginTop: "8px" }}>Your intelligent AI workspace.</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginTop: "24px", maxWidth: "620px", width: "100%" }}>
               {[
-                { title: "Explain quantum computing", sub: "in simple terms" },
-                { title: "Write a Python script", sub: "to scrape a website" },
-                { title: "Translate to English", sub: "paste any text" },
-                { title: "Debug my code", sub: "paste your code here" },
+                { title: "Quantum Computing", sub: "Explain it in simple terms" },
+                { title: "Debug Code", sub: "Help me find bugs in my code" },
+                { title: "Translation", sub: "Translate English to Spanish" },
+                { title: "Email Writing", sub: "Write a professional email" },
               ].map((s, i) => (
                 <div
                   key={i}
                   className="dashboard-card"
-                  onClick={() => sendMessage(s.title + " " + s.sub)}
-                  style={{ padding: "18px", cursor: "pointer" }}
+                  onClick={() => sendMessage(s.sub)}
+                  style={{ 
+                    padding: "18px", 
+                    cursor: "pointer", 
+                    background: "rgba(255, 255, 255, 0.05)", 
+                    border: "1px solid rgba(255, 255, 255, 0.08)", 
+                    borderRadius: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    transition: "all 0.3s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                    e.currentTarget.style.borderColor = "var(--accent)";
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
                 >
-                  <div style={{ fontSize: "14px", fontWeight: "600" }}>{s.title}</div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>{s.sub}</div>
+                  <div style={{ fontSize: "15px", fontWeight: "600", color: "#e2e8f0" }}>{s.title}</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{s.sub}</div>
                 </div>
               ))}
             </div>
@@ -188,8 +211,10 @@ function Chat() {
         {messages.map((msg, index) => (
           <React.Fragment key={index}>
             <div className={`chat-message-row ${msg.sender === "user" ? "user-row" : "ai-row"}`}>
-              <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`}>
-                {msg.sender === "user" ? "You" : <Bot size={20} color="white" />}
+              <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`} style={msg.sender === "user" ? { padding: 0, overflow: 'hidden' } : {}}>
+                {msg.sender === "user" ? (
+                  <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} alt="You" style={{ width: '100%', height: '100%' }} />
+                ) : <Bot size={20} color="white" />}
               </div>
               <div className="message-body">
                 <div className="message-sender">
@@ -218,15 +243,17 @@ function Chat() {
       </div>
 
       <div className="input-container">
-        <div className="input-box-wrapper">
-          <button className="action-btn" title="Paste from Clipboard" onClick={handlePaste}>
-            <ClipboardPaste size={24} />
+        <div className="input-box-wrapper" style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderRadius: '24px', gap: '12px' }}>
+          <button className="action-btn" title="Paste" onClick={handlePaste} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ClipboardPaste size={20} />
           </button>
+          
           <textarea
             className="chat-textarea"
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '16px', color: 'var(--text-primary)', resize: 'none', padding: '8px 0' }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isListening ? "Listening... speak now" : "Message Nexus..."}
+            placeholder="Send a message..."
             rows="1"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -235,19 +262,36 @@ function Chat() {
               }
             }}
           />
-          <button
-            className={`action-btn ${isListening ? "listening" : ""}`}
-            title={isListening ? "Listening..." : "Voice Input"}
-            style={{ marginRight: "10px" }}
-            onClick={startListening}
+
+          <button 
+            className={`action-btn ${isListening ? "listening" : ""}`} 
+            title="Voice Input" 
+            onClick={startListening} 
+            style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Mic size={24} />
+            <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
           </button>
-          <button className="send-btn" onClick={() => sendMessage()} disabled={loading || !input.trim()}>
-            <Send size={22} />
+
+          <button 
+            className="send-btn" 
+            onClick={() => sendMessage()} 
+            disabled={loading || !input.trim()}
+            style={{ 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '12px', 
+              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+            }}
+          >
+            <Send size={18} />
           </button>
         </div>
-        <div className="disclaimer">Nexus can make mistakes. Verify important info.</div>
+        <div className="disclaimer">Nexus ca make mistakes. Verify upload information.</div>
       </div>
     </div>
   );

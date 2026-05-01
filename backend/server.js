@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import fetch from "node-fetch";
 import admin from "firebase-admin";
 import fs from "fs";
+import killPort from "kill-port";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -65,35 +66,26 @@ try {
 // ===============================
 // 🔥 COMMON AI FUNCTION
 // ===============================
-const SYSTEM_PROMPT = `You are **Nexus AI**, a helpful, friendly, and highly intelligent AI companion for **Prashant**. Your goal is to talk like a real person—warm, supportive, and natural.
+const SYSTEM_PROMPT = (userName = "User") => `You are **Nexus AI**, a helpful, friendly, and highly intelligent AI companion for **${userName}**. 
 
-### 🌟 PERSONALITY:
-- **Tone**: Human-like, friendly, and conversational. Use a "smart friend" vibe.
-- **Personalized**: Always address the user as **Prashant** when giving detailed advice or at the start/end of a conversation.
-- **Language**: Use natural Hinglish/Hindi-English mix if the user speaks it. Feel like a local friend.
+### 🌟 PERSONALITY (VERY IMPORTANT):
+- **Tone**: Ek dum human-like, warm, and supportive. Aapko generic AI ki tarah baat nahi karni hai.
+- **Identity**: Aap Nexus AI ho, ${userName} ke dost ki tarah. Kabhi mat bolna "I am a large language model" ya "trained by Google/OpenAI". 
+- **Friendly Style**: Agar ${userName} puche "Kaise ho?", to bolo "Main ek dum jhakaas ${userName}! Tum batao aaj kya dhamaal machana hai?".
+- **Language**: Use natural Hinglish/Hindi-English mix. Aapka vibe ek "smart and cool friend" jaisa hona chahiye.
 
 ### 📜 RESPONSE STYLE:
-1. **Simple Questions (Hi, Hello, How are you?)**:
-   - Reply naturally and concisely. Example: "Hi Prashant! Kaise ho? Main bilkul sahi hoon, batao aaj kya plan hai?"
-
-2. **Complex/Technical Questions**:
-   - Use a structured, clean format with emojis and clear sections.
-   - Start with a summary: "Samajh gaya Prashant 👍 — [Brief summary of the issue]"
-   - Use sections like:
-     - **⚠️ Important Point**: For critical warnings or facts.
-     - **✅ Your Options**: For multiple solutions.
-     - **🔎 Clear Answer / Matlab**: For the final conclusion.
-   - Use bold text for emphasis.
-   - Use bullet points for steps.
+1. **Chat Style**: Chote messages mein casual baat karein. Lambe technical answers tabhi dein jab zaroorat ho.
+2. **Personalized**: Hamesha ${userName} ko address karein agar baat deep ho rahi ho.
 
 ### 🚫 RULES:
-- Never sound like a generic corporate bot.
-- Always use Markdown for code or lists.
-- Be direct: Give the main answer first, then details.`;
+- **STRICT**: Never say you are an AI model or robot. 
+- **STRICT**: Never say you were trained by Google, OpenAI, or any company.
+- Sound like a real person talking over chat.`;
 
 
 
-const callZAI = async (message) => {
+const callZAI = async (message, userName = "User") => {
   const models = [
     "google/gemini-2.0-flash-001",
     "google/gemini-flash-1.5",
@@ -115,6 +107,7 @@ const callZAI = async (message) => {
         body: JSON.stringify({
           model: model,
           messages: [
+            { role: "system", content: SYSTEM_PROMPT(userName) },
             { role: "user", content: message }
           ],
         }),
@@ -148,7 +141,7 @@ const callZAI = async (message) => {
   throw new Error(lastError || "All models failed. Please verify your API key and credits at openrouter.ai");
 };
 
-const callZAIStream = async (message, res) => {
+const callZAIStream = async (message, res, userName = "User") => {
   const models = [
     "google/gemini-2.0-flash-001",
     "google/gemini-flash-1.5",
@@ -169,7 +162,10 @@ const callZAIStream = async (message, res) => {
         body: JSON.stringify({
           model: model,
           stream: true,
-          messages: [{ role: "user", content: message }],
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT(userName) },
+            { role: "user", content: message }
+          ],
         }),
       });
 
@@ -256,7 +252,7 @@ const callZAIStream = async (message, res) => {
 // ===============================
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, userName } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
     // Set headers for SSE (Server-Sent Events)
@@ -264,7 +260,7 @@ app.post("/api/chat", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    await callZAIStream(message, res);
+    await callZAIStream(message, res, userName);
 
   } catch (error) {
     console.error("Chat Error:", error.message);
@@ -283,13 +279,13 @@ app.post("/api/chat", async (req, res) => {
 // ===============================
 app.post("/api/code", async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, userName } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    const result = await callZAI(`Generate clean code for: ${prompt}`);
+    const result = await callZAI(`Generate clean code for: ${prompt}`, userName);
 
     res.json({ success: true, result });
 
@@ -305,13 +301,13 @@ app.post("/api/code", async (req, res) => {
 // ===============================
 app.post("/api/content", async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, userName } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    const result = await callZAI(`Write detailed content about: ${prompt}`);
+    const result = await callZAI(`Write detailed content about: ${prompt}`, userName);
 
     res.json({ success: true, result });
 
@@ -406,14 +402,27 @@ app.get("/api/health", (req, res) => {
 // ===============================
 // 🚀 START SERVER
 // ===============================
-const server = app.listen(PORT, () => {
-  console.log(`🔥 Server running on http://localhost:${PORT}`);
-}).on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(`\n❌ Error: Port ${PORT} is already in use.`);
-    console.error(`💡 FIX: Type 'npx kill-port ${PORT}' in your terminal and try again.\n`);
-    process.exit(1);
-  } else {
-    console.error("❌ Server Error:", err.message);
+const startServer = async () => {
+  try {
+    // Attempt to kill the port before starting the server
+    await killPort(PORT, 'tcp');
+    console.log(`🧹 Automatically cleared port ${PORT}`);
+  } catch (err) {
+    // Port might not be in use, ignore error
   }
-});
+
+  const server = app.listen(PORT, () => {
+    console.log(`🔥 Server running on http://localhost:${PORT}`);
+  }).on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`\n❌ Error: Port ${PORT} is already in use.`);
+      console.error(`💡 FIX: Type 'npx kill-port ${PORT}' in your terminal and try again.\n`);
+      process.exit(1);
+    } else {
+      console.error("❌ Server Error:", err.message);
+    }
+  });
+};
+
+startServer();
+

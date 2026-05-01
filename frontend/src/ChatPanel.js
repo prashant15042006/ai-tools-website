@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { motion } from "framer-motion";
+import { AppContext } from "./App";
 import API_BASE_URL from "./apiConfig";
 
 export default function ChatPanel() {
+  const { user } = useContext(AppContext);
   const [messages, setMessages] = useState([{ text: "Hello 👋", sender: "ai" }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +19,10 @@ export default function ChatPanel() {
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ 
+          message: input,
+          userName: user?.displayName || user?.email?.split('@')[0] || "User"
+        }),
       });
       const data = await response.json();
       const aiMessage = { text: data.reply || "❌ Error connecting to backend", sender: "ai" };

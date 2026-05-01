@@ -6,7 +6,7 @@ import { AppContext } from "./App";
 import API_BASE_URL from "./apiConfig";
 
 function ContentGenerator() {
-  const { ttsEnabled, addRecentChat } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user } = useContext(AppContext);
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
     ttsEnabledRef.current = ttsEnabled;
@@ -50,7 +50,10 @@ function ContentGenerator() {
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Write: " + text }),
+        body: JSON.stringify({ 
+          message: "Write: " + text,
+          userName: user?.displayName || user?.email?.split('@')[0] || "User"
+        }),
       });
 
       if (!response.ok) throw new Error("Backend connection failed");
@@ -184,8 +187,10 @@ function ContentGenerator() {
         {messages.map((msg, index) => (
           <React.Fragment key={index}>
             <div className={`chat-message-row ${msg.sender === "user" ? "user-row" : "ai-row"}`}>
-              <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`}>
-                {msg.sender === "user" ? "You" : <PenTool size={20} color="white" />}
+              <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`} style={msg.sender === "user" ? { padding: 0, overflow: 'hidden' } : {}}>
+                {msg.sender === "user" ? (
+                   <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} alt="You" style={{ width: '100%', height: '100%' }} />
+                ) : <PenTool size={20} color="white" />}
               </div>
               <div className="message-body">
                 <div className="message-sender">
