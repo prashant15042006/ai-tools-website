@@ -58,7 +58,7 @@ function Chat() {
         }),
       });
 
-      if (!response.ok) throw new Error("Backend connection failed");
+      if (!response.ok) throw new Error(`Backend connection failed (${response.status}). If you are on Vercel, make sure REACT_APP_BACKEND_URL is set.`);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -104,8 +104,12 @@ function Chat() {
       speak(aiReply);
 
     } catch (error) {
+      let errorMsg = error.message;
+      if (errorMsg === "Failed to fetch" && window.location.hostname !== "localhost" && API_BASE_URL.includes("localhost")) {
+        errorMsg = "Backend is not configured! Please add your Render backend URL as REACT_APP_BACKEND_URL in Vercel settings.";
+      }
       setMessages((prev) => 
-        prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${error.message}` } : msg)
+        prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${errorMsg}` } : msg)
       );
     }
     setLoading(false);
