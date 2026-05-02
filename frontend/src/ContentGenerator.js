@@ -41,6 +41,8 @@ function ContentGenerator() {
   const sendMessage = async (text = input) => {
     if (!text.trim() || loading) return;
     addRecentChat("Write: " + text);
+    setInput("");
+    setLoading(true);
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();

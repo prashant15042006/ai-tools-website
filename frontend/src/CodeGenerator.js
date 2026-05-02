@@ -41,6 +41,8 @@ function CodeGenerator() {
   const sendMessage = async (text = input) => {
     if (!text.trim() || loading) return;
     addRecentChat("Code: " + text);
+    setInput("");
+    setLoading(true);
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
