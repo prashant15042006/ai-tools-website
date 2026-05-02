@@ -157,6 +157,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
+  zoom: 0.75; /* Fix zoom to 75% as requested */
 }
 
 /* Layout */
