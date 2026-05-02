@@ -38,58 +38,63 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-page">
-      <div 
-        className="dashboard-hero"
-        style={{ 
-          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        <div style={{
-          position: 'absolute',
-          top: '-50%',
-          right: '-10%',
-          width: '600px',
-          height: '600px',
-          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          zIndex: 1
-        }}></div>
-        <div className="hero-content">
-          <div className="badge">
-            <Sparkles size={14} className="sparkle-icon" />
-            <span>v2.0 Intelligent Workspace</span>
-          </div>
-          <h1>Explore the Power of Nexus AI</h1>
-          <p>Your all-in-one creative companion for code, content, and conversation.</p>
-        </div>
-      </div>
-
-      <div className="dashboard-grid">
-        {tools.map((tool, index) => (
-          <div 
-            key={index} 
-            className="tool-card"
-            onClick={() => navigate(tool.path)}
-            style={{ 
-              background: tool.bg,
-              boxShadow: `0 10px 30px -10px ${tool.glow}`
-            }}
-          >
-            <div className="card-icon" style={{ backgroundColor: `${tool.color}22`, color: tool.color, borderColor: `${tool.color}44` }}>
-              <tool.icon size={28} />
+      <div className="dashboard-container" style={{ width: '75%', maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div 
+          className="dashboard-hero"
+          style={{ 
+            background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: '24px',
+            height: '240px'
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            right: '-10%',
+            width: '600px',
+            height: '600px',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+            zIndex: 1
+          }}></div>
+          <div className="hero-content">
+            <div className="badge">
+              <Sparkles size={14} className="sparkle-icon" />
+              <span>v2.0 Intelligent Workspace</span>
             </div>
-            <div className="card-info">
-              <h3>{tool.title}</h3>
-              <p>{tool.description}</p>
-              <div className="card-action">
-                <span style={{ color: tool.color }}>Launch Workspace</span>
-                <ArrowRight size={16} style={{ color: tool.color }} />
+            <h1 style={{ fontSize: '42px' }}>Explore the Power of Nexus AI</h1>
+            <p style={{ fontSize: '18px' }}>Your all-in-one creative companion for code, content, and conversation.</p>
+          </div>
+        </div>
+
+        <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+          {tools.map((tool, index) => (
+            <div 
+              key={index} 
+              className="tool-card"
+              onClick={() => navigate(tool.path)}
+              style={{ 
+                background: tool.bg,
+                boxShadow: `0 10px 30px -10px ${tool.glow}`,
+                height: '280px'
+              }}
+            >
+              <div className="card-icon" style={{ backgroundColor: `${tool.color}22`, color: tool.color, borderColor: `${tool.color}44` }}>
+                <tool.icon size={28} />
+              </div>
+              <div className="card-info">
+                <h3 style={{ fontSize: '22px' }}>{tool.title}</h3>
+                <p style={{ fontSize: '15px' }}>{tool.description}</p>
+                <div className="card-action">
+                  <span style={{ color: tool.color }}>Launch Workspace</span>
+                  <ArrowRight size={16} style={{ color: tool.color }} />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
