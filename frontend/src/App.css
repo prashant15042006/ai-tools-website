@@ -1,18 +1,18 @@
 :root {
-  --bg-main: #0b0d17; /* Very dark navy/black */
-  --bg-sidebar: #0f111a; /* Slightly lighter sidebar */
-  --bg-hover: #1e2235;
-  --bg-bubble-user: linear-gradient(135deg, #2563eb, #1d4ed8);
-  --bg-bubble-ai: #161a2c;
-  --bg-input: rgba(15, 23, 42, 0.6);
-  --text-primary: #ffffff;
+  --bg-main: #06080f; /* Deeper black */
+  --bg-sidebar: rgba(11, 14, 26, 0.7); /* Glassmorphism sidebar */
+  --bg-hover: rgba(59, 130, 246, 0.1);
+  --bg-bubble-user: linear-gradient(135deg, #3b82f6, #2563eb);
+  --bg-bubble-ai: rgba(30, 41, 59, 0.5);
+  --bg-input: rgba(15, 23, 42, 0.8);
+  --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --border-color: rgba(255, 255, 255, 0.08);
-  --accent: #2563eb;
-  --accent-glow: rgba(37, 99, 235, 0.4);
-  --pink-glow: rgba(236, 72, 153, 0.3);
-  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
-  --sidebar-active: linear-gradient(90deg, #2563eb, #1e40af);
+  --accent: #3b82f6;
+  --accent-glow: rgba(59, 130, 246, 0.3);
+  --pink-glow: rgba(236, 72, 153, 0.2);
+  --font-main: 'Outfit', 'Inter', sans-serif;
+  --sidebar-active: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
 
 /* ===== LIGHT MODE OVERRIDES (Optional but keeping consistent) ===== */

@@ -12,24 +12,27 @@ const Dashboard = () => {
       description: 'Interact with our advanced AI for brainstorming, analysis, and general assistance.',
       icon: MessageSquare,
       path: '/chat',
-      bg: '/assets/chat_bg.png',
-      color: '#06b6d4', // Cyan
+      bg: 'linear-gradient(135deg, #0f172a, #1e293b)',
+      color: '#3b82f6',
+      glow: 'rgba(59, 130, 246, 0.4)'
     },
     {
       title: 'Code Generator',
       description: 'Generate high-quality code, debug snippets, and explain complex algorithms.',
       icon: Code,
       path: '/code',
-      bg: '/assets/code_bg.png',
-      color: '#8b5cf6', // Purple
+      bg: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+      color: '#8b5cf6',
+      glow: 'rgba(139, 92, 246, 0.4)'
     },
     {
       title: 'Content Writer',
       description: 'Create compelling articles, social media posts, and professional emails in seconds.',
       icon: PenTool,
       path: '/content',
-      bg: '/assets/content_bg.png',
-      color: '#f59e0b', // Orange
+      bg: 'linear-gradient(135deg, #2d1b0b, #452e13)',
+      color: '#f59e0b',
+      glow: 'rgba(245, 158, 11, 0.4)'
     }
   ];
 
@@ -37,15 +40,29 @@ const Dashboard = () => {
     <div className="dashboard-page">
       <div 
         className="dashboard-hero"
-        style={{ backgroundImage: "url('/assets/dashboard_hero.png')" }}
+        style={{ 
+          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          position: 'relative',
+          overflow: 'hidden'
+        }}
       >
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-10%',
+          width: '600px',
+          height: '600px',
+          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          zIndex: 1
+        }}></div>
         <div className="hero-content">
           <div className="badge">
             <Sparkles size={14} className="sparkle-icon" />
-            <span>Next-Gen AI Workspace</span>
+            <span>v2.0 Intelligent Workspace</span>
           </div>
-          <h1>Welcome to Nexus AI</h1>
-          <p>The all-in-one creative suite powered by state-of-the-art artificial intelligence.</p>
+          <h1>Explore the Power of Nexus AI</h1>
+          <p>Your all-in-one creative companion for code, content, and conversation.</p>
         </div>
       </div>
 
@@ -56,18 +73,19 @@ const Dashboard = () => {
             className="tool-card"
             onClick={() => navigate(tool.path)}
             style={{ 
-              backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.8)), url(${tool.bg})`
+              background: tool.bg,
+              boxShadow: `0 10px 30px -10px ${tool.glow}`
             }}
           >
-            <div className="card-icon" style={{ backgroundColor: `${tool.color}22`, color: tool.color }}>
+            <div className="card-icon" style={{ backgroundColor: `${tool.color}22`, color: tool.color, borderColor: `${tool.color}44` }}>
               <tool.icon size={28} />
             </div>
             <div className="card-info">
               <h3>{tool.title}</h3>
               <p>{tool.description}</p>
               <div className="card-action">
-                <span>Launch Tool</span>
-                <ArrowRight size={16} />
+                <span style={{ color: tool.color }}>Launch Workspace</span>
+                <ArrowRight size={16} style={{ color: tool.color }} />
               </div>
             </div>
           </div>

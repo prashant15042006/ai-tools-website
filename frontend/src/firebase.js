@@ -4,13 +4,13 @@ import { getFirestore } from "firebase/firestore";
 
 // PASTE YOUR FIREBASE CONFIG HERE FROM FIREBASE CONSOLE
 const firebaseConfig = {
-  apiKey: "AIzaSyClou0eTKirnxqlUU4weCpZFhXh-YNxlQ4",
-  authDomain: "ai-workspace-2aa76.firebaseapp.com",
-  projectId: "ai-workspace-2aa76",
-  storageBucket: "ai-workspace-2aa76.firebasestorage.app",
-  messagingSenderId: "126844779624",
-  appId: "1:126844779624:web:d2e2f462f5f264daf20fdd",
-  measurementId: "G-1V6Q4QTDJK"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
