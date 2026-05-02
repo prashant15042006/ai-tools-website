@@ -87,6 +87,8 @@ const SYSTEM_PROMPT = (userName = "User") => `You are **Nexus AI**, a helpful, f
 
 const callZAI = async (message, userName = "User") => {
   const models = [
+    "google/gemini-2.0-flash-lite-preview-02-05:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemini-2.0-flash-001",
     "google/gemini-flash-1.5",
     "google/gemini-pro",
@@ -143,9 +145,12 @@ const callZAI = async (message, userName = "User") => {
 
 const callZAIStream = async (message, res, userName = "User") => {
   const models = [
+    "google/gemini-2.0-flash-lite-preview-02-05:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemini-2.0-flash-001",
     "google/gemini-flash-1.5",
-    "openai/gpt-4o-mini"
+    "openai/gpt-4o-mini",
+    "meta-llama/llama-3.1-8b-instruct:free"
   ];
 
   for (const model of models) {
