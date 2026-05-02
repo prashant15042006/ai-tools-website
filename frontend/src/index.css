@@ -2,58 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+@layer base {
+  body {
+    margin: 0;
+    font-family: 'Inter', Arial, sans-serif;
+  }
 }
 
-/* Markdown Styles */
-.prose h1, .prose h2, .prose h3 {
-  @apply text-slate-100 font-semibold mt-6 mb-2;
-}
-.prose p {
-  @apply mb-4 leading-relaxed;
-}
-.prose ul {
-  @apply list-disc pl-6 mb-4;
-}
-.prose ol {
-  @apply list-decimal pl-6 mb-4;
-}
-.prose code {
-  @apply bg-slate-900 px-1 rounded font-mono text-sm;
-}
-.prose pre {
-  @apply bg-slate-950 p-4 rounded-lg overflow-x-auto border border-slate-800 mb-4;
-}
-.prose pre code {
-  @apply bg-transparent p-0 text-slate-200;
-}
-.prose strong {
-  @apply text-slate-50 font-semibold;
+@layer utilities {
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
 }
 
-/* Global body setup */
-body {
-  @apply font-sans;
-  margin: 0;
-  font-family: Inter, Arial, sans-serif;
-}
-
-/* Dark / Light Themes */
-.dark {
-  @apply bg-slate-900 text-white;
-}
-.light {
-  @apply bg-gray-100 text-black;
+@layer components {
+  /* Markdown Styles */
+  .prose h1, .prose h2, .prose h3 {
+    @apply text-slate-100 font-semibold mt-6 mb-2;
+  }
+  .prose p {
+    @apply mb-4 leading-relaxed;
+  }
+  .prose ul {
+    @apply list-disc pl-6 mb-4;
+  }
+  .prose ol {
+    @apply list-decimal pl-6 mb-4;
+  }
+  .prose code {
+    @apply bg-slate-900 px-1 rounded font-mono text-sm;
+  }
+  .prose pre {
+    @apply bg-slate-950 p-4 rounded-lg overflow-x-auto border border-slate-800 mb-4;
+  }
+  .prose pre code {
+    @apply bg-transparent p-0 text-slate-200;
+  }
+  .prose strong {
+    @apply text-slate-50 font-semibold;
+  }
 }
