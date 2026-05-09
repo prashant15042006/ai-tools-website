@@ -3,7 +3,7 @@
    Caches app shell for offline support & faster load
    ============================================= */
 
-const CACHE_NAME = 'nexus-ai-v2';
+const CACHE_NAME = 'nexus-ai-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,6 +11,8 @@ const STATIC_ASSETS = [
   '/favicon.ico',
   '/logo192.png',
   '/logo512.png',
+  '/screenshot_mobile.png',
+  '/screenshot_desktop.png',
 ];
 
 // Install: cache static assets

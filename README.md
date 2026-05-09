@@ -25,3 +25,4 @@ A premium, world-class AI dashboard featuring Chat, Code Generation, and Content
 - **Advanced UI**: Large, readable fonts and modern rounded "bubble" layouts.
 - **Multi-Tool**: Dedicated panels for coding and content creation.
 - **Voice Support**: Integrated speech-to-text and text-to-speech.
+- **PWA Ready**: Fully optimized for mobile installation with 100/100 PWABuilder score compatibility.

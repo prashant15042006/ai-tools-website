@@ -2,6 +2,7 @@
   "short_name": "Nexus AI",
   "name": "Nexus AI — Intelligent Workspace",
   "description": "Your all-in-one AI workspace for chat, code generation, and content writing.",
+  "id": "com.nexusai.workspace",
   "icons": [
     {
       "src": "favicon.ico",
@@ -21,6 +22,22 @@
       "purpose": "any maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "screenshot_mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Nexus AI Mobile Chat"
+    },
+    {
+      "src": "screenshot_desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Nexus AI Desktop Dashboard"
+    }
+  ],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -28,8 +45,10 @@
   "theme_color": "#0b0e1a",
   "background_color": "#06080f",
   "lang": "en",
-  "categories": ["productivity", "utilities"],
-  "screenshots": [],
+  "categories": ["productivity", "utilities", "education"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "shortcuts": [
     {
       "name": "Open Chat",
