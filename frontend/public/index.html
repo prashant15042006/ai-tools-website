@@ -2,13 +2,48 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nexus AI | Intelligent Workspace</title>
+    <!-- Responsive viewport for mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Theme -->
+    <meta name="theme-color" content="#0b0e1a" />
+    <meta name="background-color" content="#06080f" />
+
+    <!-- SEO -->
+    <meta name="description" content="Nexus AI — Your all-in-one AI workspace for chat, code generation, and content writing." />
+    <meta name="keywords" content="AI, chat, code generator, content writer, Nexus AI" />
+
+    <!-- PWA iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nexus AI" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+
+    <!-- PWA Android / General -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+
+    <!-- Open Graph (for sharing) -->
+    <meta property="og:title" content="Nexus AI — Intelligent Workspace" />
+    <meta property="og:description" content="Your all-in-one AI workspace for chat, code, and content." />
+    <meta property="og:image" content="%PUBLIC_URL%/logo512.png" />
+    <meta property="og:type" content="website" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <title>Nexus AI | Intelligent Workspace</title>
+
+    <!-- Prevent flash of unstyled content on mobile -->
+    <style>
+      html, body, #root { height: 100%; background: #06080f; }
+    </style>
   </head>
   <body>
+    <noscript>You need to enable JavaScript to run Nexus AI.</noscript>
     <div id="root"></div>
   </body>
 </html>

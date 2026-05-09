@@ -5,7 +5,6 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { useUIStore } from "./uiStore";
 
-
 // Root render
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
@@ -26,3 +25,17 @@ root.render(
 );
 
 reportWebVitals();
+
+// ─── Register PWA Service Worker ───────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        console.log('✅ Nexus SW registered:', registration.scope);
+      })
+      .catch((err) => {
+        console.warn('❌ SW registration failed:', err);
+      });
+  });
+}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield } from "lucide-react";
+import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield, Menu, X, Download } from "lucide-react";
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
 import ContentGenerator from "./ContentGenerator";
@@ -14,8 +14,19 @@ import "./App.css";
 // Global context for dark mode & TTS
 export const AppContext = createContext();
 
-const SidebarItem = ({ to, icon: Icon, label, isActive, color }) => (
-  <Link to={to} className={`menu-item ${isActive ? "active" : ""}`}>
+// ── Custom hook: detect mobile ──────────────────────────────
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
+}
+
+const SidebarItem = ({ to, icon: Icon, label, isActive, color, onClick }) => (
+  <Link to={to} className={`menu-item ${isActive ? "active" : ""}`} onClick={onClick}>
     <Icon size={20} style={{ color: color || 'inherit' }} />
     <span>{label}</span>
   </Link>
@@ -192,6 +203,96 @@ const SettingsView = () => {
   );
 };
 
+// ── Bottom Navigation Bar (Mobile) ────────────────────────────────────────
+const BottomNav = ({ navigate, pathname }) => {
+  const navItems = [
+    { to: '/menu', icon: Layout,       label: 'Home',     color: '#ec4899' },
+    { to: '/chat', icon: MessageSquare, label: 'Chat',    color: '#3b82f6' },
+    { to: '/code', icon: Code,          label: 'Code',    color: '#10b981' },
+    { to: '/content', icon: PenTool,   label: 'Write',    color: '#a855f7' },
+    { to: '/settings', icon: Settings, label: 'Settings', color: '#94a3b8' },
+  ];
+
+  const isActive = (to) => {
+    if (to === '/menu') return pathname === '/menu' || pathname === '/';
+    return pathname === to;
+  };
+
+  return (
+    <nav className="bottom-nav" role="navigation" aria-label="Mobile navigation">
+      {navItems.map((item) => (
+        <button
+          key={item.to}
+          className={`bottom-nav-item ${isActive(item.to) ? 'active' : ''}`}
+          onClick={() => navigate(item.to)}
+          aria-label={item.label}
+          style={{ position: 'relative' }}
+        >
+          <item.icon
+            size={22}
+            style={{ color: isActive(item.to) ? item.color : undefined }}
+          />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+};
+
+// ── PWA Install Banner ────────────────────────────────────────────────────
+const PwaInstallBanner = () => {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const dismissed = localStorage.getItem('pwa_banner_dismissed');
+      if (!dismissed) setShowBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowBanner(false);
+      localStorage.setItem('pwa_installed', 'true');
+    }
+    setDeferredPrompt(null);
+  };
+
+  const handleDismiss = () => {
+    setShowBanner(false);
+    localStorage.setItem('pwa_banner_dismissed', 'true');
+  };
+
+  if (!showBanner) return null;
+
+  return (
+    <div className="pwa-install-banner">
+      <div className="pwa-banner-icon">
+        <Sparkles size={20} color="white" />
+      </div>
+      <div className="pwa-banner-text">
+        <strong>Install Nexus AI</strong>
+        <span>Add to Home Screen for app-like experience</span>
+      </div>
+      <button className="pwa-install-btn" onClick={handleInstall}>
+        <Download size={14} style={{ display: 'inline', marginRight: '4px' }} />
+        Install
+      </button>
+      <button className="pwa-dismiss-btn" onClick={handleDismiss} aria-label="Dismiss">
+        <X size={16} />
+      </button>
+    </div>
+  );
+};
+
 // --- Main App Logic ---
 
 function AppContent() {
@@ -199,7 +300,9 @@ function AppContent() {
   const navigate = useNavigate();
   const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, loading } = useContext(AppContext);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
+  const isMobile = useIsMobile();
   
   const [projects, setProjects] = useState(() => {
     const saved = localStorage.getItem("nexus_projects");
@@ -213,12 +316,25 @@ function AppContent() {
     localStorage.setItem("nexus_projects", JSON.stringify(projects));
   }, [projects]);
 
+  // Close mobile sidebar on navigation
+  const handleMobileNav = () => {
+    if (isMobile) setIsMobileSidebarOpen(false);
+  };
+
   if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>Loading Nexus...</div>;
 
   return (
     <div className={`app-container ${darkMode ? '' : 'light-mode'}`}>
-      {/* Sidebar */}
-      <aside className={`sidebar ${!isSidebarOpen ? "collapsed" : ""}`}>
+      
+      {/* ── Mobile Sidebar Backdrop Overlay ── */}
+      <div
+        className={`sidebar-overlay ${isMobileSidebarOpen ? 'visible' : ''}`}
+        onClick={() => setIsMobileSidebarOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* ── Sidebar ── */}
+      <aside className={`sidebar ${!isSidebarOpen ? "collapsed" : ""} ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-header">
           <div className="logo-section">
             <div className="logo-icon" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)', boxShadow: '0 0 15px rgba(37, 99, 235, 0.4)' }}>
@@ -226,13 +342,17 @@ function AppContent() {
             </div>
             <span className="logo-text" style={{ fontSize: '20px', letterSpacing: '-0.5px' }}>Nexus</span>
           </div>
-          <button className="close-sidebar-btn" onClick={() => setIsSidebarOpen(false)} title="Close Sidebar">
+          <button
+            className="close-sidebar-btn"
+            onClick={() => { setIsSidebarOpen(false); setIsMobileSidebarOpen(false); }}
+            title="Close Sidebar"
+          >
             <PanelLeftClose size={20} />
           </button>
         </div>
 
         <div className="new-chat-container">
-          <button className="new-chat-btn" onClick={() => { setChatKey(prev => prev + 1); navigate('/chat'); }}>
+          <button className="new-chat-btn" onClick={() => { setChatKey(prev => prev + 1); navigate('/chat'); handleMobileNav(); }}>
             <Plus size={18} />
             New Chat
           </button>
@@ -240,12 +360,12 @@ function AppContent() {
 
         <div className="sidebar-scrollable">
           <div className="sidebar-section-title">Menu</div>
-          <SidebarItem to="/menu" icon={Layout} label="Dashboard" isActive={location.pathname === "/menu" || location.pathname === "/"} color="#ec4899" />
-          <SidebarItem to="/chat" icon={MessageSquare} label="Chat" isActive={location.pathname === "/chat"} color="#3b82f6" />
-          <SidebarItem to="/code" icon={Code} label="Code" isActive={location.pathname === "/code"} color="#10b981" />
-          <SidebarItem to="/content" icon={PenTool} label="Write" isActive={location.pathname === "/content"} color="#a855f7" />
-          <SidebarItem to="/projects" icon={FolderOpen} label="Projects" isActive={location.pathname === "/projects"} color="#f59e0b" />
-          <SidebarItem to="/settings" icon={Settings} label="Settings" isActive={location.pathname === "/settings"} color="#94a3b8" />
+          <SidebarItem to="/menu" icon={Layout} label="Dashboard" isActive={location.pathname === "/menu" || location.pathname === "/"} color="#ec4899" onClick={handleMobileNav} />
+          <SidebarItem to="/chat" icon={MessageSquare} label="Chat" isActive={location.pathname === "/chat"} color="#3b82f6" onClick={handleMobileNav} />
+          <SidebarItem to="/code" icon={Code} label="Code" isActive={location.pathname === "/code"} color="#10b981" onClick={handleMobileNav} />
+          <SidebarItem to="/content" icon={PenTool} label="Write" isActive={location.pathname === "/content"} color="#a855f7" onClick={handleMobileNav} />
+          <SidebarItem to="/projects" icon={FolderOpen} label="Projects" isActive={location.pathname === "/projects"} color="#f59e0b" onClick={handleMobileNav} />
+          <SidebarItem to="/settings" icon={Settings} label="Settings" isActive={location.pathname === "/settings"} color="#94a3b8" onClick={handleMobileNav} />
 
           <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '16px 0' }} />
           <div className="sidebar-section-title">Recent Chats</div>
@@ -253,7 +373,7 @@ function AppContent() {
             <div style={{ color: 'var(--text-secondary)', fontSize: '14px', padding: '10px 14px', fontStyle: 'italic' }}>No recent chats yet</div>
           ) : (
             recentChats.map((chat) => (
-              <div key={chat.id} className="chat-history-item" onClick={() => navigate('/chat')}>
+              <div key={chat.id} className="chat-history-item" onClick={() => { navigate('/chat'); handleMobileNav(); }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{chat.title}</span>
               </div>
             ))
@@ -287,16 +407,29 @@ function AppContent() {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* ── Main Content ── */}
       <main className="main-content">
-        {/* Header */}
+        {/* ── Header ── */}
         <header className="top-bar">
           <div className="header-left">
-            {!isSidebarOpen && (
+            {/* Mobile hamburger — always visible on mobile */}
+            <button
+              className="mobile-menu-btn open-sidebar-btn"
+              style={{ display: 'none' }}
+              onClick={() => setIsMobileSidebarOpen(true)}
+              title="Open Menu"
+              aria-label="Open navigation menu"
+            >
+              <Menu size={22} />
+            </button>
+
+            {/* Desktop open sidebar button */}
+            {!isMobile && !isSidebarOpen && (
               <button className="open-sidebar-btn" onClick={() => setIsSidebarOpen(true)} title="Open Sidebar">
                 <PanelLeft size={22} />
               </button>
             )}
+
             <h1 className="page-title" style={{ fontSize: '20px', fontWeight: '800' }}>
                {location.pathname.replace('/', '').toUpperCase() || "DASHBOARD"}
             </h1>
@@ -326,7 +459,7 @@ function AppContent() {
           </div>
         </header>
 
-        {/* Routes Container */}
+        {/* ── Routes Container ── */}
         <Routes location={location}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/menu" element={<Dashboard />} />
@@ -337,6 +470,12 @@ function AppContent() {
           <Route path="/settings" element={<SettingsView />} />
         </Routes>
       </main>
+
+      {/* ── Mobile Bottom Navigation ── */}
+      <BottomNav navigate={navigate} pathname={location.pathname} />
+
+      {/* ── PWA Install Banner ── */}
+      <PwaInstallBanner />
     </div>
   );
 }
