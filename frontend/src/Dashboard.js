@@ -36,10 +36,20 @@ const Dashboard = () => {
     }
   ];
 
+  const [projectCount, setProjectCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("nexus_projects");
+    if (saved) {
+      const projects = JSON.parse(saved);
+      setProjectCount(projects.length);
+    }
+  }, []);
+
   const stats = [
+    { label: 'Workspaces', value: projectCount.toString(), icon: Sparkles, color: '#a855f7' },
     { label: 'AI Models', value: '3+', icon: Brain, color: '#3b82f6' },
     { label: 'Responses', value: '∞', icon: Zap, color: '#10b981' },
-    { label: 'Tools', value: '3', icon: Sparkles, color: '#a855f7' },
   ];
 
   return (
