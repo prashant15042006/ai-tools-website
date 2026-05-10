@@ -5,20 +5,20 @@
   "id": "com.nexusai.workspace",
   "icons": [
     {
-      "src": "icon-192.png",
-      "type": "image/png",
+      "src": "icon-192.jpg",
+      "type": "image/jpeg",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
-      "type": "image/png",
+      "src": "icon-512.jpg",
+      "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
-      "type": "image/png",
+      "src": "icon-512.jpg",
+      "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "maskable"
     }
@@ -56,14 +56,14 @@
       "short_name": "Chat",
       "description": "Start a new AI conversation",
       "url": "/chat",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icon-192.jpg", "sizes": "192x192" }]
     },
     {
       "name": "Code Generator",
       "short_name": "Code",
       "description": "Generate and debug code with AI",
       "url": "/code",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icon-192.jpg", "sizes": "192x192" }]
     }
   ]
 }
