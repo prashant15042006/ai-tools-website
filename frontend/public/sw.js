@@ -1,19 +1,18 @@
 /* =============================================
-   NEXUS AI — Service Worker
+   NEXUS AI — Service Worker (Pro)
    Caches app shell for offline support & faster load
+   Adds Background Sync & Periodic Sync support
    ============================================= */
 
-const CACHE_NAME = 'nexus-ai-v4';
+const CACHE_NAME = 'nexus-ai-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/icon-192.jpg',
-  '/icon-512.jpg',
-  '/logo192.jpg',
-  '/logo512.jpg',
-  '/maskable_logo.jpg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/maskable_icon.png',
   '/screenshot_mobile.jpg',
   '/screenshot_desktop.jpg',
 ];
@@ -42,7 +41,6 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: Network first, fall back to cache
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET and API requests
   if (
     event.request.method !== 'GET' ||
     event.request.url.includes('/api/') ||
@@ -55,7 +53,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache fresh responses
         if (response && response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -65,7 +62,6 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Offline fallback
         return caches.match(event.request).then((cached) => {
           return cached || caches.match('/index.html');
         });
@@ -73,14 +69,39 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notifications (for future use)
+// --- Background Sync ---
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-messages') {
+    console.log('🔄 Background sync triggered: sync-messages');
+    // Implement message sync logic here if needed
+  }
+});
+
+// --- Periodic Background Sync ---
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'daily-update') {
+    console.log('📅 Periodic sync triggered: daily-update');
+    // Pre-cache new content or updates
+  }
+});
+
+// --- Push Notifications ---
 self.addEventListener('push', (event) => {
   const data = event.data?.json() || {};
   event.waitUntil(
     self.registration.showNotification(data.title || 'Nexus AI', {
       body: data.body || 'New update from Nexus AI',
-      icon: '/icon-192.jpg',
-      badge: '/icon-192.jpg',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      vibrate: [100, 50, 100],
+      data: { url: data.url || '/' }
     })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow(event.notification.data.url)
   );
 });
