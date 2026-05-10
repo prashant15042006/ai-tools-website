@@ -9,6 +9,8 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
+  '/icon-192.jpg',
+  '/icon-512.jpg',
   '/logo192.jpg',
   '/logo512.jpg',
   '/maskable_logo.jpg',
@@ -77,8 +79,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Nexus AI', {
       body: data.body || 'New update from Nexus AI',
-      icon: '/logo192.png',
-      badge: '/logo192.png',
+      icon: '/icon-192.jpg',
+      badge: '/icon-192.jpg',
     })
   );
 });

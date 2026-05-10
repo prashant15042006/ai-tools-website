@@ -3,6 +3,9 @@
   "name": "Nexus AI — Intelligent Workspace",
   "description": "Your all-in-one AI workspace for chat, code generation, and content writing.",
   "id": "com.nexusai.workspace",
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.jpg",
@@ -17,7 +20,7 @@
       "purpose": "any"
     },
     {
-      "src": "icon-512.jpg",
+      "src": "maskable_logo.jpg",
       "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "maskable"
@@ -45,7 +48,6 @@
   "orientation": "portrait-primary",
   "theme_color": "#0b0e1a",
   "background_color": "#06080f",
-  "lang": "en",
   "categories": ["productivity", "utilities", "education"],
   "launch_handler": {
     "client_mode": "focus-existing"
