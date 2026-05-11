@@ -15,30 +15,15 @@
     "minimal-ui"
   ],
   "icons": [
-    {
-      "src": "icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-192.png",
-      "type": "image/png",
-      "sizes": "114x114",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any"
-    },
-    {
-      "src": "maskable_icon.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "maskable"
-    }
+    { "src": "icon-192.png", "type": "image/png", "sizes": "96x96", "purpose": "any" },
+    { "src": "icon-192.png", "type": "image/png", "sizes": "114x114", "purpose": "any" },
+    { "src": "icon-192.png", "type": "image/png", "sizes": "128x128", "purpose": "any" },
+    { "src": "icon-192.png", "type": "image/png", "sizes": "144x144", "purpose": "any" },
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "256x256", "purpose": "any" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "384x384", "purpose": "any" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "maskable_icon.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
   ],
   "screenshots": [
     {
@@ -64,7 +49,8 @@
   "categories": [
     "productivity",
     "utilities",
-    "education"
+    "education",
+    "business"
   ],
   "launch_handler": {
     "client_mode": "focus-existing"
@@ -75,32 +61,34 @@
       "short_name": "Chat",
       "description": "Start a new AI conversation",
       "url": "/chat",
-      "icons": [
-        {
-          "src": "icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Code Generator",
       "short_name": "Code",
       "description": "Generate and debug code with AI",
       "url": "/code",
-      "icons": [
-        {
-          "src": "icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ],
   "edge_side_panel": {
     "preferred_width": 400
   },
-  "scope_extensions": [],
-  "file_handlers": [],
-  "protocol_handlers": [],
+  "file_handlers": [
+    {
+      "action": "/chat",
+      "accept": {
+        "text/plain": [".txt"],
+        "text/markdown": [".md"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+nexus",
+      "url": "/chat?q=%s"
+    }
+  ],
   "share_target": {
     "action": "/share",
     "method": "GET",

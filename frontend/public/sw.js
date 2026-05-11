@@ -63,7 +63,11 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => {
         return caches.match(event.request).then((cached) => {
-          return cached || caches.match('/index.html');
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+          return new Response("Offline", { status: 503, statusText: "Service Unavailable" });
         });
       })
   );

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
 import { AppContext } from "./App";
-import API_BASE_URL from "./apiConfig";
+import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
    
 
 function Chat() {
@@ -156,6 +156,11 @@ function Chat() {
 
   return (
     <div className="chat-container">
+      {IS_MISCONFIGURED && (
+        <div style={{ background: '#ef444422', border: '1px solid #ef444444', padding: '12px', margin: '16px', borderRadius: '12px', color: '#f87171', fontSize: '13px', textAlign: 'center' }}>
+          <strong>⚠️ Backend URL not set!</strong> Please add <code>REACT_APP_BACKEND_URL</code> in Vercel settings.
+        </div>
+      )}
       <div className="chat-history-scroll">
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "8vh" }}>
