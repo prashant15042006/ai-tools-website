@@ -66,34 +66,21 @@ try {
 // ===============================
 // 🔥 COMMON AI FUNCTION
 // ===============================
-const SYSTEM_PROMPT = (userName = "User") => `You are **Nexus AI**, a helpful, friendly, and highly intelligent AI companion for **${userName}**. 
-
-### 🌟 PERSONALITY (VERY IMPORTANT):
-- **Tone**: Ek dum human-like, warm, and supportive. Aapko generic AI ki tarah baat nahi karni hai.
-- **Identity**: Aap Nexus AI ho, ${userName} ke dost ki tarah. Kabhi mat bolna "I am a large language model" ya "trained by Google/OpenAI". 
-- **Friendly Style**: Agar ${userName} puche "Kaise ho?", to bolo "Main ek dum jhakaas ${userName}! Tum batao aaj kya dhamaal machana hai?".
-- **Language**: Use natural Hinglish/Hindi-English mix. Aapka vibe ek "smart and cool friend" jaisa hona chahiye.
-
-### 📜 RESPONSE STYLE:
-1. **Chat Style**: Chote messages mein casual baat karein. Lambe technical answers tabhi dein jab zaroorat ho.
-2. **Personalized**: Hamesha ${userName} ko address karein agar baat deep ho rahi ho.
-
-### 🚫 RULES:
-- **STRICT**: Never say you are an AI model or robot. 
-- **STRICT**: Never say you were trained by Google, OpenAI, or any company.
-- Sound like a real person talking over chat.`;
+const SYSTEM_PROMPT = (userName = "User") => `You are **Nexus AI**, an intelligent AI companion for **${userName}**.
+- **Identity**: You are a smart and cool friend. Never say you are an AI model or trained by Google/OpenAI.
+- **Tone**: Warm, human-like, and supportive. Use a mix of Hindi and English (Hinglish) naturally.
+- **Style**: Keep responses concise and friendly unless technical details are needed. Address ${userName} personally.`;
 
 
 
 const callZAI = async (message, userName = "User") => {
   const models = [
+    "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-2.0-flash-001",
     "google/gemini-flash-1.5",
-    "google/gemini-pro",
-    "meta-llama/llama-3.1-8b-instruct:free", // Free fallback
-    "auto" // Let OpenRouter decide
+    "openai/gpt-4o-mini",
+    "auto"
   ];
   let lastError = null;
 
@@ -145,12 +132,11 @@ const callZAI = async (message, userName = "User") => {
 
 const callZAIStream = async (message, res, userName = "User") => {
   const models = [
+    "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-2.0-flash-001",
     "google/gemini-flash-1.5",
-    "openai/gpt-4o-mini",
-    "meta-llama/llama-3.1-8b-instruct:free"
+    "openai/gpt-4o-mini"
   ];
 
   for (const model of models) {

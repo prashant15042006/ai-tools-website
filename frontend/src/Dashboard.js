@@ -94,7 +94,7 @@ const Dashboard = () => {
               <Sparkles size={14} className="sparkle-icon" />
               <span>v2.0 Intelligent Workspace</span>
             </div>
-            <h1>Explore the Power of Nexus AI</h1>
+            <h1>Welcome, {localStorage.getItem("nexus_user_name") || "User"}!</h1>
             <p>Your all-in-one creative companion for code, content, and conversation.</p>
           </div>
         </div>

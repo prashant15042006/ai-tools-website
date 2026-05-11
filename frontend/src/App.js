@@ -248,8 +248,11 @@ const PwaInstallBanner = () => {
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
       const dismissed = localStorage.getItem('pwa_banner_dismissed');
-      if (!dismissed) setShowBanner(true);
+      
+      if (!dismissed && !isStandalone) setShowBanner(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
