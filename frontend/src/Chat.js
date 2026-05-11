@@ -48,13 +48,20 @@ function Chat() {
     const aiMsgId = Date.now() + Math.random();
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
+    // Prepare history (last 10 messages for context)
+    const history = messages.slice(-10).map(msg => ({
+      role: msg.sender === "user" ? "user" : "assistant",
+      content: msg.text
+    })).filter(msg => msg.content); // Filter out empty messages (like the typing indicator)
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           message: text,
-          userName: user?.displayName || user?.email?.split('@')[0] || "User"
+          userName: user?.displayName || user?.email?.split('@')[0] || "User",
+          history: history
         }),
       });
 

@@ -130,13 +130,20 @@ const callZAI = async (message, userName = "User") => {
   throw new Error(lastError || "All models failed. Please verify your API key and credits at openrouter.ai");
 };
 
-const callZAIStream = async (message, res, userName = "User") => {
+const callZAIStream = async (message, res, userName = "User", history = []) => {
   const models = [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemini-flash-1.5",
     "openai/gpt-4o-mini"
+  ];
+
+  // Format messages for OpenRouter
+  const apiMessages = [
+    { role: "system", content: SYSTEM_PROMPT(userName) },
+    ...history,
+    { role: "user", content: message }
   ];
 
   for (const model of models) {
@@ -153,10 +160,7 @@ const callZAIStream = async (message, res, userName = "User") => {
         body: JSON.stringify({
           model: model,
           stream: true,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT(userName) },
-            { role: "user", content: message }
-          ],
+          messages: apiMessages,
         }),
       });
 
@@ -243,7 +247,7 @@ const callZAIStream = async (message, res, userName = "User") => {
 // ===============================
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, userName } = req.body;
+    const { message, userName, history } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
     // Set headers for SSE (Server-Sent Events)
@@ -251,7 +255,7 @@ app.post("/api/chat", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    await callZAIStream(message, res, userName);
+    await callZAIStream(message, res, userName, history);
 
   } catch (error) {
     console.error("Chat Error:", error.message);
