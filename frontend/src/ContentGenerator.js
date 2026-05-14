@@ -246,7 +246,7 @@ function ContentGenerator() {
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isListening ? "Listening..." : "Tell me what you want to write..."}
+            placeholder={isListening ? "Listening..." : "you want to write..."}
             rows="1"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

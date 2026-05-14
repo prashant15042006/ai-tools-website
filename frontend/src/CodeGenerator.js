@@ -246,7 +246,7 @@ function CodeGenerator() {
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isListening ? "Listening..." : "Describe the code you want..."}
+            placeholder={isListening ? "Listening..." : "send a message..."}
             rows="1"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
