@@ -759,7 +759,7 @@ body {
   margin-bottom: 1.2em;
   font-size: 21px;
   line-height: 1.8;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 .message-content p:last-child {
   margin-bottom: 0;
@@ -782,7 +782,7 @@ body {
 .message-content li {
   margin-bottom: 10px;
   line-height: 2;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 .message-content li::marker {
   color: #6366f1;
@@ -790,7 +790,7 @@ body {
 .message-content blockquote {
   border-left: 4px solid #8b5cf6;
   padding: 14px 20px;
-  color: #e2e8f0;
+  color: var(--text-secondary);
   margin: 16px 0;
   font-style: italic;
   background: rgba(139, 92, 246, 0.08);
