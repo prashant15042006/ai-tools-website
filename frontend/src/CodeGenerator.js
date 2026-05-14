@@ -160,7 +160,7 @@ function CodeGenerator() {
             <p style={{ color: "var(--text-secondary)", fontSize: "16px", maxWidth: "480px", textAlign: "center" }}>
               Generate, explain, and debug code instantly. Type your requirements below.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginTop: "16px", maxWidth: "620px", width: "100%" }}>
+            <div className="chat-suggestions-grid" style={{ marginTop: "16px" }}>
               {[
                 { title: "React Counter", sub: "with hooks and styling" },
                 { title: "Python Web Scraper", sub: "using BeautifulSoup" },

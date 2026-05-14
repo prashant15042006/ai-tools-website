@@ -60,7 +60,7 @@ function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           message: text,
-          userName: user?.displayName || user?.email?.split('@')[0] || "User",
+          userName: localStorage.getItem("nexus_user_name") || user?.displayName || user?.email?.split('@')[0] || "User",
           history: history
         }),
       });
@@ -178,7 +178,7 @@ function Chat() {
               <h2 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", letterSpacing: "-1px" }}>Welcome to Nexus!</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "16px", marginTop: "8px" }}>Your intelligent AI workspace.</p>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginTop: "24px", maxWidth: "620px", width: "100%" }}>
+            <div className="chat-suggestions-grid">
               {[
                 { title: "Quantum Computing", sub: "Explain it in simple terms" },
                 { title: "Debug Code", sub: "Help me find bugs in my code" },

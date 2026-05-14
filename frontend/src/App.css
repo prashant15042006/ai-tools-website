@@ -487,6 +487,21 @@ body {
     radial-gradient(circle at 80% 100%, var(--pink-glow), transparent 30%);
 }
 
+.chat-suggestions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 24px;
+  max-width: 620px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .chat-suggestions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* === ChatGPT-style Message Layout === */
 .chat-message-row {
   display: flex;
@@ -983,15 +998,19 @@ body {
   }
 
   .stat-card {
-    padding: 12px;
+    padding: 12px 8px;
     border-radius: 12px;
-    gap: 10px;
+    gap: 8px;
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
   }
 
   .stat-icon {
     width: 36px;
     height: 36px;
     border-radius: 10px;
+    margin: 0 auto;
   }
 
   .stat-value {
@@ -1005,22 +1024,6 @@ body {
   .dashboard-tools-grid {
     grid-template-columns: 1fr;
     gap: 14px;
-  }
-
-  .tool-card {
-    height: 180px !important;
-  }
-}
-
-@media (max-width: 380px) {
-  .stat-card {
-    flex-direction: column;
-    text-align: center;
-    gap: 6px;
-    padding: 10px 6px;
-  }
-  .dashboard-stats {
-    gap: 8px;
   }
 }
 
@@ -1439,7 +1442,32 @@ body {
   }
 
   .tool-card {
-    height: 180px !important;
+    height: auto !important;
+    min-height: 160px !important;
+    padding: 24px 20px !important;
+    padding-top: 70px !important;
+  }
+
+  .card-icon {
+    top: 20px !important;
+    left: 20px !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .card-icon svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .card-info h3 {
+    font-size: 18px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .card-info p {
+    font-size: 13px !important;
+    margin-bottom: 12px !important;
   }
 
   .tool-card:hover {

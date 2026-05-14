@@ -160,7 +160,7 @@ function ContentGenerator() {
             <p style={{ color: "var(--text-secondary)", fontSize: "16px", maxWidth: "480px", textAlign: "center" }}>
               Draft emails, blogs, essays and more. Professional content at your fingertips.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginTop: "16px", maxWidth: "620px", width: "100%" }}>
+            <div className="chat-suggestions-grid" style={{ marginTop: "16px" }}>
               {[
                 { title: "Professional Email", sub: "requesting for a leave" },
                 { title: "Tech Blog Post", sub: "about AI trends in 2024" },

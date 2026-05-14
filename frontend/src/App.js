@@ -191,7 +191,11 @@ const SettingsView = () => {
           </div>
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '16px' }}>
              <button 
-               onClick={() => signOut(auth)}
+               onClick={() => {
+                 localStorage.removeItem("nexus_mock_user");
+                 localStorage.removeItem("nexus_user_name");
+                 signOut(auth).finally(() => window.location.reload());
+               }}
                style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
              >
                Sign Out from Account
@@ -399,8 +403,8 @@ function AppContent() {
             <button 
               onClick={() => {
                 localStorage.removeItem("nexus_mock_user");
-                localStorage.removeItem("nexus_mock_name");
-                signOut(auth);
+                localStorage.removeItem("nexus_user_name");
+                signOut(auth).finally(() => window.location.reload());
               }} 
               style={{ width: '100%', padding: '8px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
             >
@@ -500,7 +504,7 @@ function App() {
         setLoading(false);
       } else {
         const mockEmail = localStorage.getItem("nexus_mock_user");
-        const mockName = localStorage.getItem("nexus_mock_name");
+        const mockName = localStorage.getItem("nexus_user_name");
         if (mockEmail) {
           setUser({
             email: mockEmail,
