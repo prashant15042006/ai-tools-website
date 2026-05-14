@@ -631,6 +631,7 @@ body {
   border-radius: 24px;
   display: flex;
   align-items: center;
+  gap: 12px;
   padding: 10px 16px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
   pointer-events: auto;

@@ -230,7 +230,7 @@ function ContentGenerator() {
       <div className="input-container">
         <div className="input-box-wrapper">
           <button className="action-btn" title="Paste from Clipboard" onClick={handlePaste}>
-            <ClipboardPaste size={24} />
+            <ClipboardPaste size={20} />
           </button>
           <textarea
             className="chat-textarea"
@@ -248,13 +248,12 @@ function ContentGenerator() {
           <button
             className={`action-btn ${isListening ? "listening" : ""}`}
             title={isListening ? "Listening..." : "Voice Input"}
-            style={{ marginRight: "10px" }}
             onClick={startListening}
           >
-            <Mic size={24} />
+            <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
           </button>
           <button className="send-btn" onClick={() => sendMessage()} disabled={loading || !input.trim()}>
-            <Send size={22} />
+            <Send size={18} />
           </button>
         </div>
       </div>

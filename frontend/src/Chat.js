@@ -254,14 +254,13 @@ function Chat() {
       </div>
 
       <div className="input-container">
-        <div className="input-box-wrapper" style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderRadius: '24px', gap: '12px' }}>
-          <button className="action-btn" title="Paste" onClick={handlePaste} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="input-box-wrapper">
+          <button className="action-btn" title="Paste" onClick={handlePaste}>
             <ClipboardPaste size={20} />
           </button>
           
           <textarea
             className="chat-textarea"
-            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '16px', color: 'var(--text-primary)', resize: 'none', padding: '8px 0' }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Send a message..."
@@ -278,7 +277,6 @@ function Chat() {
             className={`action-btn ${isListening ? "listening" : ""}`} 
             title="Voice Input" 
             onClick={startListening} 
-            style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
           </button>
@@ -287,17 +285,6 @@ function Chat() {
             className="send-btn" 
             onClick={() => sendMessage()} 
             disabled={loading || !input.trim()}
-            style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '12px', 
-              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              color: 'white',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-            }}
           >
             <Send size={18} />
           </button>
