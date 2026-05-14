@@ -507,12 +507,11 @@ body {
   display: flex;
   padding: 16px 20px;
   max-width: 100%;
-  margin: 0;
+  margin: 8px 0;
   gap: 16px;
   align-items: flex-start;
   transition: all 0.3s ease;
   border-radius: 18px;
-  margin: 8px 12px;
 }
 
 .chat-message-row.user-row {
@@ -527,8 +526,9 @@ body {
   flex-direction: row;
   justify-content: flex-start;
   background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .user-row .message-body {
@@ -588,6 +588,7 @@ body {
 .message-body {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .message-content {
@@ -596,6 +597,7 @@ body {
   color: var(--text-primary);
   word-wrap: break-word;
   overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .message-content.user-text {
@@ -805,20 +807,43 @@ body {
   color: #fca5a5;
 }
 .message-content pre {
-  background-color: #020617;
-  padding: 22px;
+  background: #0f172a;
+  padding: 16px;
+  padding-top: 36px;
   border-radius: 12px;
-  overflow-x: auto;
-  border: 1px solid var(--border-color);
-  margin: 20px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 16px 0;
   max-width: 100%;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow-x: hidden;
 }
+
+.message-content pre::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 50px;
+  height: 12px;
+  background-image: radial-gradient(circle at 6px 6px, #ff5f56 6px, transparent 6px),
+                    radial-gradient(circle at 24px 6px, #ffbd2e 6px, transparent 6px),
+                    radial-gradient(circle at 42px 6px, #27c93f 6px, transparent 6px);
+  background-size: 50px 12px;
+  background-repeat: no-repeat;
+  opacity: 0.8;
+}
+
 .message-content pre code {
   background-color: transparent;
   padding: 0;
   color: #e2e8f0;
-  font-size: 16px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
   line-height: 1.7;
+  white-space: pre-wrap !important;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Typing animation */
@@ -1490,7 +1515,7 @@ body {
   /* ── Chat Message Rows ── */
   .chat-message-row {
     padding: 12px 16px;
-    margin: 6px 6px;
+    margin: 6px 0;
     border-radius: 14px;
   }
 
