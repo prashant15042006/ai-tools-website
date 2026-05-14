@@ -153,7 +153,7 @@ function CodeGenerator() {
       <div className="chat-history-scroll">
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "8vh" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #10b981, #059669)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ flexShrink: 0, width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #10b981, #059669)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
               <Code size={32} color="white" />
             </div>
             <h2 style={{ fontSize: "28px", fontWeight: "700", color: "var(--text-primary)" }}>Code Generator</h2>
@@ -171,10 +171,20 @@ function CodeGenerator() {
                   key={i}
                   className="dashboard-card"
                   onClick={() => sendMessage("Generate: " + s.title + " " + s.sub)}
-                  style={{ padding: "18px", cursor: "pointer" }}
+                  style={{ 
+                    padding: "16px", 
+                    cursor: "pointer", 
+                    aspectRatio: "1",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center",
+                    gap: "8px"
+                  }}
                 >
                   <div style={{ fontSize: "15px", fontWeight: "600" }}>{s.title}</div>
-                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>{s.sub}</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{s.sub}</div>
                 </div>
               ))}
             </div>

@@ -498,7 +498,7 @@ body {
 
 @media (max-width: 768px) {
   .chat-suggestions-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -1127,7 +1127,8 @@ body {
 .card-icon {
   position: absolute;
   top: 30px;
-  left: 30px;
+  right: 30px;
+  left: auto;
   width: 56px;
   height: 56px;
   border-radius: 16px;
@@ -1451,7 +1452,8 @@ body {
 
   .card-icon {
     top: 20px !important;
-    left: 20px !important;
+    right: 20px !important;
+    left: auto !important;
     width: 40px !important;
     height: 40px !important;
   }

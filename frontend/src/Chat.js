@@ -171,8 +171,8 @@ function Chat() {
       <div className="chat-history-scroll">
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "8vh" }}>
-            <div style={{ width: "84px", height: "84px", borderRadius: "50%", background: "linear-gradient(135deg, #2563eb, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 30px rgba(37, 99, 235, 0.4)" }}>
-              <Sparkles size={40} color="white" />
+            <div style={{ flexShrink: 0, width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #2563eb, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 30px rgba(37, 99, 235, 0.4)", margin: "0 auto" }}>
+              <Sparkles size={32} color="white" />
             </div>
             <div style={{ textAlign: "center" }}>
               <h2 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", letterSpacing: "-1px" }}>Welcome to Nexus!</h2>
@@ -190,15 +190,19 @@ function Chat() {
                   className="dashboard-card"
                   onClick={() => sendMessage(s.sub)}
                   style={{ 
-                    padding: "18px", 
+                    padding: "16px", 
                     cursor: "pointer", 
                     background: "rgba(255, 255, 255, 0.05)", 
                     border: "1px solid rgba(255, 255, 255, 0.08)", 
                     borderRadius: "16px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "4px",
-                    transition: "all 0.3s ease"
+                    gap: "8px",
+                    transition: "all 0.3s ease",
+                    aspectRatio: "1",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
