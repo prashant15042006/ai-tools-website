@@ -82,7 +82,13 @@ export default function ImageGeneratorDemo() {
   return (
     <div style={{ padding: 16, maxWidth: 720 }}>
       <h3 style={{ marginBottom: 8 }}>Image Generator (demo)</h3>
-      <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ width: '100%', minHeight: 80, padding: 8, borderRadius: 8, marginBottom: 8 }} />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+        <select value={provider} onChange={(e) => setProvider(e.target.value)} style={{ padding: 8, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
+          <option value="server">Server (recommended)</option>
+          <option value="puterjs">Puter.js (client SDK)</option>
+        </select>
+        <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} style={{ flex: 1, minHeight: 80, padding: 8, borderRadius: 8 }} />
+      </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <button onClick={handleGenerate} disabled={loading} className="send-btn">
           {loading ? 'Generating...' : 'Generate Image'}
