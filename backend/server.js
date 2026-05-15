@@ -395,6 +395,53 @@ app.get("/api/health", (req, res) => {
 });
 
 // ===============================
+// 🖼️ IMAGE GENERATION
+// POST /api/generate-image
+// Body: { prompt: string, size?: string }
+// Uses OpenAI Images API when OPENAI_API_KEY is present. Returns { success: true, data: { b64_json } }
+// NOTE: This endpoint expects a valid OPENAI_API_KEY in environment variables.
+app.post("/api/generate-image", async (req, res) => {
+  try {
+    const { prompt, size = "1024x1024" } = req.body || {};
+    if (!prompt) return res.status(400).json({ success: false, error: "Prompt required" });
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({ success: false, error: "Image API key not configured on server." });
+    }
+
+    // Call OpenAI Images (DALL·E) endpoint and request base64 JSON
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        prompt,
+        n: 1,
+        size,
+        response_format: "b64_json",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Image API error:", data);
+      return res.status(502).json({ success: false, error: data.error || data });
+    }
+
+    const b64 = data?.data?.[0]?.b64_json;
+    if (!b64) return res.status(500).json({ success: false, error: "No image returned from provider" });
+
+    res.json({ success: true, data: { b64_json: b64 } });
+  } catch (err) {
+    console.error("Generate Image Error:", err.message || err);
+    res.status(500).json({ success: false, error: err.message || String(err) });
+  }
+});
+
+// ===============================
 // 🚀 START SERVER
 // ===============================
 const startServer = async () => {
