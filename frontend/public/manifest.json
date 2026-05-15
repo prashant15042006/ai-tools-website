@@ -1,6 +1,6 @@
 {
-  "short_name": "Nexus AI",
-  "name": "Nexus AI — Intelligent Workspace",
+  "short_name": "Nexuss Ai",
+  "name": "Nexuss Ai — Intelligent Workspace",
   "description": "Your all-in-one AI workspace for chat, code generation, and content writing.",
   "id": "com.nexusai.workspace",
   "lang": "en",
@@ -23,7 +23,7 @@
     { "src": "icon-512.png", "type": "image/png", "sizes": "256x256", "purpose": "any" },
     { "src": "icon-512.png", "type": "image/png", "sizes": "384x384", "purpose": "any" },
     { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
-    { "src": "maskable_icon.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
   ],
   "screenshots": [
     {
@@ -31,14 +31,14 @@
       "sizes": "1080x1920",
       "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "Nexus AI Mobile Chat"
+      "label": "Nexuss Ai Mobile Chat"
     },
     {
       "src": "screenshot_desktop.jpg",
       "sizes": "1920x1080",
       "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "Nexus AI Desktop Dashboard"
+      "label": "Nexuss Ai Desktop Dashboard"
     }
   ],
   "start_url": "/",

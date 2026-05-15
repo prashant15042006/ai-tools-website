@@ -286,7 +286,7 @@ const PwaInstallBanner = () => {
         <Sparkles size={20} color="white" />
       </div>
       <div className="pwa-banner-text">
-        <strong>Install Nexus AI</strong>
+        <strong>Install Nexuss Ai</strong>
         <span>Add to Home Screen for app-like experience</span>
       </div>
       <button className="pwa-install-btn" onClick={handleInstall}>
