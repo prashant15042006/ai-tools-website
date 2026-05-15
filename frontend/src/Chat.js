@@ -175,7 +175,7 @@ function Chat() {
               <Sparkles size={32} color="white" />
             </div>
             <div style={{ textAlign: "center" }}>
-              <h2 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", letterSpacing: "-1px" }}>Welcome to Nexus!</h2>
+              <h2 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", letterSpacing: "-1px" }}>Welcome to Nexuss!</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "16px", marginTop: "8px" }}>Your intelligent AI workspace.</p>
             </div>
             <div className="chat-suggestions-grid">
@@ -233,7 +233,7 @@ function Chat() {
               </div>
               <div className="message-body">
                 <div className="message-sender">
-                  {msg.sender === "user" ? "You" : "Nexus AI"}
+                  {msg.sender === "user" ? "You" : "Nexuss AI"}
                 </div>
                 <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
                   {msg.sender === "user" ? (
@@ -293,7 +293,6 @@ function Chat() {
             <Send size={18} />
           </button>
         </div>
-        <div className="disclaimer">Nexus ca make mistakes. Verify upload information.</div>
       </div>
     </div>
   );
