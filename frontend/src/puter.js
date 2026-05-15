@@ -32,4 +32,6 @@ export function b64ToDataUrl(b64) {
   return `data:image/png;base64,${b64}`;
 }
 
-export default { generateImage, b64ToDataUrl };
+const puter = { generateImage, b64ToDataUrl };
+
+export default puter;
