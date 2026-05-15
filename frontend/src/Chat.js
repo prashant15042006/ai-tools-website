@@ -187,36 +187,19 @@ function Chat() {
                 { title: "Debug Code", sub: "Help me find bugs in my code" },
                 { title: "Translation", sub: "Translate English to Spanish" },
                 { title: "Email Writing", sub: "Write a professional email" },
-              ].map((s, i) => (
-                <div
-                  key={i}
-                  className="dashboard-card"
-                  style={{ 
-                    padding: "16px", 
-                    cursor: "pointer", 
-                    background: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-                    border: "1px solid rgba(255, 255, 255, 0.06)", 
-                    borderRadius: "16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                    transition: "all 0.3s ease",
-                    aspectRatio: "1",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    textAlign: "center",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}
-                >
-                  <div style={{ position: "absolute", right: -20, top: -20, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle at 30% 30%, rgba(96,165,250,0.08), transparent 40%), radial-gradient(circle at 70% 70%, rgba(124,58,237,0.06), transparent 30%)", pointerEvents: "none" }} />
-                  <div style={{ fontSize: "15px", fontWeight: "700", color: "#e2e8f0" }}>{s.title}</div>
-                  <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{s.sub}</div>
-                  <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                    <button onClick={() => sendMessage(s.sub)} className="dashboard-cta" style={{ padding: "8px 12px", borderRadius: 10, background: "linear-gradient(135deg,#2563eb,#7c3aed)", color: "white", border: "none", cursor: "pointer" }}>Send</button>
-                    <button onClick={() => { setModalTitle(s.title); setModalPrompt(s.sub); setPromptModalOpen(true); }} className="dashboard-cta" style={{ padding: "8px 12px", borderRadius: 10, background: "transparent", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}>Open Prompt</button>
+              ].map((s, i) => {
+                return (
+                  <div key={i} className="dashboard-card" style={{ padding: 16, cursor: 'pointer', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 8, aspectRatio: '1', justifyContent: 'center', alignItems: 'center', textAlign: 'center', position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle at 30% 30%, rgba(96,165,250,0.08), transparent 40%), radial-gradient(circle at 70% 70%, rgba(124,58,237,0.06), transparent 30%)', pointerEvents: 'none' }} />
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>{s.title}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{s.sub}</div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button onClick={() => sendMessage(s.sub)} className="dashboard-cta" style={{ padding: '8px 12px', borderRadius: 10, background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: 'white', border: 'none', cursor: 'pointer' }}>Send</button>
+                      <button onClick={() => { setModalTitle(s.title); setModalPrompt(s.sub); setPromptModalOpen(true); }} className="dashboard-cta" style={{ padding: '8px 12px', borderRadius: 10, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>Open Prompt</button>
+                    </div>
                   </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
