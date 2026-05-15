@@ -17,6 +17,9 @@ function Chat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [promptModalOpen, setPromptModalOpen] = useState(false);
+  const [modalPrompt, setModalPrompt] = useState("");
+  const [modalTitle, setModalTitle] = useState("");
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -188,12 +191,11 @@ function Chat() {
                 <div
                   key={i}
                   className="dashboard-card"
-                  onClick={() => sendMessage(s.sub)}
                   style={{ 
                     padding: "16px", 
                     cursor: "pointer", 
-                    background: "rgba(255, 255, 255, 0.05)", 
-                    border: "1px solid rgba(255, 255, 255, 0.08)", 
+                    background: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
+                    border: "1px solid rgba(255, 255, 255, 0.06)", 
                     borderRadius: "16px",
                     display: "flex",
                     flexDirection: "column",
@@ -202,22 +204,18 @@ function Chat() {
                     aspectRatio: "1",
                     justifyContent: "center",
                     alignItems: "center",
-                    textAlign: "center"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-                    e.currentTarget.style.borderColor = "var(--accent)";
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-                    e.currentTarget.style.transform = "translateY(0)";
+                    textAlign: "center",
+                    position: "relative",
+                    overflow: "hidden"
                   }}
                 >
-                  <div style={{ fontSize: "15px", fontWeight: "600", color: "#e2e8f0" }}>{s.title}</div>
+                  <div style={{ position: "absolute", right: -20, top: -20, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle at 30% 30%, rgba(96,165,250,0.08), transparent 40%), radial-gradient(circle at 70% 70%, rgba(124,58,237,0.06), transparent 30%)", pointerEvents: "none" }} />
+                  <div style={{ fontSize: "15px", fontWeight: "700", color: "#e2e8f0" }}>{s.title}</div>
                   <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{s.sub}</div>
-                </div>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                    <button onClick={() => sendMessage(s.sub)} className="dashboard-cta" style={{ padding: "8px 12px", borderRadius: 10, background: "linear-gradient(135deg,#2563eb,#7c3aed)", color: "white", border: "none", cursor: "pointer" }}>Send</button>
+                    <button onClick={() => { setModalTitle(s.title); setModalPrompt(s.sub); setPromptModalOpen(true); }} className="dashboard-cta" style={{ padding: "8px 12px", borderRadius: 10, background: "transparent", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}>Open Prompt</button>
+                  </div>
               ))}
             </div>
           </div>
@@ -256,6 +254,29 @@ function Chat() {
 
         <div ref={messagesEndRef} />
       </div>
+
+      {promptModalOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(2,6,23,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ width: "min(720px, 94%)", background: "#061020", borderRadius: 12, padding: 20, boxShadow: "0 20px 60px rgba(2,6,23,0.8)", position: "relative" }}>
+            <button onClick={() => { navigator.clipboard && navigator.clipboard.writeText(modalPrompt); }} title="Copy" style={{ position: "absolute", right: 12, top: 12, background: "transparent", border: "1px solid rgba(255,255,255,0.06)", color: "white", padding: 8, borderRadius: 8, cursor: "pointer" }}>
+              <ClipboardPaste size={16} />
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "linear-gradient(135deg,#2563eb,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700 }}>{modalTitle?.charAt(0) || "P"}</div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{modalTitle}</div>
+                <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>Edit the prompt below to customize before inserting or sending.</div>
+              </div>
+            </div>
+            <textarea value={modalPrompt} onChange={(e) => setModalPrompt(e.target.value)} style={{ width: "100%", minHeight: 140, resize: "vertical", padding: 12, borderRadius: 8, background: "#071226", color: "#e6eef8", border: "1px solid rgba(255,255,255,0.04)" }} />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+              <button onClick={() => { setPromptModalOpen(false); }} style={{ padding: "8px 12px", borderRadius: 10, background: "transparent", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}>Close</button>
+              <button onClick={() => { setInput(modalPrompt); setPromptModalOpen(false); }} style={{ padding: "8px 12px", borderRadius: 10, background: "linear-gradient(135deg,#10b981,#06b6d4)", color: "white", border: "none", cursor: "pointer" }}>Insert</button>
+              <button onClick={() => { sendMessage(modalPrompt); setPromptModalOpen(false); }} style={{ padding: "8px 12px", borderRadius: 10, background: "linear-gradient(135deg,#2563eb,#7c3aed)", color: "white", border: "none", cursor: "pointer" }}>Send</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="input-container">
         <div className="input-box-wrapper">
