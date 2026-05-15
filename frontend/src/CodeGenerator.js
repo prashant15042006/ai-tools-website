@@ -201,7 +201,7 @@ function CodeGenerator() {
               </div>
               <div className="message-body">
                 <div className="message-sender">
-                  {msg.sender === "user" ? "You" : "Nexus Code AI"}
+                  {msg.sender === "user" ? "You" : "Nexuss Code AI"}
                 </div>
                 <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
                   {msg.sender === "user" ? (
@@ -223,7 +223,7 @@ function CodeGenerator() {
                 <Code size={20} color="white" />
               </div>
               <div className="message-body">
-                <div className="message-sender">Nexus Code AI</div>
+                <div className="message-sender">Nexuss Code AI</div>
                 <div className="typing-indicator">
                   <div className="typing-dot"></div>
                   <div className="typing-dot"></div>

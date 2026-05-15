@@ -124,7 +124,7 @@ export default function Login() {
           <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/20 ring-1 ring-white/20">
             <Sparkles size={34} className="text-white" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">Welcome to Nexus</h1>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">Welcome to Nexuss</h1>
           <p className="text-slate-400 text-base">Professional AI Workspace</p>
         </div>
 

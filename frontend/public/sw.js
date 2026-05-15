@@ -1,10 +1,10 @@
 /* =============================================
-   NEXUS AI — Service Worker (Pro)
+  NEXUSS AI — Service Worker (Pro)
    Caches app shell for offline support & faster load
    Adds Background Sync & Periodic Sync support
    ============================================= */
 
-const CACHE_NAME = 'nexus-ai-v5';
+const CACHE_NAME = 'nexuss-ai-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -93,8 +93,8 @@ self.addEventListener('periodicsync', (event) => {
 self.addEventListener('push', (event) => {
   const data = event.data?.json() || {};
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Nexus AI', {
-      body: data.body || 'New update from Nexus AI',
+    self.registration.showNotification(data.title || 'Nexuss AI', {
+      body: data.body || 'New update from Nexuss AI',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       vibrate: [100, 50, 100],

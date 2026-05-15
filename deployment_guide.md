@@ -1,4 +1,4 @@
-# 🚀 Nexus AI: Deployment & GitHub Guide
+# 🚀 Nexuss AI: Deployment & GitHub Guide
 
 This guide explains how to manage your project structure, keep it professional, and host it online.
 
@@ -26,7 +26,7 @@ To show your project on your GitHub profile, follow these steps:
 2. Click **Add New Project**.
 3. Import your GitHub `AI_window` repo.
 4. Set the **Root Directory** to `frontend`.
-5. Deploy! Vercel will give you a permanent link (e.g., `https://nexus-ai.vercel.app`).
+5. Deploy! Vercel will give you a permanent link (e.g., `https://nexuss-ai.vercel.app`).
 
 ### Backend (Render)
 1. Go to [Render](https://render.com).

@@ -1,10 +1,10 @@
-# Nexus AI Workspace 🚀
+# Nexuss AI Workspace 🚀
 
 A premium, world-class AI dashboard featuring Chat, Code Generation, and Content Creation tools. Built with a focus on performance, aesthetics, and professional utility.
 
 ## 🌟 Key Features
 
-- **🧠 Conversation Memory**: Nexus AI now remembers your previous context, allowing for natural, multi-turn conversations.
+- **🧠 Conversation Memory**: Nexuss AI now remembers your previous context, allowing for natural, multi-turn conversations.
 - **💬 Executive Chat**: Professional, structured AI responses with Markdown support.
 - **💻 Code Architect**: Dedicated tool for generating clean, optimized code across multiple languages.
 - **✍️ Content Studio**: Generate high-quality blogs, emails, and creative content instantly.

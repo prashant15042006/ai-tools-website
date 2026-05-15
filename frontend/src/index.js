@@ -32,7 +32,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
-        console.log('✅ Nexus SW registered:', registration.scope);
+        console.log('✅ Nexuss SW registered:', registration.scope);
       })
       .catch((err) => {
         console.warn('❌ SW registration failed:', err);

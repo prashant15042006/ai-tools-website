@@ -328,7 +328,7 @@ function AppContent() {
     if (isMobile) setIsMobileSidebarOpen(false);
   };
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>Loading Nexus...</div>;
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>Loading Nexuss...</div>;
 
   return (
     <div className={`app-container ${darkMode ? '' : 'light-mode'}`}>
@@ -347,7 +347,7 @@ function AppContent() {
             <div className="logo-icon" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)', boxShadow: '0 0 15px rgba(37, 99, 235, 0.4)' }}>
               <Sparkles size={18} color="white" />
             </div>
-            <span className="logo-text" style={{ fontSize: '20px', letterSpacing: '-0.5px' }}>Nexus</span>
+            <span className="logo-text" style={{ fontSize: '20px', letterSpacing: '-0.5px' }}>Nexuss</span>
           </div>
           <button
             className="close-sidebar-btn"
@@ -442,7 +442,7 @@ function AppContent() {
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '24px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 10px #22c55e' }}></div>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Nexus Online</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Nexuss Online</span>
             </div>
           </div>
 

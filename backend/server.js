@@ -154,8 +154,8 @@ const callZAIStream = async (message, res, userName = "User", history = []) => {
         headers: {
           "Authorization": `Bearer ${process.env.ZAI_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://nexus-ai.io",
-          "X-Title": "Nexus Workspace",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss Workspace",
         },
         body: JSON.stringify({
           model: model,

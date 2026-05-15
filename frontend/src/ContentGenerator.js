@@ -201,7 +201,7 @@ function ContentGenerator() {
               </div>
               <div className="message-body">
                 <div className="message-sender">
-                  {msg.sender === "user" ? "You" : "Nexus Writer AI"}
+                  {msg.sender === "user" ? "You" : "Nexuss Writer AI"}
                 </div>
                 <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
                   {msg.sender === "user" ? (
@@ -223,7 +223,7 @@ function ContentGenerator() {
                 <PenTool size={20} color="white" />
               </div>
               <div className="message-body">
-                <div className="message-sender">Nexus Writer AI</div>
+                <div className="message-sender">Nexuss Writer AI</div>
                 <div className="typing-indicator">
                   <div className="typing-dot"></div>
                   <div className="typing-dot"></div>
