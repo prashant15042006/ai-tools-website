@@ -1,12 +1,13 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield, Menu, X, Download } from "lucide-react";
+import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield, Menu, X, Download, Image } from "lucide-react";
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
 import ContentGenerator from "./ContentGenerator";
 import Dashboard from "./Dashboard";
 import PromptManager from "./PromptManager";
+import ImageGeneratorDemo from "./ImageGeneratorDemo";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Login from "./Login";
@@ -372,6 +373,7 @@ function AppContent() {
           <SidebarItem to="/chat" icon={MessageSquare} label="Chat" isActive={location.pathname === "/chat"} color="#3b82f6" onClick={handleMobileNav} />
           <SidebarItem to="/code" icon={Code} label="Code" isActive={location.pathname === "/code"} color="#10b981" onClick={handleMobileNav} />
           <SidebarItem to="/content" icon={PenTool} label="Write" isActive={location.pathname === "/content"} color="#a855f7" onClick={handleMobileNav} />
+          <SidebarItem to="/images" icon={Image} label="Images" isActive={location.pathname === "/images"} color="#f97316" onClick={handleMobileNav} />
           <SidebarItem to="/prompts" icon={Search} label="Prompts" isActive={location.pathname === "/prompts"} color="#06b6d4" onClick={handleMobileNav} />
           <SidebarItem to="/projects" icon={FolderOpen} label="Projects" isActive={location.pathname === "/projects"} color="#f59e0b" onClick={handleMobileNav} />
           <SidebarItem to="/settings" icon={Settings} label="Settings" isActive={location.pathname === "/settings"} color="#94a3b8" onClick={handleMobileNav} />
@@ -476,6 +478,7 @@ function AppContent() {
           <Route path="/code" element={<CodeGenerator />} />
           <Route path="/content" element={<ContentGenerator />} />
           <Route path="/prompts" element={<PromptManager onInsert={(p)=>{ /* insert to chat by navigating to chat and using localStorage or global context */ localStorage.setItem('prompt_to_insert', p); navigate('/chat'); }} />} />
+          <Route path="/images" element={<ImageGeneratorDemo />} />
           <Route path="/projects" element={<ProjectsView projects={projects} setProjects={setProjects} />} />
           <Route path="/settings" element={<SettingsView />} />
         </Routes>
