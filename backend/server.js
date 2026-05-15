@@ -431,10 +431,28 @@ app.post("/api/generate-image", async (req, res) => {
       return res.status(502).json({ success: false, error: data.error || data });
     }
 
-    const b64 = data?.data?.[0]?.b64_json;
-    if (!b64) return res.status(500).json({ success: false, error: "No image returned from provider" });
+    // OpenAI may return base64 JSON or a URL depending on account/API options.
+    const first = data?.data?.[0] || {};
+    if (first.b64_json) {
+      return res.json({ success: true, data: { b64_json: first.b64_json } });
+    }
 
-    res.json({ success: true, data: { b64_json: b64 } });
+    if (first.url) {
+      try {
+        // Fetch the remote image and convert to base64 on the server to avoid CORS issues
+        const imgResp = await fetch(first.url);
+        if (!imgResp.ok) throw new Error(`Failed to fetch image URL (${imgResp.status})`);
+        const buffer = await imgResp.arrayBuffer();
+        const b64 = Buffer.from(buffer).toString('base64');
+        return res.json({ success: true, data: { b64_json: b64 } });
+      } catch (fetchErr) {
+        console.error('Error converting image URL to base64:', fetchErr.message || fetchErr);
+        // Fallback: return the URL so frontend can try to display it directly
+        return res.json({ success: true, data: { url: first.url } });
+      }
+    }
+
+    return res.status(500).json({ success: false, error: 'No usable image data returned from provider' });
   } catch (err) {
     console.error("Generate Image Error:", err.message || err);
     res.status(500).json({ success: false, error: err.message || String(err) });

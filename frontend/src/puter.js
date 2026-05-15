@@ -14,6 +14,11 @@ export async function generateImage(prompt, size = '1024x1024') {
     });
 
     const json = await res.json();
+    // Normalize: if server returns url, convert to data URL client-side if possible
+    if (json.success && json.data) {
+      if (json.data.b64_json) return json;
+      if (json.data.url) return { success: true, data: { url: json.data.url } };
+    }
     return json;
   } catch (err) {
     return { success: false, error: err.message || String(err) };

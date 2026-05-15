@@ -15,53 +15,62 @@ export default function PromptManager({ onInsert }) {
   const openPrompt = (p) => {
     setSelected(p);
     setEdited(p.prompt);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="page-view" style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-        <div>
-          <h2 style={{ fontSize: 28, fontWeight: 800 }}>Prompts</h2>
-          <div style={{ color: 'var(--text-secondary)' }}>Manage reusable prompts. Click a prompt to open the editor.</div>
-        </div>
-        <div>
-          <button style={{ background: 'var(--accent)', color: 'white', padding: '10px 14px', borderRadius: 10, display: 'flex', gap: 8, alignItems: 'center', border: 'none' }} onClick={() => openPrompt({ id: Date.now(), title: 'New Prompt', prompt: '' })}>
-            <Plus size={16} /> New Prompt
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
-        {BUILT_IN_PROMPTS.map(p => (
-          <div key={p.id} onClick={() => openPrompt(p)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: 16, borderRadius: 12, cursor: 'pointer' }}>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>{p.title}</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: 13, height: 48, overflow: 'hidden' }}>{p.prompt}</div>
-          </div>
-        ))}
-      </div>
-
-      {selected && (
-        <div style={{ marginTop: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: 16, borderRadius: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+    <div className="main-content" style={{ padding: 24 }}>
+      <div style={{ display: 'flex', gap: 18, height: '100%' }}>
+        {/* Left: prompt list */}
+        <div style={{ width: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 20, fontWeight: 800 }}>{selected.title}</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Edit and insert this prompt into chat input.</div>
+              <h2 style={{ fontSize: 22, fontWeight: 800 }}>Prompts</h2>
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Manage reusable prompts</div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { navigator.clipboard && navigator.clipboard.writeText(edited); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', padding: '8px 10px', borderRadius: 8 }} aria-label="Copy prompt"> <ClipboardCopy size={16} /></button>
-              <button onClick={() => window.open('https://example.com', '_blank')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', padding: '8px 10px', borderRadius: 8 }} aria-label="Open documentation"><ExternalLink size={16} /></button>
+            <div>
+              <button className="new-chat-btn" onClick={() => openPrompt({ id: Date.now(), title: 'New Prompt', prompt: '' })}>
+                <Plus size={14} />&nbsp;New
+              </button>
             </div>
           </div>
 
-          <textarea value={edited} onChange={(e)=>setEdited(e.target.value)} style={{ width: '100%', minHeight: 180, marginTop: 12, padding: 12, borderRadius: 8, background: '#071226', color: '#e6eef8', border: '1px solid rgba(255,255,255,0.04)' }} />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-            <button onClick={() => setSelected(null)} style={{ padding: '8px 12px', borderRadius: 8, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}>Close</button>
-            <button onClick={() => { if (typeof onInsert === 'function') onInsert(edited); }} style={{ padding: '8px 12px', borderRadius: 8, background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: 'white', border: 'none' }}>Insert into chat</button>
+          <div style={{ overflowY: 'auto', paddingRight: 6, marginTop: 8 }}>
+            <div style={{ display: 'grid', gap: 12 }}>
+              {BUILT_IN_PROMPTS.map(p => (
+                <div key={p.id} onClick={() => openPrompt(p)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: 14, borderRadius: 10, cursor: 'pointer' }}>
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>{p.title}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 13, height: 44, overflow: 'hidden' }}>{p.prompt}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Right: editor */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: 16, borderRadius: 12, flex: '0 0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{selected?.title || 'Select a prompt'}</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{selected ? 'Edit and insert this prompt into chat input.' : 'Click a prompt to edit or create a new one.'}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { navigator.clipboard && navigator.clipboard.writeText(edited); }} className="icon-btn" aria-label="Copy prompt"> <ClipboardCopy size={16} /></button>
+                <button onClick={() => window.open('https://example.com', '_blank')} className="icon-btn" aria-label="Open docs"><ExternalLink size={16} /></button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <textarea value={edited} onChange={(e)=>setEdited(e.target.value)} style={{ width: '100%', height: '100%', minHeight: 320, padding: 16, borderRadius: 10, background: '#071226', color: '#e6eef8', border: '1px solid rgba(255,255,255,0.04)', resize: 'none' }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+            <button onClick={() => setSelected(null)} className="action-btn" style={{ padding: '8px 12px', borderRadius: 8, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid rgba(255,255,255,0.06)' }}>Close</button>
+            <button onClick={() => { if (typeof onInsert === 'function') onInsert(edited); }} className="send-btn" style={{ padding: '8px 12px', borderRadius: 8 }}>Insert into chat</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
