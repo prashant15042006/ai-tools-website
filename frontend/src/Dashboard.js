@@ -34,6 +34,25 @@ const Dashboard = () => {
       color: '#f59e0b',
       glow: 'rgba(245, 158, 11, 0.4)'
     }
+    ,
+    {
+      title: 'Images',
+      description: 'Generate images from text prompts using server or puter.js SDK.',
+      icon: Sparkles,
+      path: '/images',
+      bg: 'linear-gradient(135deg, #1f2937, #0b1220)',
+      color: '#fb923c',
+      glow: 'rgba(251, 146, 60, 0.28)'
+    },
+    {
+      title: 'Prompts',
+      description: 'Manage and reuse prompts across chats and generators.',
+      icon: Zap,
+      path: '/prompts',
+      bg: 'linear-gradient(135deg, #071029, #10233a)',
+      color: '#06b6d4',
+      glow: 'rgba(6, 182, 212, 0.18)'
+    }
   ];
 
   const [projectCount, setProjectCount] = React.useState(0);

@@ -80,7 +80,7 @@ export default function ImageGeneratorDemo() {
   };
 
   return (
-    <div style={{ padding: 16, maxWidth: 720 }}>
+    <div style={{ padding: 16, maxWidth: 920 }} className="image-generator-page">
       <h3 style={{ marginBottom: 8 }}>Image Generator (demo)</h3>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
         <select value={provider} onChange={(e) => setProvider(e.target.value)} style={{ padding: 8, borderRadius: 8, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
@@ -97,14 +97,14 @@ export default function ImageGeneratorDemo() {
 
       {error && <div style={{ color: '#f87171', marginBottom: 8 }}>{error}</div>}
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      <div className="image-preview-row" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         {imgSrc && (
-          <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', width: 512, height: 512 }}>
+          <div className="image-preview" style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
             <img src={imgSrc} alt="Generated" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         )}
 
-        <div ref={previewRef} style={{ width: 512, height: 512, borderRadius: 12, border: '1px dashed rgba(255,255,255,0.04)', display: imgSrc ? 'none' : 'block', overflow: 'hidden' }} />
+        <div ref={previewRef} className="image-preview image-preview-fallback" style={{ borderRadius: 12, border: '1px dashed rgba(255,255,255,0.04)', overflow: 'hidden' }} />
       </div>
     </div>
   );

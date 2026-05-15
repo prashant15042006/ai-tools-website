@@ -1010,6 +1010,42 @@ body {
   gap: 20px;
 }
 
+/* Image Generator responsive preview */
+.image-generator-page {
+  width: 100%;
+}
+.image-preview-row {
+  gap: 12px;
+}
+.image-preview {
+  width: 512px;
+  height: 512px;
+  flex-shrink: 0;
+}
+.image-preview-fallback {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .image-preview,
+  .image-preview-fallback {
+    width: 100%;
+    height: auto;
+  }
+  .image-preview img {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Prompt Manager responsive: stack columns */
+  .main-content > div {
+    flex-direction: column !important;
+  }
+  .main-content .icon-btn {
+    padding: 8px;
+  }
+}
+
 /* Mobile dashboard overrides */
 @media (max-width: 768px) {
   .dashboard-inner {
