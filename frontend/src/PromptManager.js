@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { ClipboardCopy, ExternalLink, Plus } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 
 const BUILT_IN_PROMPTS = [
   { id: 1, title: "Quantum Computing", prompt: "Explain quantum computing in simple terms for a beginner." },
@@ -50,8 +49,8 @@ export default function PromptManager({ onInsert }) {
               <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Edit and insert this prompt into chat input.</div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { navigator.clipboard && navigator.clipboard.writeText(edited); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', padding: '8px 10px', borderRadius: 8 }}> <ClipboardCopy size={16} /></button>
-              <a href="#" onClick={(e)=>e.preventDefault()} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', padding: '8px 10px', borderRadius: 8 }}><ExternalLink size={16} /></a>
+              <button onClick={() => { navigator.clipboard && navigator.clipboard.writeText(edited); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', padding: '8px 10px', borderRadius: 8 }} aria-label="Copy prompt"> <ClipboardCopy size={16} /></button>
+              <button onClick={() => window.open('https://example.com', '_blank')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', padding: '8px 10px', borderRadius: 8 }} aria-label="Open documentation"><ExternalLink size={16} /></button>
             </div>
           </div>
 
