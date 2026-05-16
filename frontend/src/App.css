@@ -1015,12 +1015,21 @@ body {
   width: 100%;
 }
 .image-preview-row {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 .image-preview {
-  width: 512px;
-  height: 512px;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: 512px;
+  aspect-ratio: 1 / 1;
+  flex: 1 1 320px;
+  min-width: 240px;
+}
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .image-preview-fallback {
   display: block;
@@ -1031,7 +1040,9 @@ body {
   .image-preview-fallback {
     width: 100%;
     height: auto;
+    max-width: 100%;
   }
+
   .image-preview img {
     width: 100%;
     height: auto;
@@ -1044,15 +1055,16 @@ body {
   .main-content .icon-btn {
     padding: 8px;
   }
+  .main-content .image-preview-row {
+    flex-direction: column;
+  }
 }
 
-/* Mobile dashboard overrides */
-@media (max-width: 768px) {
-  .dashboard-inner {
-    width: 95%;
-    gap: 16px;
-    padding-bottom: 16px;
-  }
+.dashboard-inner {
+  width: 95%;
+  gap: 16px;
+  padding-bottom: 16px;
+}
 
   .dashboard-stats {
     grid-template-columns: repeat(3, 1fr);
@@ -1087,9 +1099,6 @@ body {
     grid-template-columns: 1fr;
     gap: 14px;
   }
-}
-
-
 
 .dashboard-hero {
   position: relative;

@@ -1,0 +1,545 @@
+/* Prompt Manager Chat-style UI */
+
+.prompt-manager-page {
+  min-height: 100%;
+}
+
+.prompt-banner-card {
+  max-width: 1100px;
+  margin: 0 auto 28px;
+  padding: 32px 32px 28px;
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.28);
+}
+
+.prompt-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 18px;
+}
+
+.prompt-banner-card h1 {
+  font-size: 38px;
+  font-weight: 900;
+  margin: 0 0 12px;
+  color: #ffffff;
+}
+
+.prompt-banner-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+  max-width: 760px;
+  line-height: 1.7;
+}
+
+.prompt-top-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto 24px;
+}
+
+.prompt-search {
+  flex: 1;
+  min-width: 280px;
+  max-width: 660px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+}
+
+.prompt-search input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.prompt-top-row svg {
+  color: var(--text-secondary);
+}
+
+.prompt-new-btn {
+  min-width: 150px;
+  padding: 12px 18px;
+}
+
+.prompt-categories-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 1100px;
+  margin: 0 auto 24px;
+}
+
+.category-chip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-chip:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.category-chip.active {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.18), rgba(139, 92, 246, 0.18));
+  color: #ffffff;
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.prompt-suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  margin: 0 auto 32px;
+  max-width: 1100px;
+}
+
+.prompt-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px;
+  padding: 24px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+}
+
+.prompt-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.prompt-card.selected {
+  border-color: rgba(59, 130, 246, 0.7);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.prompt-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.prompt-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.prompt-card-tag {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.prompt-card-description {
+  color: var(--text-secondary);
+  margin: 18px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 70px;
+  overflow: hidden;
+}
+
+.prompt-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.prompt-editor-panel {
+  max-width: 1100px;
+  margin: 0 auto 40px;
+  padding: 28px;
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+}
+
+.prompt-editor-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.prompt-editor-label {
+  color: #60a5fa;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+}
+
+.prompt-editor-header h2 {
+  color: #ffffff;
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.prompt-editor-meta {
+  color: var(--text-secondary);
+  font-size: 14px;
+  min-width: 140px;
+  text-align: right;
+}
+
+.prompt-editor-body {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.prompt-editor-title {
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-size: 16px;
+  outline: none;
+}
+
+.prompt-editor-textarea {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  padding: 16px 18px;
+  font-size: 15px;
+  line-height: 1.7;
+  outline: none;
+}
+
+.prompt-editor-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.prompt-editor-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-editor-option label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.prompt-editor-option select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.prompt-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.prompt-insert-btn {
+  min-width: 130px;
+}
+
+.prompt-generate-result {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.prompt-generate-title {
+  color: #c7d2fe;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 12px;
+}
+
+.prompt-generate-box {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.prompt-generate-box.error {
+  color: #fecaca;
+}
+
+.prompt-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24px;
+  background: linear-gradient(to top, var(--bg-main) 92%, transparent);
+  pointer-events: none;
+}
+
+.prompt-footer .input-box-wrapper {
+  pointer-events: auto;
+  gap: 16px;
+}
+
+.prompt-footer-title {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.prompt-footer-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.prompt-ideas {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.idea-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.idea-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.idea-chip.active {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.idea-chip.recent {
+  background: rgba(59, 130, 246, 0.14);
+  color: #ffffff;
+  border-color: rgba(59, 130, 246, 0.34);
+}
+
+.top-right-add {
+  position: absolute;
+  top: 18px;
+  right: 28px;
+  z-index: 40;
+}
+
+.top-right-add .new-chat-btn.small {
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.08);
+}
+
+.message-box-mini {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: 18px;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(7, 18, 38, 0.9), rgba(3, 7, 18, 0.8));
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 12px 40px rgba(3, 7, 18, 0.6);
+  cursor: pointer;
+  z-index: 55;
+}
+
+.message-mini-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 120px;
+}
+
+.code-line {
+  height: 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.code-line.short {
+  width: 42px;
+}
+
+.code-line.medium {
+  width: 86px;
+}
+
+.message-mini-right {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.prompt-editor-bar {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: 18px;
+  background: rgba(7, 18, 38, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 18px;
+  border-radius: 18px;
+  display: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  z-index: 60;
+}
+
+.prompt-editor-bar.open {
+  display: block;
+}
+
+.editor-bar-inner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.editor-bar-title {
+  width: 100%;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.editor-bar-text {
+  width: 100%;
+  min-height: 64px;
+  max-height: 160px;
+  resize: none;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: transparent;
+  color: #87b6ef;
+}
+
+.editor-bar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .prompt-top-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .prompt-new-btn,
+  .prompt-search {
+    width: 100%;
+  }
+
+  .prompt-editor-header {
+    text-align: left;
+  }
+
+  .prompt-editor-meta {
+    width: 100%;
+    text-align: left;
+  }
+
+  .prompt-footer {
+    padding: 18px;
+  }
+
+  .prompt-editor-bar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .prompt-card {
+    padding: 22px;
+  }
+
+  .top-right-add {
+    right: 14px;
+    top: 12px;
+  }
+
+  .message-box-mini {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .message-mini-left {
+    display: none;
+  }
+}

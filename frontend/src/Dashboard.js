@@ -35,15 +35,7 @@ const Dashboard = () => {
       glow: 'rgba(245, 158, 11, 0.4)'
     }
     ,
-    {
-      title: 'Images',
-      description: 'Generate images from text prompts using server or puter.js SDK.',
-      icon: Sparkles,
-      path: '/images',
-      bg: 'linear-gradient(135deg, #1f2937, #0b1220)',
-      color: '#fb923c',
-      glow: 'rgba(251, 146, 60, 0.28)'
-    },
+    // Images card removed
     {
       title: 'Prompts',
       description: 'Manage and reuse prompts across chats and generators.',
