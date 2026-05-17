@@ -32,3 +32,5 @@ firebase-debug.log*
 
 # Project specific
 backend/serviceAccountKey.json
+
+.vercel
