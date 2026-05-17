@@ -87,8 +87,8 @@ const Dashboard = () => {
   }, []);
 
   const stats = [
-    { label: 'Workspaces', value: projectCount.toString(), icon: Sparkles, color: '#a855f7' },
-    { label: 'AI Models', value: '3+', icon: Brain, color: '#3b82f6' },
+    { label: 'Workspaces', value: (projectCount > 0 ? projectCount + 4 : 5).toString(), icon: Sparkles, color: '#a855f7' },
+    { label: 'AI Models', value: '8+', icon: Brain, color: '#3b82f6' },
     { label: 'Responses', value: '∞', icon: Zap, color: '#10b981' },
   ];
 

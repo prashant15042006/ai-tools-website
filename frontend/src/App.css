@@ -1748,4 +1748,75 @@ body {
     right: 24px;
     width: 340px;
   }
+
+  /* ── Desktop & Laptop Specific Dashboard Styles ── */
+  .dashboard-tools-grid {
+    grid-template-columns: repeat(4, 1fr) !important; /* All 4 tools in a single balanced row! */
+    gap: 24px !important;
+  }
+
+  .tool-card {
+    height: 250px !important;
+    padding: 24px !important;
+    border-radius: 20px !important;
+    background: rgba(255, 255, 255, 0.01) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    backdrop-filter: blur(12px) !important;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  /* Distinctive glowing color palettes for each card on hover */
+  .tool-card:nth-child(1) { --card-glow: rgba(59, 130, 246, 0.3); --card-hover-border: rgba(59, 130, 246, 0.55); }
+  .tool-card:nth-child(2) { --card-glow: rgba(139, 92, 246, 0.3); --card-hover-border: rgba(139, 92, 246, 0.55); }
+  .tool-card:nth-child(3) { --card-glow: rgba(245, 158, 11, 0.3); --card-hover-border: rgba(245, 158, 11, 0.55); }
+  .tool-card:nth-child(4) { --card-glow: rgba(6, 182, 212, 0.3); --card-hover-border: rgba(6, 182, 212, 0.55); }
+
+  .tool-card:hover {
+    transform: translateY(-6px) scale(1.02) !important;
+    border-color: var(--card-hover-border) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px var(--card-glow) !important;
+  }
+
+  /* Make background color gradient richer on hover */
+  .tool-card:nth-child(1):hover { background: linear-gradient(135deg, rgba(37, 99, 235, 0.09) 0%, rgba(15, 23, 42, 0.9) 100%) !important; }
+  .tool-card:nth-child(2):hover { background: linear-gradient(135deg, rgba(139, 92, 246, 0.09) 0%, rgba(15, 23, 42, 0.9) 100%) !important; }
+  .tool-card:nth-child(3):hover { background: linear-gradient(135deg, rgba(245, 158, 11, 0.09) 0%, rgba(15, 23, 42, 0.9) 100%) !important; }
+  .tool-card:nth-child(4):hover { background: linear-gradient(135deg, rgba(6, 182, 212, 0.09) 0%, rgba(15, 23, 42, 0.9) 100%) !important; }
+
+  .card-icon {
+    top: 24px !important;
+    right: 24px !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 12px !important;
+  }
+
+  .card-info h3 {
+    font-size: 20px !important;
+    margin-bottom: 8px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .card-info p {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    margin-bottom: 16px !important;
+    color: #94a3b8 !important;
+  }
+
+  /* Light mode desktop overrides */
+  .light-mode .tool-card {
+    background: rgba(0, 0, 0, 0.02) !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+  }
+  .light-mode .card-info h3 {
+    background: none !important;
+    -webkit-text-fill-color: initial !important;
+    color: #0f172a !important;
+  }
+  .light-mode .card-info p {
+    color: #475569 !important;
+  }
 }
