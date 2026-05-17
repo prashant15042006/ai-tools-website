@@ -18,10 +18,27 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 // Fallback to root .env if not found
 dotenv.config();
 
-if (!process.env.ZAI_API_KEY) {
-  console.error("❌ CRITICAL: ZAI_API_KEY is not defined in .env file!");
+// Helper to check if API key is present and not a placeholder
+const isValidKey = (val) => {
+  return val && val.trim() !== "" && !val.startsWith("REPLACE_WITH_") && !val.includes("example.com") && !val.includes("example");
+};
+
+if (!isValidKey(process.env.GEMINI_API_KEY)) {
+  console.warn("💡 INFO: GEMINI_API_KEY is not set or has placeholder value.");
 } else {
-  console.log("✅ API Key detected (ends with ...", process.env.ZAI_API_KEY.slice(-5), ")");
+  console.log("✅ Direct Google Gemini API Key detected (ends with ...", process.env.GEMINI_API_KEY.slice(-5), ")");
+}
+
+if (!isValidKey(process.env.ZAI_API_KEY)) {
+  console.warn("⚠️ WARNING: ZAI_API_KEY (OpenRouter Key) is not set or has placeholder value.");
+} else {
+  console.log("✅ OpenRouter (ZAI) API Key detected (ends with ...", process.env.ZAI_API_KEY.slice(-5), ")");
+}
+
+if (!isValidKey(process.env.NEMOTRON_API_KEY)) {
+  console.warn("💡 INFO: NEMOTRON_API_KEY is not set or has placeholder value.");
+} else {
+  console.log("✅ NEMOTRON API Key detected (ends with ...", process.env.NEMOTRON_API_KEY.slice(-5), ")");
 }
 
 
@@ -77,6 +94,8 @@ const callZAI = async (message, userName = "User") => {
   const models = [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
+    "nvidia/llama-3.1-nemotron-70b-instruct:free",
+    "nvidia/llama-3.1-nemotron-70b-instruct",
     "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemini-flash-1.5",
     "openai/gpt-4o-mini",
@@ -131,13 +150,134 @@ const callZAI = async (message, userName = "User") => {
 };
 
 // ===============================
+// 🌟 DIRECT GOOGLE GEMINI CALLERS (LIGHTNING FAST)
+// ===============================
+const formatHistoryForGemini = (history, currentMessage) => {
+  const contents = [];
+  if (history && Array.isArray(history)) {
+    for (const h of history) {
+      contents.push({
+        role: h.role === "assistant" ? "model" : "user",
+        parts: [{ text: h.content }]
+      });
+    }
+  }
+  contents.push({
+    role: "user",
+    parts: [{ text: currentMessage }]
+  });
+  return contents;
+};
+
+const callGeminiDirect = async (message, userName = "User") => {
+  console.log(`🚀 [DIRECT GEMINI] Requesting gemini-2.0-flash`);
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: message }] }],
+      systemInstruction: {
+        parts: [{ text: SYSTEM_PROMPT(userName) }]
+      }
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || `Status ${response.status}`);
+  }
+
+  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!reply) throw new Error("Empty response from direct Gemini API");
+  return reply;
+};
+
+const callGeminiDirectStream = async (message, res, userName = "User", history = []) => {
+  console.log(`🚀 [DIRECT GEMINI STREAM] Requesting gemini-2.0-flash`);
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: formatHistoryForGemini(history, message),
+      systemInstruction: {
+        parts: [{ text: SYSTEM_PROMPT(userName) }]
+      }
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(errText || `Status ${response.status}`);
+  }
+
+  let buffer = "";
+  let fullReply = "";
+
+  return new Promise((resolve, reject) => {
+    response.body.on("data", (chunk) => {
+      buffer += chunk.toString();
+      let lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+        const dataStr = trimmed.slice(6);
+        try {
+          const data = JSON.parse(dataStr);
+          const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (content) {
+            fullReply += content;
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          }
+        } catch (e) {
+          // Fragmented JSON
+        }
+      }
+    });
+
+    response.body.on("end", async () => {
+      console.log(`✅ [DIRECT GEMINI STREAM] Finished. Reply length: ${fullReply.length}`);
+      res.write("data: [DONE]\n\n");
+
+      // Save to database if available
+      if (db && fullReply) {
+        try {
+          await db.collection("chats").add({
+            message,
+            reply: fullReply,
+            createdAt: new Date(),
+            model: "gemini-2.0-flash-direct"
+          });
+        } catch (dbErr) {
+          console.warn("DB Save error:", dbErr.message);
+        }
+      }
+
+      res.end();
+      resolve();
+    });
+
+    response.body.on("error", (err) => {
+      console.error("❌ [DIRECT GEMINI STREAM] Body error:", err.message);
+      reject(err);
+    });
+  });
+};
+
+// ===============================
 // Nemotron caller (generic, tolerant to multiple response shapes)
 // If `NEMOTRON_API_KEY` and `NEMOTRON_API_URL` are set, this will be used as a fast default provider.
 // The function attempts to extract text from a variety of common response shapes.
 const callNemotron = async (message, userName = "User") => {
   const apiKey = process.env.NEMOTRON_API_KEY;
   const apiUrl = process.env.NEMOTRON_API_URL;
-  if (!apiKey || !apiUrl) throw new Error("Nemotron not configured");
+  if (!isValidKey(apiKey) || !isValidKey(apiUrl)) throw new Error("Nemotron not configured");
 
   // Prepare payload - many TTS/LLM endpoints accept { input } or { prompt } or chat-style messages.
   const payload = {
@@ -192,6 +332,8 @@ const callZAIStream = async (message, res, userName = "User", history = []) => {
   const models = [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
+    "nvidia/llama-3.1-nemotron-70b-instruct:free",
+    "nvidia/llama-3.1-nemotron-70b-instruct",
     "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemini-flash-1.5",
     "openai/gpt-4o-mini"
@@ -313,8 +455,18 @@ app.post("/api/chat", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    // If Nemotron is configured (fast provider), use it for a single non-streaming reply
-    if (process.env.NEMOTRON_API_KEY && process.env.NEMOTRON_API_URL) {
+    // 1. Try Direct Google Gemini if configured (extremely fast & free)
+    if (isValidKey(process.env.GEMINI_API_KEY)) {
+      try {
+        await callGeminiDirectStream(message, res, userName, history);
+        return;
+      } catch (err) {
+        console.error('Direct Gemini stream failed, falling back:', err.message || err);
+      }
+    }
+
+    // 2. If Nemotron is configured (fast provider), use it for a single non-streaming reply
+    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(message, userName);
 
@@ -335,12 +487,18 @@ app.post("/api/chat", async (req, res) => {
         return;
       } catch (err) {
         console.error('Nemotron streaming fallback failed, continuing to OpenRouter stream:', err.message || err);
-        // fallthrough to streaming fallback
       }
     }
 
-    // Default: stream from OpenRouter / ZAI
-    await callZAIStream(message, res, userName, history);
+    // 3. Try OpenRouter / ZAI if configured
+    if (isValidKey(process.env.ZAI_API_KEY)) {
+      await callZAIStream(message, res, userName, history);
+      return;
+    }
+
+    // 4. No valid keys configured
+    res.write(`data: ${JSON.stringify({ error: "⚠️ **API Keys Configured नहीं हैं!** कृपया बैकएंड की `.env` फ़ाइल या Render Dashboard में `GEMINI_API_KEY`, `NEMOTRON_API_KEY` या `ZAI_API_KEY` सेट करें ताकि AI रिप्लाई कर सके।" })}\n\n`);
+    res.end();
 
   } catch (error) {
     console.error("Chat Error:", error.message);
@@ -358,13 +516,29 @@ app.post("/api/chat", async (req, res) => {
 // 💬 CHAT API (COMPLETE - non-streaming)
 // Uses Nemotron by default if configured (fast replies). Falls back to OpenRouter/ZAI.
 // Body: { message, userName, history }
+// ===============================
 app.post("/api/chat/complete", async (req, res) => {
   try {
     const { message, userName, history } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
-    // Prefer Nemotron when available
-    if (process.env.NEMOTRON_API_KEY && process.env.NEMOTRON_API_URL) {
+    // 1. Prefer Direct Google Gemini if configured
+    if (isValidKey(process.env.GEMINI_API_KEY)) {
+      try {
+        const reply = await callGeminiDirect(message, userName);
+        if (db && reply) {
+          try {
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "gemini-2.0-flash-direct" });
+          } catch (e) { console.warn('DB save failed:', e.message); }
+        }
+        return res.json({ success: true, model: 'gemini-2.0-flash-direct', reply });
+      } catch (err) {
+        console.error('Direct Gemini call failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Prefer Nemotron when available
+    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(message, userName);
         // Save to DB if available
@@ -379,9 +553,13 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // Fallback to existing ZAI (non-streaming)
-    const reply = await callZAI(message, userName);
-    return res.json({ success: true, model: 'zai', reply });
+    // 3. Fallback to existing ZAI (non-streaming)
+    if (isValidKey(process.env.ZAI_API_KEY)) {
+      const reply = await callZAI(message, userName);
+      return res.json({ success: true, model: 'zai', reply });
+    }
+
+    return res.status(503).json({ success: false, error: "No API Key configured. Please set GEMINI_API_KEY, NEMOTRON_API_KEY, or ZAI_API_KEY." });
 
   } catch (error) {
     console.error('Chat Complete Error:', error.message);
@@ -401,8 +579,18 @@ app.post("/api/code", async (req, res) => {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    // Prefer Nemotron if configured
-    if (process.env.NEMOTRON_API_KEY && process.env.NEMOTRON_API_URL) {
+    // 1. Prefer Direct Google Gemini if configured
+    if (isValidKey(process.env.GEMINI_API_KEY)) {
+      try {
+        const result = await callGeminiDirect(`Generate clean code for: ${prompt}`, userName);
+        return res.json({ success: true, provider: 'gemini-direct', result });
+      } catch (err) {
+        console.warn('Direct Gemini code generation failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Prefer Nemotron if configured
+    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Generate clean code for: ${prompt}`, userName);
         return res.json({ success: true, provider: 'nemotron', result: reply });
@@ -411,8 +599,13 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    const result = await callZAI(`Generate clean code for: ${prompt}`, userName);
-    res.json({ success: true, provider: 'zai', result });
+    // 3. Fallback to ZAI
+    if (isValidKey(process.env.ZAI_API_KEY)) {
+      const result = await callZAI(`Generate clean code for: ${prompt}`, userName);
+      return res.json({ success: true, provider: 'zai', result });
+    }
+
+    return res.status(503).json({ success: false, error: "No API Key configured." });
 
   } catch (error) {
     console.error("Code Error:", error.message);
@@ -432,8 +625,18 @@ app.post("/api/content", async (req, res) => {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    // Prefer Nemotron if configured
-    if (process.env.NEMOTRON_API_KEY && process.env.NEMOTRON_API_URL) {
+    // 1. Prefer Direct Google Gemini if configured
+    if (isValidKey(process.env.GEMINI_API_KEY)) {
+      try {
+        const result = await callGeminiDirect(`Write detailed content about: ${prompt}`, userName);
+        return res.json({ success: true, provider: 'gemini-direct', result });
+      } catch (err) {
+        console.warn('Direct Gemini content generation failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Prefer Nemotron if configured
+    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Write detailed content about: ${prompt}`, userName);
         return res.json({ success: true, provider: 'nemotron', result: reply });
@@ -442,14 +645,20 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    const result = await callZAI(`Write detailed content about: ${prompt}`, userName);
-    res.json({ success: true, provider: 'zai', result });
+    // 3. Fallback to ZAI
+    if (isValidKey(process.env.ZAI_API_KEY)) {
+      const result = await callZAI(`Write detailed content about: ${prompt}`, userName);
+      return res.json({ success: true, provider: 'zai', result });
+    }
+
+    return res.status(503).json({ success: false, error: "No API Key configured." });
 
   } catch (error) {
     console.error("Content Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 
 // ===============================
 // 📋 TASK APIs
