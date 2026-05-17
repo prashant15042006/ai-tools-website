@@ -2,12 +2,9 @@
   "short_name": "Nexuss Ai",
   "name": "Nexuss Ai — Intelligent Workspace",
   "description": "Your all-in-one AI workspace for chat, code generation, and content writing.",
-  "id": "com.nexusai.workspace",
+  "id": "/",
   "lang": "en",
   "dir": "ltr",
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "iarc_rating_id": "none",
   "display": "standalone",
   "display_override": [
     "window-controls-overlay",
@@ -15,15 +12,24 @@
     "minimal-ui"
   ],
   "icons": [
-    { "src": "icon-192.png", "type": "image/png", "sizes": "96x96", "purpose": "any" },
-    { "src": "icon-192.png", "type": "image/png", "sizes": "114x114", "purpose": "any" },
-    { "src": "icon-192.png", "type": "image/png", "sizes": "128x128", "purpose": "any" },
-    { "src": "icon-192.png", "type": "image/png", "sizes": "144x144", "purpose": "any" },
-    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
-    { "src": "icon-512.png", "type": "image/png", "sizes": "256x256", "purpose": "any" },
-    { "src": "icon-512.png", "type": "image/png", "sizes": "384x384", "purpose": "any" },
-    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
-    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "maskable_icon.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    }
   ],
   "screenshots": [
     {
@@ -43,7 +49,7 @@
   ],
   "start_url": "/",
   "scope": "/",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "theme_color": "#0b0e1a",
   "background_color": "#06080f",
   "categories": [
@@ -61,14 +67,18 @@
       "short_name": "Chat",
       "description": "Start a new AI conversation",
       "url": "/chat",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
     },
     {
       "name": "Code Generator",
       "short_name": "Code",
       "description": "Generate and debug code with AI",
       "url": "/code",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
     }
   ],
   "edge_side_panel": {
@@ -97,5 +107,6 @@
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "prefer_related_applications": false
 }

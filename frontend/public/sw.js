@@ -4,7 +4,7 @@
    Adds Background Sync & Periodic Sync support
    ============================================= */
 
-const CACHE_NAME = 'nexuss-ai-v1';
+const CACHE_NAME = 'nexuss-ai-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -13,8 +13,6 @@ const STATIC_ASSETS = [
   '/icon-192.png',
   '/icon-512.png',
   '/maskable_icon.png',
-  '/screenshot_mobile.jpg',
-  '/screenshot_desktop.jpg',
 ];
 
 // Install: cache static assets
