@@ -736,6 +736,173 @@ app.delete("/api/tasks/:id", async (req, res) => {
 });
 
 // ===============================
+// 📂 PROJECTS APIs (EMAIL SCOPED)
+// ===============================
+const projectsFilePath = path.join(__dirname, "projects.json");
+
+const getLocalProjects = () => {
+  try {
+    if (fs.existsSync(projectsFilePath)) {
+      return JSON.parse(fs.readFileSync(projectsFilePath, "utf8"));
+    }
+  } catch (err) {
+    console.error("Error reading local projects:", err.message);
+  }
+  return [];
+};
+
+const saveLocalProjects = (projects) => {
+  try {
+    fs.writeFileSync(projectsFilePath, JSON.stringify(projects, null, 2), "utf8");
+    return true;
+  } catch (err) {
+    console.error("Error saving local projects:", err.message);
+    return false;
+  }
+};
+
+app.get("/api/projects", async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    if (db) {
+      try {
+        const snapshot = await db.collection("projects").where("email", "==", email).get();
+        const projects = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        return res.json(projects);
+      } catch (dbErr) {
+        console.warn("Firestore projects fetch failed, using local fallback:", dbErr.message);
+      }
+    }
+
+    // Fallback to local projects.json file
+    const localProjects = getLocalProjects();
+    const userProjects = localProjects.filter(p => p.email === email);
+    res.json(userProjects);
+  } catch (err) {
+    console.error("GET /api/projects error:", err.message);
+    res.status(500).json({ error: "Failed to fetch projects" });
+  }
+});
+
+app.post("/api/projects", async (req, res) => {
+  try {
+    const { email, name, desc } = req.body;
+    if (!email || !name) {
+      return res.status(400).json({ error: "Email and Name are required" });
+    }
+
+    const newProject = {
+      email,
+      name,
+      desc: desc || "New workspace project",
+      notes: "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (db) {
+      try {
+        const docRef = await db.collection("projects").add(newProject);
+        return res.json({ id: docRef.id, ...newProject });
+      } catch (dbErr) {
+        console.warn("Firestore project add failed, using local fallback:", dbErr.message);
+      }
+    }
+
+    // Fallback to local projects.json file
+    const id = Date.now().toString();
+    const localProjects = getLocalProjects();
+    const savedProject = { id, ...newProject };
+    localProjects.push(savedProject);
+    saveLocalProjects(localProjects);
+
+    res.json(savedProject);
+  } catch (err) {
+    console.error("POST /api/projects error:", err.message);
+    res.status(500).json({ error: "Failed to create project" });
+  }
+});
+
+app.put("/api/projects/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, desc, notes } = req.body;
+
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (desc !== undefined) updates.desc = desc;
+    if (notes !== undefined) updates.notes = notes;
+    updates.updatedAt = new Date().toISOString();
+
+    if (db) {
+      try {
+        const docRef = db.collection("projects").doc(id);
+        const doc = await docRef.get();
+        if (doc.exists) {
+          await docRef.update(updates);
+          return res.json({ success: true, id, ...updates });
+        }
+      } catch (dbErr) {
+        console.warn("Firestore project update failed, trying local fallback:", dbErr.message);
+      }
+    }
+
+    // Fallback to local projects.json file
+    const localProjects = getLocalProjects();
+    const index = localProjects.findIndex(p => p.id === id);
+    if (index !== -1) {
+      localProjects[index] = { ...localProjects[index], ...updates };
+      saveLocalProjects(localProjects);
+      return res.json({ success: true, id, ...localProjects[index] });
+    }
+
+    res.status(404).json({ error: "Project not found" });
+  } catch (err) {
+    console.error("PUT /api/projects error:", err.message);
+    res.status(500).json({ error: "Failed to update project" });
+  }
+});
+
+app.delete("/api/projects/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (db) {
+      try {
+        const docRef = db.collection("projects").doc(id);
+        const doc = await docRef.get();
+        if (doc.exists) {
+          await docRef.delete();
+          return res.json({ success: true });
+        }
+      } catch (dbErr) {
+        console.warn("Firestore project delete failed, trying local fallback:", dbErr.message);
+      }
+    }
+
+    // Fallback to local projects.json file
+    const localProjects = getLocalProjects();
+    const filtered = localProjects.filter(p => p.id !== id);
+    if (filtered.length !== localProjects.length) {
+      saveLocalProjects(filtered);
+      return res.json({ success: true });
+    }
+
+    res.status(404).json({ error: "Project not found" });
+  } catch (err) {
+    console.error("DELETE /api/projects error:", err.message);
+    res.status(500).json({ error: "Failed to delete project" });
+  }
+});
+
+// ===============================
 // ❤️ HEALTH CHECK
 // ===============================
 app.get("/api/health", (req, res) => {

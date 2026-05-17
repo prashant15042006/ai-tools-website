@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield, Menu, X, Download } from "lucide-react";
+import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield, Menu, X, Download, ChevronLeft, Save, RotateCw, CheckCircle2, AlertCircle, FileText } from "lucide-react";
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
 import ContentGenerator from "./ContentGenerator";
@@ -10,6 +10,7 @@ import PromptManager from "./PromptManager";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Login from "./Login";
+import API_BASE_URL from "./apiConfig";
 import "./App.css";
 
 // Global context for dark mode & TTS
@@ -56,29 +57,327 @@ const Toggle = ({ checked, onChange }) => (
 // --- New Components for Projects and Settings ---
 
 const ProjectsView = ({ projects, setProjects }) => {
+  const { user } = useContext(AppContext);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [notes, setNotes] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [syncStatus, setSyncStatus] = useState("saved"); // 'saved' | 'saving' | 'offline'
+  const [searchQuery, setSearchQuery] = useState("");
+  const autoSaveTimerRef = React.useRef(null);
 
-  const addProject = () => {
-    if (newName.trim()) {
-      setProjects([...projects, { name: newName, desc: "New workspace project", id: Date.now() }]);
-      setNewName("");
-      setIsAdding(false);
+  // Load selected project notes when opened
+  const openProject = (proj) => {
+    setSelectedProject(proj);
+    setNotes(proj.notes || "");
+    setSyncStatus("saved");
+  };
+
+  const closeProject = () => {
+    setSelectedProject(null);
+    setNotes("");
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+  };
+
+  const addProject = async () => {
+    if (!newName.trim() || !user?.email) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/projects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          name: newName,
+          desc: newDesc || "New workspace project"
+        })
+      });
+
+      if (response.ok) {
+        const created = await response.json();
+        const updatedList = [...projects, created];
+        setProjects(updatedList);
+        localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
+      } else {
+        throw new Error("API call failed");
+      }
+    } catch (err) {
+      console.warn("API add failed, saving locally:", err.message);
+      // Local fallback
+      const id = Date.now().toString();
+      const created = {
+        id,
+        email: user.email,
+        name: newName,
+        desc: newDesc || "New workspace project",
+        notes: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      const updatedList = [...projects, created];
+      setProjects(updatedList);
+      localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
+    }
+
+    setNewName("");
+    setNewDesc("");
+    setIsAdding(false);
+  };
+
+  const deleteProject = async (id) => {
+    if (!window.confirm("Delete this project? This action cannot be undone.")) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+        method: "DELETE"
+      });
+      if (!response.ok) throw new Error("API call failed");
+    } catch (err) {
+      console.warn("API delete failed, updating local state:", err.message);
+    }
+
+    const updatedList = projects.filter(p => p.id !== id);
+    setProjects(updatedList);
+    localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
+    if (selectedProject?.id === id) {
+      closeProject();
     }
   };
 
-  const deleteProject = (id) => {
-    if (window.confirm("Delete this project?")) {
-      setProjects(projects.filter(p => p.id !== id));
+  const saveNotes = async (currentNotes = notes, silent = false) => {
+    if (!selectedProject || !user?.email) return;
+    if (!silent) setSyncStatus("saving");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notes: currentNotes
+        })
+      });
+
+      if (response.ok) {
+        setSyncStatus("saved");
+      } else {
+        throw new Error("Server error");
+      }
+    } catch (err) {
+      console.warn("Auto-save to server failed, saved locally:", err.message);
+      setSyncStatus("offline");
     }
+
+    // Always update local state & cache
+    const updatedProjects = projects.map(p => {
+      if (p.id === selectedProject.id) {
+        return { ...p, notes: currentNotes, updatedAt: new Date().toISOString() };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedProjects));
+
+    // Update active selected project object
+    setSelectedProject(prev => prev ? { ...prev, notes: currentNotes } : null);
   };
 
+  // Auto-save effect
+  const handleNotesChange = (e) => {
+    const val = e.target.value;
+    setNotes(val);
+    setSyncStatus("saving");
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveNotes(val, true);
+    }, 1500); // Save notes after 1.5 seconds of silence
+  };
+
+  const filteredProjects = projects.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.desc && p.desc.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // If a project is selected, render the gorgeous glassmorphic editor
+  if (selectedProject) {
+    const wordCount = notes.trim() === "" ? 0 : notes.trim().split(/\s+/).length;
+    const charCount = notes.length;
+
+    return (
+      <div className="page-view" style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
+        
+        {/* Editor Header Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button 
+              onClick={closeProject}
+              style={{ 
+                background: 'rgba(255,255,255,0.05)', 
+                color: 'white', 
+                border: '1px solid var(--border-color)', 
+                padding: '8px 16px', 
+                borderRadius: '10px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                fontWeight: '600', 
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              className="back-btn"
+            >
+              <ChevronLeft size={16} /> Back to Projects
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <h2 style={{ 
+                fontSize: '26px', 
+                fontWeight: '800', 
+                background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', 
+                WebkitBackgroundClip: 'text', 
+                WebkitTextFillColor: 'transparent',
+                lineHeight: '1.2'
+              }}>
+                {selectedProject.name}
+              </h2>
+            </div>
+          </div>
+
+          {/* Sync Status Badge & Action */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '8px 14px', 
+                borderRadius: '10px', 
+                background: syncStatus === 'saved' ? 'rgba(34, 197, 94, 0.1)' : syncStatus === 'saving' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                border: `1px solid ${syncStatus === 'saved' ? 'rgba(34, 197, 94, 0.2)' : syncStatus === 'saving' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
+                fontSize: '13px',
+                color: syncStatus === 'saved' ? '#4ade80' : syncStatus === 'saving' ? '#60a5fa' : '#fbbf24',
+                fontWeight: '600'
+              }}
+            >
+              {syncStatus === 'saved' && (
+                <>
+                  <CheckCircle2 size={15} />
+                  <span>All changes synced</span>
+                </>
+              )}
+              {syncStatus === 'saving' && (
+                <>
+                  <RotateCw size={15} className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
+                  <span>Saving changes...</span>
+                </>
+              )}
+              {syncStatus === 'offline' && (
+                <>
+                  <AlertCircle size={15} />
+                  <span>Saved locally (Offline)</span>
+                </>
+              )}
+            </div>
+
+            <button 
+              onClick={() => saveNotes(notes, false)}
+              style={{ 
+                background: 'var(--accent)', 
+                color: 'white', 
+                border: 'none', 
+                padding: '9px 18px', 
+                borderRadius: '10px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                fontWeight: '700', 
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Save size={16} /> Save Now
+            </button>
+          </div>
+        </div>
+
+        {/* Project Description Banner */}
+        {selectedProject.desc && (
+          <div style={{ padding: '0 4px', marginBottom: '20px', color: 'var(--text-secondary)', fontSize: '15px' }}>
+            <strong>Description:</strong> {selectedProject.desc}
+          </div>
+        )}
+
+        {/* Text Editor Container */}
+        <div style={{ 
+          flex: 1, 
+          position: 'relative', 
+          background: 'rgba(255, 255, 255, 0.02)', 
+          border: '1px solid var(--border-color)', 
+          borderRadius: '18px',
+          padding: '24px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '300px'
+        }}>
+          {/* Notes Title Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px', color: '#a78bfa' }}>
+            <FileText size={18} />
+            <span style={{ fontSize: '14px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Workspace Notebook</span>
+          </div>
+
+          <textarea
+            value={notes}
+            onChange={handleNotesChange}
+            placeholder="Write your ideas, code snippets, notes, prompts, or generate some creative text and store them here! Auto-saves as you type..."
+            style={{
+              width: '100%',
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              color: '#f8fafc',
+              fontSize: '16px',
+              lineHeight: '1.6',
+              resize: 'none',
+              outline: 'none',
+              fontFamily: 'Outfit, sans-serif'
+            }}
+          />
+
+          {/* Editor Footer (Counters and Info) */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            borderTop: '1px solid rgba(255,255,255,0.06)', 
+            paddingTop: '16px', 
+            marginTop: '16px',
+            fontSize: '13px',
+            color: 'var(--text-secondary)',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <span style={{ fontStyle: 'italic' }}>AI-compatible notepad. Everything written is stored under your email profile.</span>
+            <div style={{ display: 'flex', gap: '16px', fontWeight: '600' }}>
+              <span>{wordCount} words</span>
+              <span>{charCount} characters</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // List View (rendered when selectedProject === null)
   return (
     <div className="page-view" style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '32px', fontWeight: '800' }}>Projects</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Manage your AI workspaces and generated content.</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Manage your AI workspaces, documentations, and workspace notes.</p>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
@@ -88,44 +387,102 @@ const ProjectsView = ({ projects, setProjects }) => {
         </button>
       </div>
 
+      {/* New Project Form */}
       {isAdding && (
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', marginBottom: '32px' }}>
-          <h3 style={{ marginBottom: '16px' }}>Create New Project</h3>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '700' }}>Create New Project</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <input 
               type="text" 
               placeholder="Project Name" 
               value={newName} 
               onChange={(e) => setNewName(e.target.value)}
-              style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', color: 'white' }}
+              style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', color: 'white', fontSize: '14px' }}
             />
-            <button onClick={addProject} style={{ background: 'var(--accent)', border: 'none', padding: '0 24px', borderRadius: '8px', color: 'white', fontWeight: '600' }}>Create</button>
-            <button onClick={() => setIsAdding(false)} style={{ background: 'transparent', border: '1px solid var(--border-color)', padding: '0 24px', borderRadius: '8px', color: 'white' }}>Cancel</button>
+            <input 
+              type="text" 
+              placeholder="Project Description (optional)" 
+              value={newDesc} 
+              onChange={(e) => setNewDesc(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', color: 'white', fontSize: '14px' }}
+            />
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setIsAdding(false)} style={{ background: 'transparent', border: '1px solid var(--border-color)', padding: '10px 20px', borderRadius: '8px', color: 'white', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={addProject} style={{ background: 'var(--accent)', border: 'none', padding: '10px 24px', borderRadius: '8px', color: 'white', fontWeight: '600', cursor: 'pointer' }}>Create Project</button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Search Filter Bar */}
+      <div style={{ position: 'relative', marginBottom: '32px' }}>
+        <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+        <input 
+          type="text" 
+          placeholder="Search projects..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 12px 12px 48px', color: 'white', fontSize: '15px' }}
+        />
+      </div>
+
+      {/* Projects Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-        {projects.length === 0 ? (
-          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>No projects found. Create one to get started!</div>
+        {filteredProjects.length === 0 ? (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border-color)', borderRadius: '16px' }}>
+            No projects found. Create one to get started!
+          </div>
         ) : (
-          projects.map(p => (
-            <div key={p.id || p.name} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', position: 'relative', transition: 'all 0.3s' }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                 <div style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#3b82f6', padding: '8px', borderRadius: '10px' }}>
-                    <FolderOpen size={24} />
-                 </div>
-                 <button onClick={() => deleteProject(p.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }}>
-                    <Trash2 size={18} />
-                 </button>
-               </div>
-               <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>{p.name}</h3>
-               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{p.desc}</p>
-               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'white', padding: '6px 14px', borderRadius: '8px', fontSize: '13px' }}>Open Project</button>
-               </div>
-            </div>
-          ))
+          filteredProjects.map(p => {
+            const wordCount = p.notes ? p.notes.trim().split(/\s+/).filter(Boolean).length : 0;
+            return (
+              <div 
+                key={p.id} 
+                onClick={() => openProject(p)}
+                className="dashboard-card"
+                style={{ 
+                  background: 'rgba(255,255,255,0.02)', 
+                  border: '1px solid var(--border-color)', 
+                  padding: '24px', 
+                  borderRadius: '16px', 
+                  position: 'relative', 
+                  transition: 'all 0.3s',
+                  cursor: 'pointer',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Glowing ambient background inside card */}
+                <div style={{ position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle, rgba(96,165,250,0.04) 0%, transparent 60%)', pointerEvents: 'none' }} />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
+                  <div style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#3b82f6', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FolderOpen size={20} />
+                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent opening the project when clicking delete
+                      deleteProject(p.id);
+                    }} 
+                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.8, transition: 'all 0.2s' }}
+                    title="Delete Project"
+                    className="delete-project-btn"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', color: '#f8fafc' }}>{p.name}</h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '42px' }}>
+                  {p.desc || "No description provided."}
+                </p>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  <span>{wordCount} words stored</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: '700' }}>Open Workspace &rarr;</span>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
@@ -312,17 +669,35 @@ function AppContent() {
   const [chatKey, setChatKey] = useState(0);
   const isMobile = useIsMobile();
   
-  const [projects, setProjects] = useState(() => {
-    const saved = localStorage.getItem("nexus_projects");
-    return saved ? JSON.parse(saved) : [
-      { id: 1, name: "E-Commerce Backend", desc: "Node.js API with Express and MongoDB. Last edited 2 days ago." },
-      { id: 2, name: "React Portfolio", desc: "Personal portfolio website built with React and Framer Motion." }
-    ];
-  });
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem("nexus_projects", JSON.stringify(projects));
-  }, [projects]);
+    if (!user?.email) return;
+
+    // 1. Initial load from local storage cache
+    const cached = localStorage.getItem(`nexus_projects_${user.email}`);
+    if (cached) {
+      setProjects(JSON.parse(cached));
+    } else {
+      setProjects([]);
+    }
+
+    // 2. Load latest projects from backend API
+    const loadProjects = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/projects?email=${encodeURIComponent(user.email)}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProjects(data);
+          localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(data));
+        }
+      } catch (err) {
+        console.warn("Failed to fetch projects from backend, using local cache:", err.message);
+      }
+    };
+
+    loadProjects();
+  }, [user]);
 
   // Close mobile sidebar on navigation
   const handleMobileNav = () => {

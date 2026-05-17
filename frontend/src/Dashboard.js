@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Code, PenTool, ArrowRight, Sparkles, Zap, Brain } from 'lucide-react';
+import { auth } from './firebase';
 import './App.css';
 
 const Dashboard = () => {
@@ -50,10 +51,38 @@ const Dashboard = () => {
   const [projectCount, setProjectCount] = React.useState(0);
 
   React.useEffect(() => {
-    const saved = localStorage.getItem("nexus_projects");
-    if (saved) {
-      const projects = JSON.parse(saved);
-      setProjectCount(projects.length);
+    let email = localStorage.getItem("nexus_mock_user");
+    if (!email && auth.currentUser) {
+      email = auth.currentUser.email;
+    }
+
+    if (email) {
+      // 1. Check local cache first
+      const saved = localStorage.getItem(`nexus_projects_${email}`);
+      if (saved) {
+        setProjectCount(JSON.parse(saved).length);
+      }
+
+      // 2. Fetch latest count from server
+      const loadCount = async () => {
+        try {
+          const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5001";
+          const response = await fetch(`${API_BASE_URL}/api/projects?email=${encodeURIComponent(email)}`);
+          if (response.ok) {
+            const data = await response.json();
+            setProjectCount(data.length);
+            localStorage.setItem(`nexus_projects_${email}`, JSON.stringify(data));
+          }
+        } catch (err) {
+          console.warn("Dashboard count fetch failed:", err.message);
+        }
+      };
+      loadCount();
+    } else {
+      const saved = localStorage.getItem("nexus_projects");
+      if (saved) {
+        setProjectCount(JSON.parse(saved).length);
+      }
     }
   }, []);
 
