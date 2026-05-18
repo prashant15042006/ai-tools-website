@@ -45,8 +45,18 @@
       html, body, #root { height: 100%; background: #06080f; }
     </style>
 
-    <!-- Register PWA Service Worker via un-minified static script for PWA Builder -->
-    <script src="%PUBLIC_URL%/register-sw.js" defer></script>
+    <!-- Register PWA Service Worker Inline for PWA Builder Static Analyzer -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').then(function (reg) {
+            console.log('✅ Service Worker registered successfully:', reg.scope);
+          }).catch(function (err) {
+            console.warn('❌ Service Worker registration failed:', err);
+          });
+        });
+      }
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run Nexuss Ai.</noscript>
