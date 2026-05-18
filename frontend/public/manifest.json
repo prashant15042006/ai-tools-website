@@ -13,34 +13,40 @@
   ],
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "maskable_icon.png",
+      "src": "/maskable_icon.png",
       "type": "image/png",
       "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/maskable_icon_512.png",
+      "type": "image/png",
+      "sizes": "512x512",
       "purpose": "maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "screenshot_mobile.jpg",
+      "src": "/screenshot_mobile.jpg",
       "sizes": "1080x1920",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Nexuss Ai Mobile Chat"
     },
     {
-      "src": "screenshot_desktop.jpg",
+      "src": "/screenshot_desktop.jpg",
       "sizes": "1920x1080",
       "type": "image/jpeg",
       "form_factor": "wide",
@@ -68,7 +74,7 @@
       "description": "Start a new AI conversation",
       "url": "/chat",
       "icons": [
-        { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }
+        { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }
       ]
     },
     {
@@ -77,7 +83,7 @@
       "description": "Generate and debug code with AI",
       "url": "/code",
       "icons": [
-        { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }
+        { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }
       ]
     }
   ],
@@ -107,6 +113,6 @@
       "text": "text",
       "url": "url"
     }
-  },
+  ],
   "prefer_related_applications": false
 }
