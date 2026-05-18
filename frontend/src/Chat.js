@@ -179,7 +179,7 @@ function Chat() {
               <h2 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", letterSpacing: "-1px" }}>Welcome to Nexuss!</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "16px", marginTop: "8px" }}>Your intelligent AI workspace.</p>
             </div>
-            <div className="chat-suggestions-grid">
+            <div className="chat-suggestions-grid chat-suggestions">
               {[
                 { title: "Quantum Computing", sub: "Explain it in simple terms" },
                 { title: "Debug Code", sub: "Help me find bugs in my code" },
@@ -189,28 +189,14 @@ function Chat() {
                 return (
                   <div 
                     key={i} 
-                    className="dashboard-card" 
+                    className="suggestion-card" 
                     onClick={() => sendMessage(s.sub)}
-                    style={{ 
-                      padding: 16, 
-                      cursor: 'pointer', 
-                      borderRadius: 16, 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: 8, 
-                      aspectRatio: '1', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
-                      textAlign: 'center', 
-                      position: 'relative', 
-                      overflow: 'hidden', 
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))', 
-                      border: '1px solid rgba(255,255,255,0.06)' 
-                    }}
                   >
-                    <div style={{ position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle at 30% 30%, rgba(96,165,250,0.08), transparent 40%), radial-gradient(circle at 70% 70%, rgba(124,58,237,0.06), transparent 30%)', pointerEvents: 'none' }} />
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>{s.title}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{s.sub}</div>
+                    <div className="suggestion-card-content">
+                      <div className="suggestion-card-title">{s.title}</div>
+                      <div className="suggestion-card-sub">{s.sub}</div>
+                    </div>
+                    <Sparkles size={16} className="suggestion-card-icon" />
                   </div>
                 );
               })}

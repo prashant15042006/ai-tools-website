@@ -97,36 +97,40 @@ const Dashboard = () => {
       <div className="dashboard-inner">
         
         {/* ── Hero Banner ── */}
-        <div 
-          className="dashboard-hero"
-          style={{ 
-            background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: '20px',
-            flexShrink: 0
-          }}
-        >
-          {/* Ambient glow */}
+        <div className="dashboard-hero">
+          {/* Ambient glow spheres for glossy glassmorphic depth */}
           <div style={{
             position: 'absolute',
-            top: '-50%',
+            top: '-40%',
             right: '-10%',
-            width: '500px',
-            height: '500px',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
-            filter: 'blur(60px)',
-            zIndex: 1
+            width: '600px',
+            height: '600px',
+            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.28) 0%, transparent 70%)',
+            filter: 'blur(70px)',
+            zIndex: 1,
+            pointerEvents: 'none'
           }}></div>
           <div style={{
             position: 'absolute',
-            bottom: '-30%',
-            left: '10%',
-            width: '300px',
-            height: '300px',
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
-            filter: 'blur(50px)',
-            zIndex: 1
+            bottom: '-20%',
+            left: '-10%',
+            width: '450px',
+            height: '450px',
+            background: 'radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+            zIndex: 1,
+            pointerEvents: 'none'
+          }}></div>
+          <div style={{
+            position: 'absolute',
+            top: '15%',
+            right: '25%',
+            width: '400px',
+            height: '400px',
+            background: 'radial-gradient(circle, rgba(236, 72, 153, 0.18) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+            zIndex: 1,
+            pointerEvents: 'none'
           }}></div>
 
           <div className="hero-content">

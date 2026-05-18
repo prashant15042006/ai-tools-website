@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
-import { Send, ClipboardPaste, Mic, ExternalLink, Code } from "lucide-react";
+import { Send, ClipboardPaste, Mic, ExternalLink, Code, Sparkles } from "lucide-react";
 
 import { AppContext } from "./App";
 import API_BASE_URL from "./apiConfig";
@@ -160,7 +160,7 @@ function CodeGenerator() {
             <p style={{ color: "var(--text-secondary)", fontSize: "16px", maxWidth: "480px", textAlign: "center" }}>
               Generate, explain, and debug code instantly. Type your requirements below.
             </p>
-            <div className="chat-suggestions-grid" style={{ marginTop: "16px" }}>
+            <div className="chat-suggestions-grid code-suggestions" style={{ marginTop: "16px" }}>
               {[
                 { title: "React Counter", sub: "with hooks and styling" },
                 { title: "Python Web Scraper", sub: "using BeautifulSoup" },
@@ -169,22 +169,14 @@ function CodeGenerator() {
               ].map((s, i) => (
                 <div
                   key={i}
-                  className="dashboard-card"
+                  className="suggestion-card"
                   onClick={() => sendMessage("Generate: " + s.title + " " + s.sub)}
-                  style={{ 
-                    padding: "16px", 
-                    cursor: "pointer", 
-                    aspectRatio: "1",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    textAlign: "center",
-                    gap: "8px"
-                  }}
                 >
-                  <div style={{ fontSize: "15px", fontWeight: "600" }}>{s.title}</div>
-                  <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>{s.sub}</div>
+                  <div className="suggestion-card-content">
+                    <div className="suggestion-card-title">{s.title}</div>
+                    <div className="suggestion-card-sub">{s.sub}</div>
+                  </div>
+                  <Sparkles size={16} className="suggestion-card-icon" />
                 </div>
               ))}
             </div>

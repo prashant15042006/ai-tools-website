@@ -492,13 +492,110 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   margin-top: 24px;
-  max-width: 620px;
+  max-width: 800px; /* Increased to fit horizontal style */
   width: 100%;
 }
 
 @media (max-width: 768px) {
   .chat-suggestions-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Premium Suggestion Cards ── */
+.suggestion-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 16px !important;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 16px 20px !important;
+  overflow: hidden !important;
+  gap: 12px !important;
+  width: 100% !important;
+  box-shadow: none !important;
+  aspect-ratio: auto !important; /* Force non-square rectangular aspect ratio */
+}
+
+.suggestion-card-content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+  flex: 1 !important;
+}
+
+.suggestion-card-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #f1f5f9 !important;
+  margin-bottom: 4px !important;
+}
+
+.suggestion-card-sub {
+  font-size: 13px !important;
+  color: var(--text-secondary) !important;
+  line-height: 1.4 !important;
+}
+
+.suggestion-card-icon {
+  color: var(--text-secondary) !important;
+  opacity: 0.4 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.suggestion-card:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  transform: translateY(-2px) !important;
+}
+
+.suggestion-card:hover .suggestion-card-icon {
+  opacity: 1 !important;
+  transform: scale(1.15) rotate(15deg) !important;
+}
+
+/* Distinct glowing color themes for different AI panels */
+.chat-suggestions .suggestion-card:hover {
+  border-color: rgba(59, 130, 246, 0.45) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(59, 130, 246, 0.15) !important;
+}
+.chat-suggestions .suggestion-card:hover .suggestion-card-icon {
+  color: #3b82f6 !important;
+}
+
+.code-suggestions .suggestion-card:hover {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(16, 185, 129, 0.15) !important;
+}
+.code-suggestions .suggestion-card:hover .suggestion-card-icon {
+  color: #10b981 !important;
+}
+
+.content-suggestions .suggestion-card:hover {
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(245, 158, 11, 0.15) !important;
+}
+.content-suggestions .suggestion-card:hover .suggestion-card-icon {
+  color: #f59e0b !important;
+}
+
+/* ── Laptop & Computer Overrides to make it unique and rectangular ── */
+@media (min-width: 769px) {
+  .chat-suggestions-grid {
+    grid-template-columns: repeat(4, 1fr) !important; /* Elegant single-row 4 column layout! */
+    max-width: 900px !important;
+    gap: 16px !important;
+  }
+
+  .suggestion-card {
+    height: 96px !important; /* Perfectly proportional horizontal rectangle */
+    padding: 16px 20px !important;
+    border-radius: 18px !important;
   }
 }
 
@@ -1108,10 +1205,25 @@ body {
   display: flex;
   align-items: center;
   padding: 0 60px;
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #0a0d1a 0%, #150f24 45%, #25102a 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 15px 30px rgba(255, 255, 255, 0.05),
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(139, 92, 246, 0.15) !important;
+  backdrop-filter: blur(24px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-hero:hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 15px 30px rgba(255, 255, 255, 0.08),
+    0 25px 50px rgba(0, 0, 0, 0.6),
+    0 0 45px rgba(139, 92, 246, 0.25) !important;
+  transform: translateY(-3px);
 }
 
 .hero-content {
@@ -1122,11 +1234,12 @@ body {
 
 .hero-content h1 {
   font-size: 48px;
-  font-weight: 800;
+  font-weight: 900;
   margin: 16px 0;
-  background: linear-gradient(to right, #fff, #94a3b8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 40%, #c084fc 75%, #f472b6 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  letter-spacing: -1px;
 }
 
 .hero-content p {
