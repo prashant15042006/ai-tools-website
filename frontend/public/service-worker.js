@@ -15,7 +15,8 @@ const STATIC_ASSETS = [
   '/maskable_icon.png',
   '/maskable_icon_512.png',
   '/sw.js',
-  '/service-worker.js'
+  '/service-worker.js',
+  '/register-sw.js'
 ];
 
 // Install: cache static assets
