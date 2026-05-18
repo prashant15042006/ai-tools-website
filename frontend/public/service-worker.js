@@ -1,10 +1,9 @@
 /* =============================================
-  NEXUSS AI — Service Worker (Pro)
-   Caches app shell for offline support & faster load
-   Adds Background Sync & Periodic Sync support
-   ============================================= */
+  NEXUSS AI — Service Worker (Pro V3)
+  Robust caching for CRA / SPA Apps
+============================================= */
 
-const CACHE_NAME = 'nexuss-ai-v2';
+const CACHE_NAME = 'nexuss-ai-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -14,21 +13,22 @@ const STATIC_ASSETS = [
   '/icon-512.png',
   '/maskable_icon.png',
   '/maskable_icon_512.png',
-  '/sw.js',
-  '/service-worker.js',
   '/register-sw.js'
 ];
 
-// Install: cache static assets
+// Install: cache static assets and skip waiting to activate immediately
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
+    }).catch((err) => {
+      console.warn('SW Precache failed (some assets may be missing)', err);
+    })
   );
 });
 
-// Activate: remove old caches
+// Activate: remove old caches and take control
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) =>
@@ -41,7 +41,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network first, fall back to cache
+// Fetch: Network-First for HTML, Stale-While-Revalidate for JS/CSS/Images
 self.addEventListener('fetch', (event) => {
   if (
     event.request.method !== 'GET' ||
@@ -49,29 +49,44 @@ self.addEventListener('fetch', (event) => {
     event.request.url.includes('firestore') ||
     event.request.url.includes('googleapis')
   ) {
+    return; // Bypass Service Worker for API and external dynamic calls
+  }
+
+  // 1. Navigation Requests (HTML) -> Network First
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        })
+        .catch(() => {
+          return caches.match('/index.html');
+        })
+    );
     return;
   }
 
+  // 2. Static Assets (JS, CSS, Images) -> Stale-While-Revalidate (Cache First + Background Update)
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response && response.status === 200) {
-          const responseClone = response.clone();
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        // Cache valid responses dynamically
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
+            cache.put(event.request, networkResponse.clone());
           });
         }
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request).then((cached) => {
-          if (cached) return cached;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return new Response("Offline", { status: 503, statusText: "Service Unavailable" });
-        });
-      })
+        return networkResponse;
+      }).catch(() => {
+        // Ignore network errors for background revalidation
+      });
+
+      // Return cached immediately if available, otherwise wait for network
+      return cachedResponse || fetchPromise;
+    })
   );
 });
 
@@ -79,7 +94,6 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-messages') {
     console.log('🔄 Background sync triggered: sync-messages');
-    // Implement message sync logic here if needed
   }
 });
 
@@ -87,7 +101,6 @@ self.addEventListener('sync', (event) => {
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'daily-update') {
     console.log('📅 Periodic sync triggered: daily-update');
-    // Pre-cache new content or updates
   }
 });
 
