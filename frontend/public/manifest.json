@@ -37,6 +37,22 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshot_mobile.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Nexuss Ai Mobile Chat"
+    },
+    {
+      "src": "/screenshot_desktop.jpg",
+      "sizes": "1920x1080",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Nexuss Ai Desktop Dashboard"
+    }
+  ],
   "start_url": "/",
   "scope": "/",
   "orientation": "any",
