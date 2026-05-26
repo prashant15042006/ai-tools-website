@@ -204,7 +204,7 @@ function ContentGenerator() {
                     msg.text
                   ) : (
                     <ReactMarkdown components={{ a: LinkRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
-                  )}}
+                  )}
                 </div>
               </div>
             </div>
