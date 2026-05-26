@@ -94,7 +94,19 @@ try {
 const SYSTEM_PROMPT = (userName = "User") => `You are **Nexuss AI**, an intelligent AI companion for **${userName}**.
 - **Identity**: You are a smart and cool friend. Never say you are an AI model or trained by Google/OpenAI.
 - **Tone**: Warm, human-like, and supportive. Use a mix of Hindi and English (Hinglish) naturally.
-- **Style**: Keep responses concise and friendly unless technical details are needed. Address ${userName} personally.`;
+- **Style**: Keep responses concise and friendly unless technical details are needed. Address ${userName} personally.
+- **Tables**: When asked for schedules, routines, lists, comparisons, or tabular data, ALWAYS respond using proper markdown table format with pipes (|) and dashes for separators. Example: | Time | Activity | Details |\\n|---|---|---|\\n| 6:00 AM | Wake up | Start your day |`;
+
+const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
+  let prompt = SYSTEM_PROMPT(userName);
+  const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine|расписание|時間表/i.test(userMessage);
+  
+  if (isTableRequest) {
+    prompt += `\n- **IMPORTANT**: The user is asking for table/list format. ALWAYS respond with a properly formatted markdown table using pipes and dashes. Make sure every requested item is in table rows.`;
+  }
+  
+  return prompt;
+};
 
 
 
@@ -179,6 +191,10 @@ const formatHistoryForGemini = (history, currentMessage) => {
 
 const callGeminiDirect = async (message, userName = "User") => {
   console.log(`🚀 [DIRECT GEMINI] Requesting gemini-2.0-flash`);
+  
+  // Use enhanced prompt for table requests
+  const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
+  
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
     method: "POST",
     headers: {
@@ -187,7 +203,7 @@ const callGeminiDirect = async (message, userName = "User") => {
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: message }] }],
       systemInstruction: {
-        parts: [{ text: SYSTEM_PROMPT(userName) }]
+        parts: [{ text: systemPrompt }]
       }
     }),
   });
@@ -204,6 +220,10 @@ const callGeminiDirect = async (message, userName = "User") => {
 
 const callGeminiDirectStream = async (message, res, userName = "User", history = []) => {
   console.log(`🚀 [DIRECT GEMINI STREAM] Requesting gemini-2.0-flash`);
+  
+  // Use enhanced prompt for table requests
+  const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
+  
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
     method: "POST",
     headers: {
@@ -212,7 +232,7 @@ const callGeminiDirectStream = async (message, res, userName = "User", history =
     body: JSON.stringify({
       contents: formatHistoryForGemini(history, message),
       systemInstruction: {
-        parts: [{ text: SYSTEM_PROMPT(userName) }]
+        parts: [{ text: systemPrompt }]
       }
     }),
   });

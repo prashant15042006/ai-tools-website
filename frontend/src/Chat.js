@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
 import { AppContext } from "./App";
+import { tableComponents } from "./components/TableRenderer";
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
    
 
@@ -220,7 +221,7 @@ function Chat() {
                   {msg.sender === "user" ? (
                     msg.text
                   ) : msg.text ? (
-                    <ReactMarkdown components={{ a: LinkRenderer }}>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown components={{ a: LinkRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   ) : (
                     <div className="typing-indicator">
                       <div className="typing-dot"></div>
