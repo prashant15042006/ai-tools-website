@@ -3,7 +3,11 @@ import ReactMarkdown from "react-markdown";
 import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
+import { injectTableStyles } from "./utils/tableStyles";
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
+
+// Inject table styles on component mount
+injectTableStyles();
    
 
 function Chat() {
