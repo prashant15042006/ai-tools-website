@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
 import { AppContext } from "./App";
-import { tableComponents } from "./components/TableRenderer";
+import { tableComponents } from "./utils/TableRenderer";
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
    
 
