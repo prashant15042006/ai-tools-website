@@ -132,7 +132,7 @@ export const convertToMarkdownTable = (data, headers) => {
 // Enhanced prompt helper for table generation
 export const enhanceTablePrompt = (userMessage) => {
   const lowerMsg = userMessage.toLowerCase();
-  const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine/i.test(userMessage);
+  const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine/.test(lowerMsg);
   
   if (isTableRequest) {
     return userMessage + '\n\n📋 **Please format your response as a markdown table for clarity.** Use proper markdown syntax with pipes (|) for columns and dashes for separators.';
@@ -163,7 +163,7 @@ const convertListToTable = (text) => {
   const items = [];
 
   for (const line of lines) {
-    const cleaned = line.replace(/^[\d+\.\-•\s*]+/, '').trim();
+    const cleaned = line.replace(/^[\d+.-•\s*]+/, '').trim();
     if (cleaned) {
       items.push(cleaned);
     }
@@ -186,10 +186,12 @@ const convertListToTable = (text) => {
   return text;
 };
 
-export default {
+const tableUtils = {
   convertToMarkdownTable,
   enhanceTablePrompt,
   parseAndFormatResponse,
   injectTableStyles,
   tableStyles
 };
+
+export default tableUtils;
