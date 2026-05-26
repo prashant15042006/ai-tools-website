@@ -669,6 +669,7 @@ function AppContent() {
   const [chatKey, setChatKey] = useState(0);
   const isMobile = useIsMobile();
   
+  const [connectionState, setConnectionState] = useState('online'); // 'online' | 'slow' | 'offline'
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
@@ -703,6 +704,59 @@ function AppContent() {
   const handleMobileNav = () => {
     if (isMobile) setIsMobileSidebarOpen(false);
   };
+
+  const checkConnectionHealth = async () => {
+    if (!navigator.onLine) {
+      setConnectionState('offline');
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 2200);
+    const start = performance.now();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/health`, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      const elapsed = performance.now() - start;
+
+      if (!response.ok) {
+        throw new Error('Health check failed');
+      }
+
+      if (elapsed > 1500) {
+        setConnectionState('slow');
+      } else {
+        setConnectionState('online');
+      }
+    } catch (err) {
+      setConnectionState('offline');
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  };
+
+  useEffect(() => {
+    checkConnectionHealth();
+    const interval = window.setInterval(checkConnectionHealth, 15000);
+
+    const handleOnline = () => {
+      checkConnectionHealth();
+    };
+    const handleOffline = () => setConnectionState('offline');
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>Loading Nexuss...</div>;
 
@@ -817,9 +871,11 @@ function AppContent() {
             <h1 className="page-title" style={{ fontSize: '20px', fontWeight: '800' }}>
                {location.pathname.replace('/', '').toUpperCase() || "DASHBOARD"}
             </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '24px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 10px #22c55e' }}></div>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Nexuss Online</span>
+            <div className="network-status-chip" data-status={connectionState} aria-live="polite" aria-label={`Internet status ${connectionState}`}>
+              <span className="network-status-dot" />
+              <span>
+                {connectionState === 'online' ? 'Internet Good' : connectionState === 'slow' ? 'Internet Slow' : 'Internet Offline'}
+              </span>
             </div>
           </div>
 

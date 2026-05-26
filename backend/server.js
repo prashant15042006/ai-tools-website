@@ -41,6 +41,14 @@ if (!isValidKey(process.env.NEMOTRON_API_KEY)) {
   console.log("✅ NEMOTRON API Key detected (ends with ...", process.env.NEMOTRON_API_KEY.slice(-5), ")");
 }
 
+if (!isValidKey(process.env.CEREBRAS_API_KEY)) {
+  console.warn("💡 INFO: CEREBRAS_API_KEY is not set or has placeholder value.");
+} else {
+  console.log("✅ Cerebras API Key detected (ends with ...", process.env.CEREBRAS_API_KEY.slice(-5), ")");
+}
+
+const USE_CEREBRAS_MODE = process.env.MODE?.toUpperCase() === "CEREBRAS";
+
 
 // ===============================
 // 🚀 EXPRESS INIT
@@ -328,6 +336,56 @@ const callNemotron = async (message, userName = "User") => {
   return Buffer.from(buffer).toString('base64');
 };
 
+const callCerebras = async (message, userName = "User") => {
+  const apiKey = process.env.CEREBRAS_API_KEY;
+  const apiUrl = process.env.CEREBRAS_API_URL || "https://api.cerebras.net/v1/generate";
+  const model = process.env.CEREBRAS_MODEL || "cerebras-gpt";
+
+  if (!isValidKey(apiKey)) {
+    throw new Error("Cerebras not configured");
+  }
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      prompt: `${SYSTEM_PROMPT(userName)}\n\n${message}`,
+      max_tokens: 1024,
+      temperature: 0.7,
+    }),
+  });
+
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+  if (!response.ok) {
+    const txt = await response.text();
+    throw new Error(`Cerebras error: ${txt}`);
+  }
+
+  if (contentType.includes("application/json")) {
+    const data = await response.json();
+    if (typeof data === "string") return data;
+    if (data.output) return data.output;
+    if (data.response) return data.response;
+    if (data.result) return data.result;
+    if (data.text) return data.text;
+    if (data.generated_text) return data.generated_text;
+    if (data.choices?.[0]?.message?.content) return data.choices[0].message.content;
+    if (data.choices?.[0]?.text) return data.choices[0].text;
+    return JSON.stringify(data);
+  }
+
+  if (contentType.includes("text/")) {
+    return await response.text();
+  }
+
+  const buffer = await response.arrayBuffer();
+  return Buffer.from(buffer).toString('base64');
+};
+
 const callZAIStream = async (message, res, userName = "User", history = []) => {
   const models = [
     "google/gemini-2.0-flash-001",
@@ -455,6 +513,26 @@ app.post("/api/chat", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    // 0. If MODE=CEREBRAS, prefer Cerebras provider first
+    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(message, userName);
+        res.write(`data: ${JSON.stringify({ content: reply })}\n\n`);
+        res.write("data: [DONE]\n\n");
+        if (db && reply) {
+          try {
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" });
+          } catch (dbErr) {
+            console.warn("DB Save error:", dbErr.message);
+          }
+        }
+        res.end();
+        return;
+      } catch (err) {
+        console.error('Cerebras stream failed, falling back:', err.message || err);
+      }
+    }
+
     // 1. Try Direct Google Gemini if configured (extremely fast & free)
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
@@ -522,6 +600,21 @@ app.post("/api/chat/complete", async (req, res) => {
     const { message, userName, history } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
+    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled
+    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(message, userName);
+        if (db && reply) {
+          try {
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" });
+          } catch (e) { console.warn('DB save failed:', e.message); }
+        }
+        return res.json({ success: true, model: 'cerebras', reply });
+      } catch (err) {
+        console.error('Cerebras call failed, falling back:', err.message);
+      }
+    }
+
     // 1. Prefer Direct Google Gemini if configured
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
@@ -579,6 +672,16 @@ app.post("/api/code", async (req, res) => {
       return res.status(400).json({ error: "Prompt required" });
     }
 
+    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled
+    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Generate clean code for: ${prompt}`, userName);
+        return res.json({ success: true, provider: 'cerebras', result: reply });
+      } catch (err) {
+        console.warn('Cerebras code generation failed, falling back:', err.message);
+      }
+    }
+
     // 1. Prefer Direct Google Gemini if configured
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
@@ -623,6 +726,16 @@ app.post("/api/content", async (req, res) => {
 
     if (!prompt) {
       return res.status(400).json({ error: "Prompt required" });
+    }
+
+    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled
+    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Write detailed content about: ${prompt}`, userName);
+        return res.json({ success: true, provider: 'cerebras', result: reply });
+      } catch (err) {
+        console.warn('Cerebras content generation failed, falling back:', err.message);
+      }
     }
 
     // 1. Prefer Direct Google Gemini if configured
