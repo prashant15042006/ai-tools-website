@@ -283,7 +283,6 @@ const callGeminiDirectStream = async (message, res, userName = "User", userEmail
         try {
           await db.collection("chats").add({
             message,
-            reply: fullReply,
             createdAt: new Date(),
             model: "gemini-2.0-flash-direct",
             userName,
@@ -495,7 +494,6 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
             try {
               await db.collection("chats").add({
                 message,
-                reply: fullReply,
                 createdAt: new Date(),
                 model: model,
                 userName,
@@ -550,7 +548,7 @@ app.post("/api/chat", async (req, res) => {
         res.write("data: [DONE]\n\n");
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" , userName, userEmail });
+            await db.collection("chats").add({ message, createdAt: new Date(), model: "cerebras" , userName, userEmail });
           } catch (dbErr) {
             console.warn("DB Save error:", dbErr.message);
           }
@@ -584,7 +582,7 @@ app.post("/api/chat", async (req, res) => {
         // Save to DB if available
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "nemotron" , userName, userEmail });
+            await db.collection("chats").add({ message, createdAt: new Date(), model: "nemotron" , userName, userEmail });
           } catch (dbErr) {
             console.warn("DB Save error:", dbErr.message);
           }
@@ -635,7 +633,7 @@ app.post("/api/chat/complete", async (req, res) => {
         const reply = await callCerebras(message, userName, userEmail);
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" , userName, userEmail });
+            await db.collection("chats").add({ message, createdAt: new Date(), model: "cerebras" , userName, userEmail });
           } catch (e) { console.warn('DB save failed:', e.message); }
         }
         return res.json({ success: true, model: 'cerebras', reply });
@@ -650,7 +648,7 @@ app.post("/api/chat/complete", async (req, res) => {
         const reply = await callGeminiDirect(message, userName);
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "gemini-2.0-flash-direct" , userName, userEmail });
+            await db.collection("chats").add({ message, createdAt: new Date(), model: "gemini-2.0-flash-direct" , userName, userEmail });
           } catch (e) { console.warn('DB save failed:', e.message); }
         }
         return res.json({ success: true, model: 'gemini-2.0-flash-direct', reply });
@@ -666,7 +664,7 @@ app.post("/api/chat/complete", async (req, res) => {
         // Save to DB if available
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "nemotron" , userName, userEmail });
+            await db.collection("chats").add({ message, createdAt: new Date(), model: "nemotron" , userName, userEmail });
           } catch (e) { console.warn('DB save failed:', e.message); }
         }
         return res.json({ success: true, model: 'nemotron', reply });
