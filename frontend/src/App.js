@@ -871,15 +871,15 @@ function AppContent() {
             <h1 className="page-title" style={{ fontSize: '20px', fontWeight: '800' }}>
                {location.pathname.replace('/', '').toUpperCase() || "DASHBOARD"}
             </h1>
-            <div className="network-status-chip" data-status={connectionState} aria-live="polite" aria-label={`Internet status ${connectionState}`}>
-              <span className="network-status-dot" />
-              <span>
-                {connectionState === 'online' ? 'Internet Good' : connectionState === 'slow' ? 'Internet Slow' : 'Internet Offline'}
-              </span>
-            </div>
           </div>
 
           <div className="header-actions">
+            <div className="network-status-chip" data-status={connectionState} aria-live="polite" aria-label={`Internet status ${connectionState}`}>
+              <span className="network-status-dot" />
+              <span>
+                {user?.displayName || 'Nexuss'} {connectionState === 'online' ? 'Online' : connectionState === 'slow' ? 'Slow' : 'Offline'}
+              </span>
+            </div>
             <div className="search-box">
               <Search size={18} className="search-icon" />
               <input type="text" className="search-input" placeholder="Search..." />
