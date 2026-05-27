@@ -454,6 +454,12 @@ body {
 
   @media (max-width: 768px) {
     .network-status-chip {
+      padding: 7px;
+      min-width: auto;
+      gap: 0;
+    }
+
+    .network-status-chip span:last-child {
       display: none;
     }
   }
