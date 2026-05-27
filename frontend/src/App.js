@@ -489,8 +489,43 @@ const ProjectsView = ({ projects, setProjects }) => {
   );
 };
 
+const SystemVoiceSelector = ({ voicePreset, setVoicePreset }) => {
+  const [voices, setVoices] = useState([]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const available = window.speechSynthesis.getVoices();
+      setVoices(available);
+    };
+
+    loadVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+  }, []);
+
+  const selectedVoice = ['default', 'jarvis', 'custom', 'system'].includes(voicePreset)
+    ? 'default'
+    : voicePreset;
+
+  return (
+    <select
+      value={selectedVoice}
+      onChange={(e) => setVoicePreset(e.target.value)}
+      style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 280 }}
+    >
+      <option value="default">System default voice</option>
+      {voices.map((voice) => (
+        <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
+          {voice.name} ({voice.lang})
+        </option>
+      ))}
+    </select>
+  );
+};
+
 const SettingsView = () => {
   const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl } = useContext(AppContext);
+  const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const testCustomVoice = async (url) => {
     if (!url) return alert('Enter a custom TTS endpoint URL to test.');
     try {
@@ -506,6 +541,11 @@ const SettingsView = () => {
       alert('Unable to play custom voice. Ensure the endpoint returns audio (mp3/wav) and allows CORS.');
     }
   };
+
+  const handleTestVoice = (preset) => {
+    // Import and call testVoice from voiceEngine
+    import('./utils/voiceEngine').then(({ testVoice }) => testVoice(preset));
+  };
   
   return (
     <div className="page-view" style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
@@ -520,12 +560,12 @@ const SettingsView = () => {
           </div>
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '20px' }}>
             <img 
-              src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} 
+              src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} 
               alt="Profile" 
               style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)' }} 
             />
             <div>
-              <div style={{ fontSize: '20px', fontWeight: '700' }}>{user?.displayName || user?.email?.split('@')[0]}</div>
+              <div style={{ fontSize: '20px', fontWeight: '700' }}>{displayName}</div>
               <div style={{ color: 'var(--text-secondary)' }}>{user?.email}</div>
               <div style={{ display: 'inline-block', marginTop: '8px', padding: '4px 10px', background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>Pro Member</div>
             </div>
@@ -554,14 +594,26 @@ const SettingsView = () => {
               <Toggle checked={ttsEnabled} onChange={() => setTtsEnabled(!ttsEnabled)} />
             </div>
             {ttsEnabled && (
-              <div style={{ padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 220 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
-                  <select value={voicePreset} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
-                    <option value="default">Default (system)</option>
-                    <option value="jarvis">Robotic — J.A.R.V.I.S.-like preset</option>
-                    <option value="custom">Custom TTS Endpoint (URL)</option>
-                  </select>
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ minWidth: 220 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
+                    <select value={['default', 'jarvis', 'custom', 'system'].includes(voicePreset) ? voicePreset : 'system'} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
+                      <option value="default">Default (system)</option>
+                      <option value="jarvis">🎙️ J.A.R.V.I.S. — Indian English, Clear & Natural</option>
+                      <option value="custom">Custom TTS Endpoint (URL)</option>
+                      <option value="system">Choose System Voice...</option>
+                    </select>
+                  </div>
+                  <div style={{ minWidth: 280 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>System Voice (advanced)</div>
+                    <SystemVoiceSelector voicePreset={voicePreset} setVoicePreset={setVoicePreset} />
+                  </div>
+                  {(voicePreset === 'jarvis' || voicePreset === 'default') && (
+                    <button onClick={() => handleTestVoice(voicePreset)} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
+                      🔊 Test Voice
+                    </button>
+                  )}
                 </div>
                 {voicePreset === 'custom' && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -570,7 +622,15 @@ const SettingsView = () => {
                   </div>
                 )}
                 {voicePreset === 'jarvis' && (
-                  <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>J.A.R.V.I.S. preset uses an English male-sounding system voice with adjusted pitch and rate to create a robotic assistant tone.</div>
+                  <div style={{ background: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.15)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
+                    <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Voice Profile</div>
+                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      Indian-accented, polished & calm delivery with a natural Hindi/English tone.
+                      Speaks both <strong style={{ color: '#60a5fa' }}>Hindi</strong> and <strong style={{ color: '#60a5fa' }}>English</strong> naturally 
+                      with auto-detection. Fast, clear, and confident — not slow or robotic. 
+                      Uses a smooth, natural cadence for better Indian-style speech.
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -699,7 +759,8 @@ const PwaInstallBanner = () => {
   function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, loading, voicePreset, customVoiceUrl, setVoicePreset, setCustomVoiceUrl } = useContext(AppContext);
+  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, loading } = useContext(AppContext);
+  const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
@@ -859,12 +920,12 @@ const PwaInstallBanner = () => {
           <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
               <img 
-                src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} 
-                alt="Profile" 
-                style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--accent)' }} 
-              />
+                  src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} 
+                  alt="Profile" 
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--accent)' }} 
+                />
               <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.displayName || user?.email?.split('@')[0]}</div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email || 'No email available'}</div>
               </div>
             </div>
@@ -929,8 +990,8 @@ const PwaInstallBanner = () => {
             <button className="icon-btn">
               <Bell size={20} />
             </button>
-            <div className="profile-btn" style={{ overflow: 'hidden', padding: 0 }} title={user?.email || user?.displayName || 'Profile'}>
-               <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} alt="P" style={{ width: '100%', height: '100%' }} />
+            <div className="profile-btn" style={{ overflow: 'hidden', padding: 0 }} title={user?.email || displayName || 'Profile'}>
+              <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} alt="P" style={{ width: '100%', height: '100%' }} />
             </div>
           </div>
         </header>
@@ -961,7 +1022,7 @@ const PwaInstallBanner = () => {
 function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [ttsEnabled, setTtsEnabled] = useState(false);
-  const [voicePreset, setVoicePreset] = useState(() => localStorage.getItem('tts_voice') || 'default');
+  const [voicePreset, setVoicePreset] = useState(() => localStorage.getItem('tts_voice') || 'jarvis');
   const [customVoiceUrl, setCustomVoiceUrl] = useState(() => localStorage.getItem('tts_custom_url') || '');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
