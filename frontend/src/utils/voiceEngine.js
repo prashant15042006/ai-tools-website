@@ -112,10 +112,31 @@ const isArabicVoice = (voice) => {
 };
 
 /**
+ * Allow only specific voices: US English, Indian English, or any voice
+ * explicitly named 'JARVIS' (case-insensitive). This removes other
+ * system voices so only the requested sounds remain.
+ */
+const isAllowedVoice = (voice) => {
+  if (!voice) return false;
+  const name = (voice.name || '').toLowerCase();
+  const lang = (voice.lang || '').toLowerCase();
+
+  if (name.includes('jarvis')) return true;
+  if (lang.startsWith('en-in')) return true; // India
+  if (lang.startsWith('en-us')) return true; // US
+  // Also allow voices whose name mentions 'india' or 'us' (covers vendor names)
+  if (name.includes('india')) return true;
+  if (name.includes('us ' ) || name.includes('us-') || name.includes('usenglish') || name.includes('usenglish'.toLowerCase())) return true;
+
+  return false;
+};
+
+/**
  * Find the best matching voice from a priority list.
  */
 const findBestVoice = (priorityList, voices) => {
-  const filteredVoices = voices.filter(v => !isArabicVoice(v));
+  // Filter out undesired languages and keep only allowed voices
+  const filteredVoices = voices.filter(v => !isArabicVoice(v) && isAllowedVoice(v));
   for (const target of priorityList) {
     // Try exact name match first
     const byName = filteredVoices.find(v => v.name === target);
@@ -386,7 +407,8 @@ export const stopKeepAlive = () => {
  */
 export const getAvailableVoices = () => {
   const voices = window.speechSynthesis.getVoices();
-  return voices.map(v => ({
+  // Only expose allowed voices to the app (US, India, JARVIS)
+  return voices.filter(isAllowedVoice).map(v => ({
     name: v.name,
     lang: v.lang,
     isLocal: v.localService,
@@ -401,8 +423,8 @@ export const getAvailableVoices = () => {
  */
 export const testVoice = (preset = 'jarvis') => {
   const phrases = {
-    jarvis: "Namaste. Main aapke sawal ka jawab dene ke liye taiyar hoon. Aap kya padhna chahenge?",
-    default: "Hello! Main aapka digital assistant hoon. Aapko aaj kis cheez mein madad chahiye?",
+    jarvis: "Namaste,sir.All system are online and ready for your command.",
+    default: "HELLO! I'm Nexuss, your AI assistant.How can I help you today?",
   };
   
   speak(phrases[preset] || phrases.jarvis, { voicePreset: preset });
