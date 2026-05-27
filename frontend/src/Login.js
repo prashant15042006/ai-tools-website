@@ -58,15 +58,16 @@ export default function Login() {
       const userEmail = currentUser ? currentUser.email : email;
       
       if (userEmail) {
-        await setDoc(doc(db, "users", userEmail), {
+        // Fire and forget - don't await because it can hang indefinitely if Firebase config is invalid or offline
+        setDoc(doc(db, "users", userEmail), {
           name: name,
           email: userEmail,
           lastLogin: serverTimestamp(),
           authProvider: currentUser ? "google" : "email_mock"
-        }, { merge: true });
+        }, { merge: true }).catch(err => console.warn("Firestore save failed:", err));
       }
     } catch (err) {
-      console.warn("Firestore save failed:", err);
+      console.warn("Error getting user for Firestore:", err);
     }
 
     localStorage.setItem("nexus_user_name", name);
@@ -84,16 +85,16 @@ export default function Login() {
     setLoading(true);
     
     try {
-      // Save user data to Firestore
+      // Save user data to Firestore (Fire and forget to prevent hanging)
       try {
-        await setDoc(doc(db, "users", email), {
+        setDoc(doc(db, "users", email), {
           name: name,
           email: email,
           lastLogin: serverTimestamp(),
           authProvider: "email_mock"
-        }, { merge: true });
+        }, { merge: true }).catch(err => console.warn("Firestore save failed:", err));
       } catch (err) {
-        console.warn("Firestore save failed:", err);
+        console.warn("Error initiating Firestore save:", err);
       }
 
       // MOCK LOGIN: Save email and name to localStorage
