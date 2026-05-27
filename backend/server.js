@@ -223,7 +223,7 @@ const callGeminiDirect = async (message, userName = "User") => {
   return reply;
 };
 
-const callGeminiDirectStream = async (message, res, userName = "User", history = []) => {
+const callGeminiDirectStream = async (message, res, userName = "User", userEmail = "", history = []) => {
   console.log(`🚀 [DIRECT GEMINI STREAM] Requesting gemini-2.0-flash`);
   
   // Use enhanced prompt for table requests
@@ -285,7 +285,9 @@ const callGeminiDirectStream = async (message, res, userName = "User", history =
             message,
             reply: fullReply,
             createdAt: new Date(),
-            model: "gemini-2.0-flash-direct"
+            model: "gemini-2.0-flash-direct",
+            userName,
+            userEmail
           });
         } catch (dbErr) {
           console.warn("DB Save error:", dbErr.message);
@@ -307,7 +309,7 @@ const callGeminiDirectStream = async (message, res, userName = "User", history =
 // Nemotron caller (generic, tolerant to multiple response shapes)
 // If `NEMOTRON_API_KEY` and `NEMOTRON_API_URL` are set, this will be used as a fast default provider.
 // The function attempts to extract text from a variety of common response shapes.
-const callNemotron = async (message, userName = "User") => {
+const callNemotron = async (message, userName = "User", userEmail = "") => {
   const apiKey = process.env.NEMOTRON_API_KEY;
   const apiUrl = process.env.NEMOTRON_API_URL;
   if (!isValidKey(apiKey) || !isValidKey(apiUrl)) throw new Error("Nemotron not configured");
@@ -361,7 +363,7 @@ const callNemotron = async (message, userName = "User") => {
   return Buffer.from(buffer).toString('base64');
 };
 
-const callCerebras = async (message, userName = "User") => {
+const callCerebras = async (message, userName = "User", userEmail = "") => {
   const apiKey = process.env.CEREBRAS_API_KEY;
   const apiUrl = process.env.CEREBRAS_API_URL || "https://api.cerebras.net/v1/generate";
   const model = process.env.CEREBRAS_MODEL || "cerebras-gpt";
@@ -411,7 +413,7 @@ const callCerebras = async (message, userName = "User") => {
   return Buffer.from(buffer).toString('base64');
 };
 
-const callZAIStream = async (message, res, userName = "User", history = []) => {
+const callZAIStream = async (message, res, userName = "User", userEmail = "", history = []) => {
   const models = [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
@@ -495,7 +497,9 @@ const callZAIStream = async (message, res, userName = "User", history = []) => {
                 message,
                 reply: fullReply,
                 createdAt: new Date(),
-                model: model
+                model: model,
+                userName,
+                userEmail
               });
             } catch (dbErr) {
               console.warn("DB Save error:", dbErr.message);
@@ -530,7 +534,7 @@ const callZAIStream = async (message, res, userName = "User", history = []) => {
 // ===============================
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, userName, history } = req.body;
+    const { message, userName, userEmail, history } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
     // Set headers for SSE (Server-Sent Events)
@@ -541,12 +545,12 @@ app.post("/api/chat", async (req, res) => {
     // 0. If MODE=CEREBRAS, prefer Cerebras provider first
     if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
-        const reply = await callCerebras(message, userName);
+        const reply = await callCerebras(message, userName, userEmail);
         res.write(`data: ${JSON.stringify({ content: reply })}\n\n`);
         res.write("data: [DONE]\n\n");
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" });
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" , userName, userEmail });
           } catch (dbErr) {
             console.warn("DB Save error:", dbErr.message);
           }
@@ -561,7 +565,7 @@ app.post("/api/chat", async (req, res) => {
     // 1. Try Direct Google Gemini if configured (extremely fast & free)
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
-        await callGeminiDirectStream(message, res, userName, history);
+        await callGeminiDirectStream(message, res, userName, userEmail, history);
         return;
       } catch (err) {
         console.error('Direct Gemini stream failed, falling back:', err.message || err);
@@ -571,7 +575,7 @@ app.post("/api/chat", async (req, res) => {
     // 2. If Nemotron is configured (fast provider), use it for a single non-streaming reply
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
-        const reply = await callNemotron(message, userName);
+        const reply = await callNemotron(message, userName, userEmail);
 
         // Send as a single SSE message and mark done
         res.write(`data: ${JSON.stringify({ content: reply })}\n\n`);
@@ -580,7 +584,7 @@ app.post("/api/chat", async (req, res) => {
         // Save to DB if available
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "nemotron" });
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "nemotron" , userName, userEmail });
           } catch (dbErr) {
             console.warn("DB Save error:", dbErr.message);
           }
@@ -595,7 +599,7 @@ app.post("/api/chat", async (req, res) => {
 
     // 3. Try OpenRouter / ZAI if configured
     if (isValidKey(process.env.ZAI_API_KEY)) {
-      await callZAIStream(message, res, userName, history);
+      await callZAIStream(message, res, userName, userEmail, history);
       return;
     }
 
@@ -622,16 +626,16 @@ app.post("/api/chat", async (req, res) => {
 // ===============================
 app.post("/api/chat/complete", async (req, res) => {
   try {
-    const { message, userName, history } = req.body;
+    const { message, userName, userEmail, history } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
     // 0. Prefer Cerebras when MODE=CEREBRAS is enabled
     if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
-        const reply = await callCerebras(message, userName);
+        const reply = await callCerebras(message, userName, userEmail);
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" });
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "cerebras" , userName, userEmail });
           } catch (e) { console.warn('DB save failed:', e.message); }
         }
         return res.json({ success: true, model: 'cerebras', reply });
@@ -646,7 +650,7 @@ app.post("/api/chat/complete", async (req, res) => {
         const reply = await callGeminiDirect(message, userName);
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "gemini-2.0-flash-direct" });
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "gemini-2.0-flash-direct" , userName, userEmail });
           } catch (e) { console.warn('DB save failed:', e.message); }
         }
         return res.json({ success: true, model: 'gemini-2.0-flash-direct', reply });
@@ -658,11 +662,11 @@ app.post("/api/chat/complete", async (req, res) => {
     // 2. Prefer Nemotron when available
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
-        const reply = await callNemotron(message, userName);
+        const reply = await callNemotron(message, userName, userEmail);
         // Save to DB if available
         if (db && reply) {
           try {
-            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "nemotron" });
+            await db.collection("chats").add({ message, reply, createdAt: new Date(), model: "nemotron" , userName, userEmail });
           } catch (e) { console.warn('DB save failed:', e.message); }
         }
         return res.json({ success: true, model: 'nemotron', reply });

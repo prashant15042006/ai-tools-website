@@ -67,6 +67,7 @@ function Chat() {
         body: JSON.stringify({ 
           message: text,
           userName: localStorage.getItem("nexus_user_name") || user?.displayName || user?.email?.split('@')[0] || "User",
+          userEmail: user?.email || localStorage.getItem("nexus_mock_user") || "Anonymous",
           history: history
         }),
       });
