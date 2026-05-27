@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { auth, googleProvider } from "./firebase";
+import { auth, googleProvider, db } from "./firebase";
 import { signInWithPopup, onAuthStateChanged } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Mail, ArrowRight, User, CheckCircle } from "lucide-react";
 
@@ -45,12 +46,29 @@ export default function Login() {
     }
   };
 
-  const finalizeLogin = (e) => {
+  const finalizeLogin = async (e) => {
     if (e) e.preventDefault();
     if (!name.trim()) {
         setError("Please enter your name to continue.");
         return;
     }
+    
+    try {
+      const currentUser = auth.currentUser;
+      const userEmail = currentUser ? currentUser.email : email;
+      
+      if (userEmail) {
+        await setDoc(doc(db, "users", userEmail), {
+          name: name,
+          email: userEmail,
+          lastLogin: serverTimestamp(),
+          authProvider: currentUser ? "google" : "email_mock"
+        }, { merge: true });
+      }
+    } catch (err) {
+      console.warn("Firestore save failed:", err);
+    }
+
     localStorage.setItem("nexus_user_name", name);
     navigate("/");
   };
@@ -66,6 +84,18 @@ export default function Login() {
     setLoading(true);
     
     try {
+      // Save user data to Firestore
+      try {
+        await setDoc(doc(db, "users", email), {
+          name: name,
+          email: email,
+          lastLogin: serverTimestamp(),
+          authProvider: "email_mock"
+        }, { merge: true });
+      } catch (err) {
+        console.warn("Firestore save failed:", err);
+      }
+
       // MOCK LOGIN: Save email and name to localStorage
       localStorage.setItem("nexus_mock_user", email);
       localStorage.setItem("nexus_user_name", name);

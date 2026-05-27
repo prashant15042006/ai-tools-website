@@ -72,8 +72,13 @@ const PORT = process.env.PORT || 5001;
 // ===============================
 let db;
 try {
+  const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
+  if (!fs.existsSync(serviceAccountPath)) {
+    throw new Error(`Service account file not found at ${serviceAccountPath}`);
+  }
+
   const serviceAccount = JSON.parse(
-    fs.readFileSync("./serviceAccountKey.json", "utf-8")
+    fs.readFileSync(serviceAccountPath, "utf-8")
   );
 
   admin.initializeApp({
@@ -81,7 +86,7 @@ try {
   });
 
   db = admin.firestore();
-  console.log("✅ Firebase initialized successfully");
+  console.log("✅ Firebase initialized successfully using service account:", serviceAccount.project_id);
 } catch (err) {
   console.error("❌ Firebase Initialization Error:", err.message);
   console.warn("Server will continue without database persistence.");
