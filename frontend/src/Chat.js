@@ -11,7 +11,7 @@ injectTableStyles();
    
 
 function Chat() {
-  const { ttsEnabled, addRecentChat, user } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
     ttsEnabledRef.current = ttsEnabled;
@@ -33,14 +33,49 @@ function Chat() {
     scrollToBottom();
   }, [messages, loading]);
 
-  const speak = (text) => {
+  const speak = async (text) => {
     if (!ttsEnabledRef.current) return;
     window.speechSynthesis.cancel();
     const cleaned = text.replace(/[#*`>_~[\]]/g, "").trim();
+
+    // If user provided a custom TTS endpoint, try to fetch audio and play it
+    if (voicePreset === 'custom' && customVoiceUrl) {
+      try {
+        const encoded = encodeURIComponent(cleaned);
+        const url = customVoiceUrl.includes('?') ? `${customVoiceUrl}&text=${encoded}` : `${customVoiceUrl}?text=${encoded}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const blob = await res.blob();
+          const audioUrl = URL.createObjectURL(blob);
+          const a = new Audio(audioUrl);
+          await a.play();
+          return;
+        }
+      } catch (e) {
+        console.warn('Custom TTS playback failed', e);
+        // fallback to browser TTS below
+      }
+    }
+
+    // Use browser voices for default or jarvis preset
     const utterance = new SpeechSynthesisUtterance(cleaned);
-    utterance.lang = "hi-IN";
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
+    // prefer Hindi for default content if detected, else English
+    utterance.lang = /[\u0900-\u097F]/.test(cleaned) ? 'hi-IN' : 'en-US';
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voicePreset === 'jarvis') {
+      // Try pick a male English voice for a deeper, robotic tone
+      const preferred = voices.find(v => /male|Daniel|Alex|Google UK English Male|Microsoft David|en-GB|en-US/i.test(v.name)) || voices.find(v => /en-|English/i.test(v.lang || v.name));
+      if (preferred) utterance.voice = preferred;
+      utterance.rate = 0.95;
+      utterance.pitch = 0.9;
+      utterance.volume = 1;
+    } else {
+      // default system voice
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+    }
+
     window.speechSynthesis.speak(utterance);
   };
 
@@ -110,7 +145,7 @@ function Chat() {
           } catch (e) { }
         }
       }
-      speak(aiReply);
+      await speak(aiReply);
 
     } catch (error) {
       let errorMsg = error.message;

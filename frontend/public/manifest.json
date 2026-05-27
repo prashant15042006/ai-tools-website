@@ -55,7 +55,7 @@
   ],
   "start_url": "/",
   "scope": "/",
-  "orientation": "any",
+  "orientation": "portrait",
   "theme_color": "#0b0e1a",
   "background_color": "#06080f",
   "categories": [

@@ -194,6 +194,22 @@ const formatHistoryForGemini = (history, currentMessage) => {
   return contents;
 };
 
+const saveChatMetadata = async ({ question, userName, userEmail, model, provider }) => {
+  if (!db) return;
+  try {
+    await db.collection("chats").add({
+      question,
+      userName,
+      userEmail,
+      model,
+      provider,
+      createdAt: new Date()
+    });
+  } catch (dbErr) {
+    console.warn("DB Save error:", dbErr.message);
+  }
+};
+
 const callGeminiDirect = async (message, userName = "User") => {
   console.log(`🚀 [DIRECT GEMINI] Requesting gemini-2.0-flash`);
   
@@ -278,20 +294,14 @@ const callGeminiDirectStream = async (message, res, userName = "User", userEmail
       console.log(`✅ [DIRECT GEMINI STREAM] Finished. Reply length: ${fullReply.length}`);
       res.write("data: [DONE]\n\n");
 
-      // Save to database if available
-      if (db && fullReply) {
-        try {
-          await db.collection("chats").add({
-            message,
-            createdAt: new Date(),
-            model: "gemini-2.0-flash-direct",
-            userName,
-            userEmail
-          });
-        } catch (dbErr) {
-          console.warn("DB Save error:", dbErr.message);
-        }
-      }
+      // Save to database if available (metadata only, no AI reply text)
+      await saveChatMetadata({
+        question: message,
+        userName,
+        userEmail,
+        model: "gemini-2.0-flash-direct",
+        provider: "Google Gemini"
+      });
 
       res.end();
       resolve();
@@ -489,20 +499,14 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
         response.body.on("end", async () => {
           console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
           
-          // Save to database if available
-          if (db && fullReply) {
-            try {
-              await db.collection("chats").add({
-                message,
-                createdAt: new Date(),
-                model: model,
-                userName,
-                userEmail
-              });
-            } catch (dbErr) {
-              console.warn("DB Save error:", dbErr.message);
-            }
-          }
+          // Save metadata only, without AI reply text
+          await saveChatMetadata({
+            question: message,
+            userName,
+            userEmail,
+            model: model,
+            provider: "OpenRouter"
+          });
           
           res.end();
           resolve();
@@ -546,13 +550,13 @@ app.post("/api/chat", async (req, res) => {
         const reply = await callCerebras(message, userName, userEmail);
         res.write(`data: ${JSON.stringify({ content: reply })}\n\n`);
         res.write("data: [DONE]\n\n");
-        if (db && reply) {
-          try {
-            await db.collection("chats").add({ message, createdAt: new Date(), model: "cerebras" , userName, userEmail });
-          } catch (dbErr) {
-            console.warn("DB Save error:", dbErr.message);
-          }
-        }
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "cerebras",
+          provider: "Cerebras"
+        });
         res.end();
         return;
       } catch (err) {
@@ -579,14 +583,14 @@ app.post("/api/chat", async (req, res) => {
         res.write(`data: ${JSON.stringify({ content: reply })}\n\n`);
         res.write("data: [DONE]\n\n");
 
-        // Save to DB if available
-        if (db && reply) {
-          try {
-            await db.collection("chats").add({ message, createdAt: new Date(), model: "nemotron" , userName, userEmail });
-          } catch (dbErr) {
-            console.warn("DB Save error:", dbErr.message);
-          }
-        }
+        // Save metadata only, without AI reply text
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "nemotron",
+          provider: "Nemotron"
+        });
 
         res.end();
         return;
@@ -631,11 +635,13 @@ app.post("/api/chat/complete", async (req, res) => {
     if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(message, userName, userEmail);
-        if (db && reply) {
-          try {
-            await db.collection("chats").add({ message, createdAt: new Date(), model: "cerebras" , userName, userEmail });
-          } catch (e) { console.warn('DB save failed:', e.message); }
-        }
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "cerebras",
+          provider: "Cerebras"
+        });
         return res.json({ success: true, model: 'cerebras', reply });
       } catch (err) {
         console.error('Cerebras call failed, falling back:', err.message);
@@ -646,11 +652,13 @@ app.post("/api/chat/complete", async (req, res) => {
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
         const reply = await callGeminiDirect(message, userName);
-        if (db && reply) {
-          try {
-            await db.collection("chats").add({ message, createdAt: new Date(), model: "gemini-2.0-flash-direct" , userName, userEmail });
-          } catch (e) { console.warn('DB save failed:', e.message); }
-        }
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "gemini-2.0-flash-direct",
+          provider: "Google Gemini"
+        });
         return res.json({ success: true, model: 'gemini-2.0-flash-direct', reply });
       } catch (err) {
         console.error('Direct Gemini call failed, falling back:', err.message);
@@ -661,12 +669,13 @@ app.post("/api/chat/complete", async (req, res) => {
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(message, userName, userEmail);
-        // Save to DB if available
-        if (db && reply) {
-          try {
-            await db.collection("chats").add({ message, createdAt: new Date(), model: "nemotron" , userName, userEmail });
-          } catch (e) { console.warn('DB save failed:', e.message); }
-        }
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "nemotron",
+          provider: "Nemotron"
+        });
         return res.json({ success: true, model: 'nemotron', reply });
       } catch (err) {
         console.error('Nemotron call failed, falling back:', err.message);
@@ -676,6 +685,13 @@ app.post("/api/chat/complete", async (req, res) => {
     // 3. Fallback to existing ZAI (non-streaming)
     if (isValidKey(process.env.ZAI_API_KEY)) {
       const reply = await callZAI(message, userName);
+      await saveChatMetadata({
+        question: message,
+        userName,
+        userEmail,
+        model: "zai",
+        provider: "OpenRouter"
+      });
       return res.json({ success: true, model: 'zai', reply });
     }
 

@@ -490,7 +490,22 @@ const ProjectsView = ({ projects, setProjects }) => {
 };
 
 const SettingsView = () => {
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user } = useContext(AppContext);
+  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl } = useContext(AppContext);
+  const testCustomVoice = async (url) => {
+    if (!url) return alert('Enter a custom TTS endpoint URL to test.');
+    try {
+      const text = encodeURIComponent('This is a Nexuss voice test.');
+      const fetchUrl = url.includes('?') ? `${url}&text=${text}` : `${url}?text=${text}`;
+      const res = await fetch(fetchUrl);
+      if (!res.ok) throw new Error('Failed to fetch audio');
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const a = new Audio(audioUrl);
+      await a.play();
+    } catch (e) {
+      alert('Unable to play custom voice. Ensure the endpoint returns audio (mp3/wav) and allows CORS.');
+    }
+  };
   
   return (
     <div className="page-view" style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
@@ -531,13 +546,34 @@ const SettingsView = () => {
               </div>
               <Toggle checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
             </div>
-            <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
               <div>
                 <div style={{ fontWeight: '600' }}>AI Voice Response</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Listen to AI responses using Text-to-Speech.</div>
               </div>
               <Toggle checked={ttsEnabled} onChange={() => setTtsEnabled(!ttsEnabled)} />
             </div>
+            {ttsEnabled && (
+              <div style={{ padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 220 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
+                  <select value={voicePreset} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
+                    <option value="default">Default (system)</option>
+                    <option value="jarvis">Robotic — J.A.R.V.I.S.-like preset</option>
+                    <option value="custom">Custom TTS Endpoint (URL)</option>
+                  </select>
+                </div>
+                {voicePreset === 'custom' && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input placeholder="https://your-tts.example/api/speak" value={customVoiceUrl} onChange={(e) => setCustomVoiceUrl(e.target.value)} style={{ padding: 8, borderRadius: 8, minWidth: 360, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)' }} />
+                    <button onClick={() => testCustomVoice(customVoiceUrl)} style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--accent)', color: 'white', fontWeight: 700 }}>Test</button>
+                  </div>
+                )}
+                {voicePreset === 'jarvis' && (
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>J.A.R.V.I.S. preset uses an English male-sounding system voice with adjusted pitch and rate to create a robotic assistant tone.</div>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -660,10 +696,10 @@ const PwaInstallBanner = () => {
 
 // --- Main App Logic ---
 
-function AppContent() {
+  function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, loading } = useContext(AppContext);
+  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, loading, voicePreset, customVoiceUrl, setVoicePreset, setCustomVoiceUrl } = useContext(AppContext);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
@@ -829,7 +865,7 @@ function AppContent() {
               />
               <div style={{ overflow: 'hidden' }}>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.displayName || user?.email?.split('@')[0]}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Pro Account</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email || 'No email available'}</div>
               </div>
             </div>
             <button 
@@ -893,7 +929,7 @@ function AppContent() {
             <button className="icon-btn">
               <Bell size={20} />
             </button>
-            <div className="profile-btn" style={{ overflow: 'hidden', padding: 0 }}>
+            <div className="profile-btn" style={{ overflow: 'hidden', padding: 0 }} title={user?.email || user?.displayName || 'Profile'}>
                <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} alt="P" style={{ width: '100%', height: '100%' }} />
             </div>
           </div>
@@ -925,6 +961,8 @@ function AppContent() {
 function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [voicePreset, setVoicePreset] = useState(() => localStorage.getItem('tts_voice') || 'default');
+  const [customVoiceUrl, setCustomVoiceUrl] = useState(() => localStorage.getItem('tts_custom_url') || '');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recentChats, setRecentChats] = useState(() => {
@@ -960,6 +998,14 @@ function App() {
     localStorage.setItem("nexus_chats", JSON.stringify(recentChats));
   }, [recentChats]);
 
+  useEffect(() => {
+    localStorage.setItem('tts_voice', voicePreset);
+  }, [voicePreset]);
+
+  useEffect(() => {
+    localStorage.setItem('tts_custom_url', customVoiceUrl);
+  }, [customVoiceUrl]);
+
   const addRecentChat = (question) => {
     const title = question.length > 36 ? question.substring(0, 36) + '…' : question;
     setRecentChats((prev) => {
@@ -969,7 +1015,7 @@ function App() {
   };
 
   return (
-    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, loading }}>
+    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, loading, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />

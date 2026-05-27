@@ -4,7 +4,7 @@ import { AppContext } from "./App";
 import API_BASE_URL from "./apiConfig";
 
 export default function ChatPanel() {
-  const { user } = useContext(AppContext);
+  const { user, darkMode } = useContext(AppContext);
   const [messages, setMessages] = useState([{ text: "Hello 👋", sender: "ai" }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +37,7 @@ export default function ChatPanel() {
 
   return (
     <motion.div
-      className="bg-[#1e293b] rounded-2xl p-4 flex flex-col h-[350px]"
+      className={`rounded-2xl p-4 flex flex-col h-[350px] ${darkMode ? 'bg-[#1e293b]' : 'bg-white'}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
@@ -48,15 +48,15 @@ export default function ChatPanel() {
             key={i}
             className={`p-3 rounded-xl max-w-[70%] ${
               msg.sender === "user"
-                ? "bg-blue-500 text-black self-end"
-                : "bg-gray-700 text-white self-start"
+                ? (darkMode ? "bg-blue-500 text-black self-end" : "bg-blue-500 text-white self-end")
+                : (darkMode ? "bg-gray-700 text-white self-start" : "bg-white text-black border border-gray-200 self-start")
             }`}
           >
             {msg.text}
           </div>
         ))}
         {loading && (
-          <div className="p-3 rounded-xl bg-gray-700 text-white self-start">
+          <div className={`p-3 rounded-xl self-start ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-black border border-gray-200'}`}>
             AI is typing...
           </div>
         )}
@@ -65,7 +65,7 @@ export default function ChatPanel() {
       {/* Input Bar */}
       <div className="flex gap-2 mt-2">
         <input
-          className="flex-1 p-2 rounded-lg bg-gray-800 text-white outline-none"
+          className={`flex-1 p-2 rounded-lg outline-none ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black border border-gray-200'}`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask anything..."

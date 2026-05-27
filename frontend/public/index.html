@@ -57,6 +57,20 @@
         });
       }
     </script>
+    <script>
+      // Try to lock orientation to portrait on supported browsers (may require PWA install/secure context)
+      (function() {
+        try {
+          const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+          const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+          if (isMobile && isStandalone && screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('portrait').catch(() => {});
+          }
+        } catch (e) {
+          // ignore
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run Nexuss Ai.</noscript>
