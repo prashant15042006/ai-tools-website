@@ -224,7 +224,7 @@ const chunkText = (text, maxLen = 200) => {
  * 
  * @param {string} text - The text to speak
  * @param {Object} options
- * @param {string} options.voicePreset - 'default' | 'jarvis' | 'custom'
+ * @param {string} options.voicePreset - 'default' | 'jarvis' | 'custom' | 'system' | explicit system voice name
  * @param {string} options.customVoiceUrl - URL for custom TTS endpoint
  * @param {React.RefObject} options.ttsEnabledRef - Ref to check if TTS is still enabled
  * @returns {Promise<void>}
@@ -235,6 +235,10 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
   
   // Cancel any ongoing speech
   window.speechSynthesis.cancel();
+  
+  if (voicePreset === 'system') {
+    voicePreset = 'default';
+  }
   
   const cleaned = cleanTextForSpeech(text);
   if (!cleaned) return;
@@ -331,12 +335,12 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         // Use voice's language if available, otherwise detect
         utterance.lang = explicit.lang || detectLanguage(cleaned);
       } else {
-        // Fallback to default behavior
-        if (isHindi) {
-          utterance.lang = 'hi-IN';
-        } else {
-          utterance.lang = 'en-IN';
-        }
+        // Fallback to default behavior when the explicit voice name is unavailable.
+        const fallback = isHindi
+          ? findBestVoice(HINDI_VOICE_PRIORITY, voices)
+          : findBestVoice(JARVIS_VOICE_PRIORITY, voices) || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+        if (fallback) utterance.voice = fallback;
+        utterance.lang = fallback?.lang || (isHindi ? 'hi-IN' : 'en-IN');
       }
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
@@ -425,13 +429,14 @@ export const getAvailableVoices = () => {
 /**
  * Play a test phrase with the given preset.
  */
-export const testVoice = (preset = 'jarvis') => {
+export const testVoice = (preset = 'jarvis', customVoiceUrl = '') => {
   const phrases = {
-    jarvis: "Namaste,sir.All system are online and ready for your command.",
-    default: "HELLO! I'm Nexuss, your AI assistant.How can I help you today?",
+    jarvis: "Namaste, sir. All systems are online and ready for your command.",
+    default: "Hello, this is Nexuss. Please listen to the voice quality and clarity.",
+    system: "This is Savi verifying your selected system voice. Please listen to tone, speed, and clarity.",
   };
-  
-  speak(phrases[preset] || phrases.jarvis, { voicePreset: preset });
+  const phrase = phrases[preset] || `This is Savi testing the selected voice: ${preset}. Please listen carefully.`;
+  return speak(phrase, { voicePreset: preset === 'system' ? 'default' : preset, customVoiceUrl });
 };
 
 const VoiceEngine = {

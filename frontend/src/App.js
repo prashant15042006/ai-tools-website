@@ -503,9 +503,11 @@ const SystemVoiceSelector = ({ voicePreset, setVoicePreset }) => {
     return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
   }, []);
 
-  const selectedVoice = ['default', 'jarvis', 'custom', 'system'].includes(voicePreset)
-    ? 'default'
-    : voicePreset;
+  const selectedVoice = voicePreset === 'system'
+    ? 'system'
+    : ['default', 'jarvis', 'custom'].includes(voicePreset)
+      ? 'default'
+      : voicePreset;
 
   return (
     <select
@@ -513,6 +515,7 @@ const SystemVoiceSelector = ({ voicePreset, setVoicePreset }) => {
       onChange={(e) => setVoicePreset(e.target.value)}
       style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 280 }}
     >
+      <option value="system" disabled>Choose a system voice...</option>
       <option value="default">System default voice</option>
       {voices.map((voice) => (
         <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
@@ -609,10 +612,15 @@ const SettingsView = () => {
                     <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>System Voice (advanced)</div>
                     <SystemVoiceSelector voicePreset={voicePreset} setVoicePreset={setVoicePreset} />
                   </div>
-                  {(voicePreset === 'jarvis' || voicePreset === 'default') && (
+                  {(['jarvis', 'default'].includes(voicePreset) || (typeof voicePreset === 'string' && !['custom', 'system'].includes(voicePreset))) && (
                     <button onClick={() => handleTestVoice(voicePreset)} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
                       🔊 Test Voice
                     </button>
+                  )}
+                  {(typeof voicePreset === 'string' && !['custom', 'system', 'default', 'jarvis'].includes(voicePreset)) && (
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>
+                      Selected system voice: <strong>{voicePreset}</strong>
+                    </div>
                   )}
                 </div>
                 {voicePreset === 'custom' && (
