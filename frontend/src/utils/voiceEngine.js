@@ -196,6 +196,9 @@ const cleanTextForSpeech = (text) => {
   
   let cleaned = text;
   
+  // Remove emojis to prevent TTS from speaking "smiling face", etc.
+  cleaned = cleaned.replace(/[\p{Emoji}]/gu, '');
+  
   // Remove code blocks entirely (```code```)
   cleaned = cleaned.replace(/```[\s\S]*?```/g, ' code block removed ');
   
