@@ -72,26 +72,54 @@ const detectLanguage = (text) => {
  * These create a clear, natural, Indian-accented tone.
  */
 const JARVIS_VOICE_PRIORITY = [
-  // Indian English voices (preferred for Hindi/English mixed responses)
+  // Highest-quality voices for a polished Indian English Jarvis style
+  'Microsoft Aria Online (Natural)',
+  'Microsoft Aria',
   'Google India English Male',
   'Google India English Female',
+  'Google UK English Male',
+  'Google UK English Female',
+  'Google US English',
   'Microsoft Rahul Online (Natural)',
   'Microsoft Priya Online (Natural)',
   'Microsoft Indira Online (Natural)',
   'Microsoft Priya',
   'Microsoft Rahul',
-  'Google Hindi',
-  // Fallback to Indian English language if exact names are not available
-  'en-IN',
-  // Fallback to general English voices
-  'en-GB',
-  'Google US English',
   'Microsoft Guy Online (Natural)',
   'Microsoft David Desktop',
   'Microsoft David',
   'Microsoft Mark',
   'Alex',                            // macOS US male
   'Fred',                            // macOS US male
+  'en-IN',
+  'en-GB',
+  'en-US',
+  'en',
+];
+
+/**
+ * Real Jarvis priority — use the most natural, expressive voice available.
+ */
+const REALJARVIS_VOICE_PRIORITY = [
+  'Microsoft Aria Online (Natural)',
+  'Microsoft Aria',
+  'Google UK English Male',
+  'Google UK English Female',
+  'Google US English',
+  'Google India English Male',
+  'Google India English Female',
+  'Microsoft Rahul Online (Natural)',
+  'Microsoft Priya Online (Natural)',
+  'Microsoft Indira Online (Natural)',
+  'Microsoft Guy Online (Natural)',
+  'Microsoft David Desktop',
+  'Microsoft Mark',
+  'Alex',
+  'Fred',
+  'en-IN',
+  'en-GB',
+  'en-US',
+  'en',
 ];
 
 /**
@@ -122,11 +150,13 @@ const isAllowedVoice = (voice) => {
   const lang = (voice.lang || '').toLowerCase();
 
   if (name.includes('jarvis')) return true;
-  if (lang.startsWith('en-in')) return true; // India
-  if (lang.startsWith('en-us')) return true; // US
-  // Also allow voices whose name mentions 'india' or 'us' (covers vendor names)
+  if (name.includes('savi')) return true;
+  if (lang.startsWith('en-')) return true; // English voices
+  if (lang.startsWith('hi-')) return true; // Hindi voices
+  if (name.includes('english')) return true;
   if (name.includes('india')) return true;
-  if (name.includes('us ' ) || name.includes('us-') || name.includes('usenglish') || name.includes('usenglish'.toLowerCase())) return true;
+  if (name.includes('aria')) return true;
+  if (name.includes('natural')) return true;
 
   return false;
 };
@@ -285,7 +315,32 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
     
     const utterance = new SpeechSynthesisUtterance(chunks[i]);
     
-    if (voicePreset === 'jarvis') {
+    if (voicePreset === 'realjarvis') {
+      // ── Real J.A.R.V.I.S. Mode ──
+      // Highest-fidelity voice, extra natural and expressive.
+      if (isHindi) {
+        const hindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices)
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi-in'))
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
+        if (hindiVoice) utterance.voice = hindiVoice;
+        utterance.lang = hindiVoice?.lang || 'hi-IN';
+        utterance.rate = 1.28;
+        utterance.pitch = 1.1;
+        utterance.volume = 1;
+      } else {
+        const jarvisVoice = findBestVoice(REALJARVIS_VOICE_PRIORITY, voices)
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-in'))
+          || voices.find(v => v.name && /india/i.test(v.name))
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-us'))
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'))
+          || voices[0];
+        if (jarvisVoice) utterance.voice = jarvisVoice;
+        utterance.lang = jarvisVoice?.lang || 'en-IN';
+        utterance.rate = 1.38;
+        utterance.pitch = 1.15;
+        utterance.volume = 1;
+      }
+    } else if (voicePreset === 'jarvis') {
       // ── J.A.R.V.I.S. Mode ──
       // Polished Indian English accent, confident, fast, and natural.
       // Real-sounding delivery with strong volume and clear tone.
@@ -296,19 +351,20 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
           || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
         if (hindiVoice) utterance.voice = hindiVoice;
         utterance.lang = hindiVoice?.lang || 'hi-IN';
-        utterance.rate = 1.15;
-        utterance.pitch = 1.0;
+        utterance.rate = 1.2;
+        utterance.pitch = 1.05;
         utterance.volume = 1;
       } else {
         const jarvisVoice = findBestVoice(JARVIS_VOICE_PRIORITY, voices)
           || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-in'))
           || voices.find(v => v.name && /india/i.test(v.name))
           || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-us'))
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'))
           || voices[0];
         if (jarvisVoice) utterance.voice = jarvisVoice;
         utterance.lang = jarvisVoice?.lang || 'en-IN';
-        utterance.rate = 1.2;
-        utterance.pitch = 1.05;
+        utterance.rate = 1.3;
+        utterance.pitch = 1.1;
         utterance.volume = 1;
       }
     } else if (voicePreset === 'default') {
@@ -432,6 +488,7 @@ export const getAvailableVoices = () => {
 export const testVoice = (preset = 'jarvis', customVoiceUrl = '') => {
   const phrases = {
     jarvis: "Namaste, sir. All systems are online and ready for your command.",
+    realjarvis: "This is the Real Jarvis voice check. Listen to the natural tone, speed, and clarity.",
     default: "Hello, this is Nexuss. Please listen to the voice quality and clarity.",
     system: "This is Savi verifying your selected system voice. Please listen to tone, speed, and clarity.",
   };

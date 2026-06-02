@@ -505,7 +505,7 @@ const SystemVoiceSelector = ({ voicePreset, setVoicePreset }) => {
 
   const selectedVoice = voicePreset === 'system'
     ? 'system'
-    : ['default', 'jarvis', 'custom'].includes(voicePreset)
+    : ['default', 'jarvis', 'realjarvis', 'custom'].includes(voicePreset)
       ? 'default'
       : voicePreset;
 
@@ -601,9 +601,10 @@ const SettingsView = () => {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ minWidth: 220 }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
-                    <select value={['default', 'jarvis', 'custom', 'system'].includes(voicePreset) ? voicePreset : 'system'} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
+                    <select value={['default', 'jarvis', 'realjarvis', 'custom', 'system'].includes(voicePreset) ? voicePreset : 'system'} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
                       <option value="default">Default (system)</option>
                       <option value="jarvis">🎙️ J.A.R.V.I.S. — Indian English, Clear & Natural</option>
+                      <option value="realjarvis">✨ Real J.A.R.V.I.S. — Most natural voice</option>
                       <option value="custom">Custom TTS Endpoint (URL)</option>
                       <option value="system">Choose System Voice...</option>
                     </select>
@@ -612,12 +613,12 @@ const SettingsView = () => {
                     <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>System Voice (advanced)</div>
                     <SystemVoiceSelector voicePreset={voicePreset} setVoicePreset={setVoicePreset} />
                   </div>
-                  {(['jarvis', 'default'].includes(voicePreset) || (typeof voicePreset === 'string' && !['custom', 'system'].includes(voicePreset))) && (
+                  {(['jarvis', 'realjarvis', 'default'].includes(voicePreset) || (typeof voicePreset === 'string' && !['custom', 'system'].includes(voicePreset))) && (
                     <button onClick={() => handleTestVoice(voicePreset)} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
                       🔊 Test Voice
                     </button>
                   )}
-                  {(typeof voicePreset === 'string' && !['custom', 'system', 'default', 'jarvis'].includes(voicePreset)) && (
+                  {(typeof voicePreset === 'string' && !['custom', 'system', 'default', 'jarvis', 'realjarvis'].includes(voicePreset)) && (
                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>
                       Selected system voice: <strong>{voicePreset}</strong>
                     </div>
@@ -637,6 +638,15 @@ const SettingsView = () => {
                       Speaks both <strong style={{ color: '#60a5fa' }}>Hindi</strong> and <strong style={{ color: '#60a5fa' }}>English</strong> naturally 
                       with auto-detection. Fast, clear, and confident — not slow or robotic. 
                       Uses a smooth, natural cadence for better Indian-style speech.
+                    </div>
+                  </div>
+                )}
+                {voicePreset === 'realjarvis' && (
+                  <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
+                    <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>✨ Real J.A.R.V.I.S. Voice</div>
+                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      The most realistic Jarvis sound available in the browser. Uses premium voice fallback logic,
+                      faster delivery, and a richer tone for a more human-like response. Ideal for a strong, confident AI assistant voice.
                     </div>
                   </div>
                 )}
