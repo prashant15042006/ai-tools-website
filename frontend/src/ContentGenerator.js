@@ -246,8 +246,9 @@ function ContentGenerator() {
             onChange={(e) => setInput(e.target.value)}
             placeholder={isListening ? "Listening..." : "you want to write..."}
             rows="1"
+            disabled={loading}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !loading) {
                 e.preventDefault();
                 sendMessage();
               }
