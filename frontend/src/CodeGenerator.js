@@ -4,17 +4,25 @@ import { Send, ClipboardPaste, Mic, ExternalLink, Code, Sparkles } from "lucide-
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
+import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL from "./apiConfig";
 
 // Inject table styles on component mount
 injectTableStyles();
 
 function CodeGenerator() {
-  const { ttsEnabled, addRecentChat, user } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
+  const displayName = user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
     ttsEnabledRef.current = ttsEnabled;
-    if (!ttsEnabled) window.speechSynthesis.cancel();
+    if (!ttsEnabled) {
+      stopSpeaking();
+      stopKeepAlive();
+    } else {
+      startKeepAlive();
+    }
+    return () => stopKeepAlive();
   }, [ttsEnabled]);
 
   const [messages, setMessages] = useState([]);
@@ -31,15 +39,8 @@ function CodeGenerator() {
     scrollToBottom();
   }, [messages, loading]);
 
-  const speak = (text) => {
-    if (!ttsEnabledRef.current) return;
-    window.speechSynthesis.cancel();
-    const cleaned = text.replace(/[#*`>_~[\]]/g, "").trim();
-    const utterance = new SpeechSynthesisUtterance(cleaned);
-    utterance.lang = "hi-IN";
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    window.speechSynthesis.speak(utterance);
+  const handleSpeak = async (text) => {
+    await voiceSpeak(text, { voicePreset, customVoiceUrl, ttsEnabledRef });
   };
 
   const sendMessage = async (text = input) => {
@@ -58,7 +59,7 @@ function CodeGenerator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           message: "Generate code: " + text,
-          userName: user?.displayName || user?.email?.split('@')[0] || "User"
+          userName: displayName
         }),
       });
 
@@ -99,7 +100,7 @@ function CodeGenerator() {
           } catch (e) { }
         }
       }
-      speak(aiReply);
+      handleSpeak(aiReply);
     } catch (error) {
       setMessages((prev) => 
         prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${error.message}` } : msg)
@@ -128,7 +129,8 @@ function CodeGenerator() {
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = "hi-IN";
+    recognition.maxAlternatives = 3;
+    recognition.lang = "en-IN";
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
@@ -192,7 +194,7 @@ function CodeGenerator() {
             <div className={`chat-message-row ${msg.sender === "user" ? "user-row" : "ai-row"}`}>
               <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`} style={msg.sender === "user" ? { padding: 0, overflow: 'hidden' } : {}}>
                 {msg.sender === "user" ? (
-                   <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} alt="You" style={{ width: '100%', height: '100%' }} />
+                   <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} alt="You" style={{ width: '100%', height: '100%' }} />
                 ) : <Code size={20} color="white" />}
               </div>
               <div className="message-body">

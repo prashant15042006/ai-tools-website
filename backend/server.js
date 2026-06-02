@@ -62,7 +62,16 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
+
+// Handle invalid JSON bodies gracefully instead of crashing
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('❌ Invalid JSON payload:', err.message);
+    return res.status(400).json({ success: false, error: 'Invalid JSON payload. Please send proper JSON.' });
+  }
+  next(err);
+});
 
 // Use Render's PORT or default to 5001
 const PORT = process.env.PORT || 5001;
@@ -197,14 +206,17 @@ const formatHistoryForGemini = (history, currentMessage) => {
 const saveChatMetadata = async ({ question, userName, userEmail, model, provider }) => {
   if (!db) return;
   try {
-    await db.collection("chats").add({
+    const chatData = {
       question,
       userName,
-      userEmail,
       model,
       provider,
       createdAt: new Date()
-    });
+    };
+    if (userEmail) {
+      chatData.userEmail = userEmail;
+    }
+    await db.collection("chats").add(chatData);
   } catch (dbErr) {
     console.warn("DB Save error:", dbErr.message);
   }

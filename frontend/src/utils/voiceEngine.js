@@ -283,24 +283,28 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
     
     if (voicePreset === 'jarvis') {
       // ── J.A.R.V.I.S. Mode ──
-      // Polished Indian English accent, calm and confident delivery
-      // Not robotic — human-like with authority
+      // Polished Indian English accent, confident, fast, and natural.
+      // Real-sounding delivery with strong volume and clear tone.
       
       if (isHindi) {
-        // For Hindi content, use best Hindi voice with JARVIS-like tuning
-        const hindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices);
+        const hindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices)
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi-in'))
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
         if (hindiVoice) utterance.voice = hindiVoice;
-        utterance.lang = 'hi-IN';
-        utterance.rate = 1.08;    // Slightly brisk — not slow AI
-        utterance.pitch = 0.95;   // Slightly deep — authoritative
+        utterance.lang = hindiVoice?.lang || 'hi-IN';
+        utterance.rate = 1.15;
+        utterance.pitch = 1.0;
         utterance.volume = 1;
       } else {
-        // For English content, prefer Indian English voices
-        const jarvisVoice = findBestVoice(JARVIS_VOICE_PRIORITY, voices);
+        const jarvisVoice = findBestVoice(JARVIS_VOICE_PRIORITY, voices)
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-in'))
+          || voices.find(v => v.name && /india/i.test(v.name))
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-us'))
+          || voices[0];
         if (jarvisVoice) utterance.voice = jarvisVoice;
-        utterance.lang = 'en-IN';
-        utterance.rate = 1.05;    // Natural pace — not slow, not rushed
-        utterance.pitch = 0.88;   // Deep, confident — like JARVIS
+        utterance.lang = jarvisVoice?.lang || 'en-IN';
+        utterance.rate = 1.2;
+        utterance.pitch = 1.05;
         utterance.volume = 1;
       }
     } else if (voicePreset === 'default') {

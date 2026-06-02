@@ -4,6 +4,7 @@ import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-r
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
+import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
 
 // Inject table styles on component mount
@@ -12,10 +13,17 @@ injectTableStyles();
 
 function Chat() {
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
+  const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
     ttsEnabledRef.current = ttsEnabled;
-    if (!ttsEnabled) window.speechSynthesis.cancel();
+    if (!ttsEnabled) {
+      stopSpeaking();
+      stopKeepAlive();
+    } else {
+      startKeepAlive();
+    }
+    return () => stopKeepAlive();
   }, [ttsEnabled]);
 
   const [messages, setMessages] = useState([]);
@@ -33,50 +41,8 @@ function Chat() {
     scrollToBottom();
   }, [messages, loading]);
 
-  const speak = async (text) => {
-    if (!ttsEnabledRef.current) return;
-    window.speechSynthesis.cancel();
-    const cleaned = text.replace(/[#*`>_~[\]]/g, "").trim();
-
-    // If user provided a custom TTS endpoint, try to fetch audio and play it
-    if (voicePreset === 'custom' && customVoiceUrl) {
-      try {
-        const encoded = encodeURIComponent(cleaned);
-        const url = customVoiceUrl.includes('?') ? `${customVoiceUrl}&text=${encoded}` : `${customVoiceUrl}?text=${encoded}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const blob = await res.blob();
-          const audioUrl = URL.createObjectURL(blob);
-          const a = new Audio(audioUrl);
-          await a.play();
-          return;
-        }
-      } catch (e) {
-        console.warn('Custom TTS playback failed', e);
-        // fallback to browser TTS below
-      }
-    }
-
-    // Use browser voices for default or jarvis preset
-    const utterance = new SpeechSynthesisUtterance(cleaned);
-    // prefer Hindi for default content if detected, else English
-    utterance.lang = /[\u0900-\u097F]/.test(cleaned) ? 'hi-IN' : 'en-US';
-
-    const voices = window.speechSynthesis.getVoices();
-    if (voicePreset === 'jarvis') {
-      // Try pick a male English voice for a deeper, robotic tone
-      const preferred = voices.find(v => /male|Daniel|Alex|Google UK English Male|Microsoft David|en-GB|en-US/i.test(v.name)) || voices.find(v => /en-|English/i.test(v.lang || v.name));
-      if (preferred) utterance.voice = preferred;
-      utterance.rate = 0.95;
-      utterance.pitch = 0.9;
-      utterance.volume = 1;
-    } else {
-      // default system voice
-      utterance.rate = 0.95;
-      utterance.pitch = 1;
-    }
-
-    window.speechSynthesis.speak(utterance);
+  const handleSpeak = async (text) => {
+    await voiceSpeak(text, { voicePreset, customVoiceUrl, ttsEnabledRef });
   };
 
   const sendMessage = async (text = input) => {
@@ -101,7 +67,7 @@ function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           message: text,
-          userName: localStorage.getItem("nexus_user_name") || user?.displayName || user?.email?.split('@')[0] || "User",
+          userName: displayName,
           userEmail: user?.email || localStorage.getItem("nexus_mock_user") || "Anonymous",
           history: history
         }),
@@ -145,7 +111,7 @@ function Chat() {
           } catch (e) { }
         }
       }
-      await speak(aiReply);
+      await handleSpeak(aiReply);
 
     } catch (error) {
       let errorMsg = error.message;
@@ -179,7 +145,9 @@ function Chat() {
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = "hi-IN";
+    recognition.maxAlternatives = 3;
+    // Use Indian English for microphone speech recognition
+    recognition.lang = "en-IN";
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
@@ -250,7 +218,7 @@ function Chat() {
             <div className={`chat-message-row ${msg.sender === "user" ? "user-row" : "ai-row"}`}>
               <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`} style={msg.sender === "user" ? { padding: 0, overflow: 'hidden' } : {}}>
                 {msg.sender === "user" ? (
-                  <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + (user?.displayName || user?.email)} alt="You" style={{ width: '100%', height: '100%' }} />
+                  <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} alt="You" style={{ width: '100%', height: '100%' }} />
                 ) : <Bot size={20} color="white" />}
               </div>
               <div className="message-body">
