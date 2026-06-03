@@ -343,7 +343,7 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         utterance.pitch = 1.15;
         utterance.volume = 1;
       }
-      } else if (voicePreset === 'ironman_en') {
+    } else if (voicePreset === 'ironman_en') {
         // ── Ironman English Mode ──
         // Uses a strong, confident synthetic voice, akin to a heroic AI.
         // Prioritize high-fidelity English voice; fallback to first available.
@@ -363,60 +363,37 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         // Uses a bold Hindi voice with clear articulation.
         // Prioritize natural Hindi voices first.
         const ironHindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices)
-          || findBestVoice([
-            'Google हिन्दी',
-            'Microsoft Madhur Online (Natural)',
-            'Microsoft Swara Online (Natural)'
-          ], voices);
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi-in'))
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
         if (ironHindiVoice) utterance.voice = ironHindiVoice;
         utterance.lang = ironHindiVoice?.lang || 'hi-IN';
-        // Reduce rate for better comprehension (previously 1.4)
-        utterance.rate = 1.2;
+        // Reduced rate for better comprehension
+        utterance.rate = 1.0;
         utterance.pitch = 1.0;
         utterance.volume = 1;
       } else if (voicePreset === 'jarvis') {
-      // ── J.A.R.V.I.S. Mode ──
-      // Polished Indian English accent, confident, fast, and natural.
-      // Real-sounding delivery with strong volume and clear tone.
-      
-      if (isHindi) {
-        const hindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices)
-          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi-in'))
-          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
-        if (hindiVoice) utterance.voice = hindiVoice;
-        utterance.lang = hindiVoice?.lang || 'hi-IN';
-        utterance.rate = 1.2;
-        utterance.pitch = 1.05;
-        utterance.volume = 1;
-      } else {
-        const jarvisVoice = findBestVoice(JARVIS_VOICE_PRIORITY, voices)
-          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-in'))
-          || voices.find(v => v.name && /india/i.test(v.name))
-          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-us'))
-          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'))
-          || voices[0];
+        // ── J.A.R.V.I.S. Mode ──
+        // Polished Indian English accent, confident, fast, and natural.
+        // Real-sounding delivery with strong volume and clear tone.
+        const jarvisVoice = isHindi
+          ? findBestVoice(HINDI_VOICE_PRIORITY, voices) || findBestVoice(JARVIS_VOICE_PRIORITY, voices)
+          : findBestVoice(JARVIS_VOICE_PRIORITY, voices);
         if (jarvisVoice) utterance.voice = jarvisVoice;
-        utterance.lang = jarvisVoice?.lang || 'en-IN';
+        utterance.lang = jarvisVoice?.lang || (isHindi ? 'hi-IN' : 'en-IN');
         utterance.rate = 1.3;
         utterance.pitch = 1.1;
         utterance.volume = 1;
-      }
-    } else if (voicePreset === 'default') {
-      // ── Default Mode ──
-      // Clean, natural system voice
-      if (isHindi) {
-        const hindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices);
-        if (hindiVoice) utterance.voice = hindiVoice;
-        utterance.lang = 'hi-IN';
-      } else {
-        const englishVoice = findBestVoice(JARVIS_VOICE_PRIORITY, voices);
+      } else if (voicePreset === 'default') {
+        // ── Default Mode ──
+        // Force English voice for professional English output
+        const englishVoice = findBestVoice(JARVIS_VOICE_PRIORITY, voices)
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
         if (englishVoice) utterance.voice = englishVoice;
         utterance.lang = 'en-IN';
-      }
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.volume = 1;
-    } else if (voicePreset && typeof voicePreset === 'string') {
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1;
+      } else if (voicePreset && typeof voicePreset === 'string') {
       // ── Explicit system voice by name ──
       // If voicePreset is a specific voice name (advanced), try to use it.
       const explicit = voices.find(v => v.name === voicePreset) || voices.find(v => v.name && v.name.includes(voicePreset));
@@ -523,6 +500,7 @@ export const testVoice = (preset = 'jarvis', customVoiceUrl = '') => {
   const phrases = {
     jarvis: "Namaste, sir. All systems are online and ready for your command.",
     realjarvis: "This is the Real Jarvis voice check. Listen to the natural tone, speed, and clarity.",
+    ironman_hi: "नमस्ते, मैं आयरनमैन जार्विस हूँ। आपकी हिंदी आवाज़ अब सक्रिय है।",
     default: "Hello, this is Nexuss. Please listen to the voice quality and clarity.",
     system: "This is Savi verifying your selected system voice. Please listen to tone, speed, and clarity.",
   };

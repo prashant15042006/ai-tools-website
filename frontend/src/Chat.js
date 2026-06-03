@@ -146,8 +146,8 @@ function Chat() {
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 3;
-    // Use Indian English for microphone speech recognition
-    recognition.lang = "en-IN";
+    // Use Hindi recognition when the user has selected the Hindi Jarvis voice preset.
+    recognition.lang = voicePreset === 'ironman_hi' ? 'hi-IN' : 'en-IN';
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
