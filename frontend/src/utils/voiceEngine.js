@@ -65,6 +65,64 @@ const detectLanguage = (text) => {
   return 'en-IN';
 };
 
+// ── Devanagari to Latin (Hinglish) Transliterator ───────────────────
+const DEVANAGARI_CONSONANTS = {
+  'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n',
+  'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
+  'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
+  'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+  'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm',
+  'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
+  'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gy'
+};
+
+const DEVANAGARI_VOWELS = {
+  'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au'
+};
+
+const DEVANAGARI_MATRAS = {
+  'ा': 'aa', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au',
+  'ं': 'n', 'ः': 'h', 'ँ': 'n'
+};
+
+const transliterateDevanagari = (text) => {
+  if (!text) return '';
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (DEVANAGARI_CONSONANTS[char]) {
+      let base = DEVANAGARI_CONSONANTS[char];
+      if (nextChar && DEVANAGARI_MATRAS[nextChar]) {
+        result += base + DEVANAGARI_MATRAS[nextChar];
+        i++; // skip matra
+      } else if (nextChar === '्') {
+        result += base;
+        i++; // skip halant
+      } else {
+        // Inherent 'a' sound unless followed by a space, punctuation, or end of string (schwa deletion)
+        const isEndOfWord = !nextChar || /[\s\p{P}]/u.test(nextChar);
+        if (isEndOfWord) {
+          result += base;
+        } else {
+          result += base + 'a';
+        }
+      }
+    } else if (DEVANAGARI_VOWELS[char]) {
+      result += DEVANAGARI_VOWELS[char];
+    } else if (DEVANAGARI_MATRAS[char]) {
+      result += DEVANAGARI_MATRAS[char];
+    } else if (char === '्') {
+      // ignore standalone halant
+    } else {
+      result += char;
+    }
+  }
+  return result;
+};
+
+
 // ── Voice Selection Priority Lists ──────────────────────────────────
 
 /**
@@ -306,8 +364,16 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
   const lang = detectLanguage(cleaned);
   const isHindi = lang === 'hi-IN';
   
+  // Check if Hindi voices are available on the user's system
+  const hasHindiVoice = voices.some(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
+  
+  let processedText = cleaned;
+  if (isHindi && !hasHindiVoice) {
+    processedText = transliterateDevanagari(cleaned);
+  }
+  
   // Chunk long text for smoother delivery
-  const chunks = chunkText(cleaned);
+  const chunks = chunkText(processedText);
   
   for (let i = 0; i < chunks.length; i++) {
     // Re-check if TTS is still enabled between chunks
@@ -325,8 +391,10 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         const hindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices)
           || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi-in'))
           || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
+        const fallbackVoice = !hindiVoice ? findBestVoice(REALJARVIS_VOICE_PRIORITY, voices) : null;
         if (hindiVoice) utterance.voice = hindiVoice;
-        utterance.lang = hindiVoice?.lang || 'hi-IN';
+        else if (fallbackVoice) utterance.voice = fallbackVoice;
+        utterance.lang = hindiVoice?.lang || fallbackVoice?.lang || 'hi-IN';
         utterance.rate = 1.28;
         utterance.pitch = 1.1;
         utterance.volume = 1;
