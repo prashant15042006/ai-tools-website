@@ -343,7 +343,35 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         utterance.pitch = 1.15;
         utterance.volume = 1;
       }
-    } else if (voicePreset === 'jarvis') {
+      } else if (voicePreset === 'ironman_en') {
+        // ── Ironman English Mode ──
+        // Uses a strong, confident synthetic voice, akin to a heroic AI.
+        // Prioritize high-fidelity English voice; fallback to first available.
+        const ironVoice = findBestVoice([
+          'Microsoft Aria Online (Natural)',
+          'Google US English',
+          'Google UK English Male',
+          'Microsoft David Desktop'
+        ], voices) || voices[0];
+        if (ironVoice) utterance.voice = ironVoice;
+        utterance.lang = ironVoice?.lang || 'en-US';
+        utterance.rate = 1.5; // slightly faster for heroic tone
+        utterance.pitch = 1.0;
+        utterance.volume = 1;
+      } else if (voicePreset === 'ironman_hi') {
+        // ── Ironman Hindi Mode ──
+        // Uses a bold Hindi voice with clear articulation.
+        const ironHindiVoice = findBestVoice([
+          'Google हिन्दी',
+          'Microsoft Madhur Online (Natural)',
+          'Microsoft Swara Online (Natural)'
+        ], voices) || findBestVoice(HINDI_VOICE_PRIORITY, voices);
+        if (ironHindiVoice) utterance.voice = ironHindiVoice;
+        utterance.lang = ironHindiVoice?.lang || 'hi-IN';
+        utterance.rate = 1.4;
+        utterance.pitch = 1.05;
+        utterance.volume = 1;
+      } else if (voicePreset === 'jarvis') {
       // ── J.A.R.V.I.S. Mode ──
       // Polished Indian English accent, confident, fast, and natural.
       // Real-sounding delivery with strong volume and clear tone.

@@ -601,10 +601,12 @@ const SettingsView = () => {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ minWidth: 220 }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
-                    <select value={['default', 'jarvis', 'realjarvis', 'custom', 'system'].includes(voicePreset) ? voicePreset : 'system'} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
+                    <select value={['default', 'jarvis', 'realjarvis', 'ironman_en', 'ironman_hi', 'custom', 'system'].includes(voicePreset) ? voicePreset : 'system'} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
                       <option value="default">Default (system)</option>
                       <option value="jarvis">🎙️ J.A.R.V.I.S. — Indian English, Clear & Natural</option>
                       <option value="realjarvis">✨ Real J.A.R.V.I.S. — Most natural voice</option>
+                      <option value="ironman_en">🦾 Ironman Jarvis (English)</option>
+                      <option value="ironman_hi">🦾 Ironman Jarvis (Hindi)</option>
                       <option value="custom">Custom TTS Endpoint (URL)</option>
                       <option value="system">Choose System Voice...</option>
                     </select>
