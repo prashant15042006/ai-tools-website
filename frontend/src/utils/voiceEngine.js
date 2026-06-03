@@ -365,8 +365,11 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         const ironHindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices)
           || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi-in'))
           || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
+        // Fallback to a generic English voice if no Hindi voice found
+        const fallbackVoice = !ironHindiVoice ? findBestVoice(JARVIS_VOICE_PRIORITY, voices) : null;
         if (ironHindiVoice) utterance.voice = ironHindiVoice;
-        utterance.lang = ironHindiVoice?.lang || 'hi-IN';
+        else if (fallbackVoice) utterance.voice = fallbackVoice;
+        utterance.lang = ironHindiVoice?.lang || fallbackVoice?.lang || 'hi-IN';
         // Reduced rate for better comprehension
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
@@ -378,8 +381,10 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         const jarvisVoice = isHindi
           ? findBestVoice(HINDI_VOICE_PRIORITY, voices) || findBestVoice(JARVIS_VOICE_PRIORITY, voices)
           : findBestVoice(JARVIS_VOICE_PRIORITY, voices);
-        if (jarvisVoice) utterance.voice = jarvisVoice;
-        utterance.lang = jarvisVoice?.lang || (isHindi ? 'hi-IN' : 'en-IN');
+        // Fallback to English voice if still null
+        const finalJarvisVoice = jarvisVoice || findBestVoice(JARVIS_VOICE_PRIORITY, voices);
+        if (finalJarvisVoice) utterance.voice = finalJarvisVoice;
+        utterance.lang = finalJarvisVoice?.lang || (isHindi ? 'hi-IN' : 'en-IN');
         utterance.rate = 1.3;
         utterance.pitch = 1.1;
         utterance.volume = 1;
@@ -498,7 +503,7 @@ export const getAvailableVoices = () => {
  */
 export const testVoice = (preset = 'jarvis', customVoiceUrl = '') => {
   const phrases = {
-    jarvis: "Namaste, sir. All systems are online and ready for your command.",
+    jarvis: "नमस्ते, सर। सभी सिस्टम ऑनलाइन हैं और आपके आदेश के लिए तैयार हैं।",
     realjarvis: "This is the Real Jarvis voice check. Listen to the natural tone, speed, and clarity.",
     ironman_en: "Testing Ironman Jarvis English voice. Ready for heroic commands.",
     ironman_hi: "परीक्षण आइरनमैन जार्विस हिंदी आवाज़। तैयार हैं आपके आदेश के लिए।",
