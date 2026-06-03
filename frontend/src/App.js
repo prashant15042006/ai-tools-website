@@ -489,64 +489,11 @@ const ProjectsView = ({ projects, setProjects }) => {
   );
 };
 
-const SystemVoiceSelector = ({ voicePreset, setVoicePreset }) => {
-  const [voices, setVoices] = useState([]);
-
-  useEffect(() => {
-    const loadVoices = () => {
-      const available = window.speechSynthesis.getVoices();
-      setVoices(available);
-    };
-
-    loadVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
-  }, []);
-
-  const selectedVoice = voicePreset === 'system'
-    ? 'system'
-    : ['default', 'jarvis', 'realjarvis', 'custom'].includes(voicePreset)
-      ? 'default'
-      : voicePreset;
-
-  return (
-    <select
-      value={selectedVoice}
-      onChange={(e) => setVoicePreset(e.target.value)}
-      style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 280 }}
-    >
-      <option value="system" disabled>Choose a system voice...</option>
-      <option value="default">System default voice</option>
-      {voices.map((voice) => (
-        <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
-          {voice.name} ({voice.lang})
-        </option>
-      ))}
-    </select>
-  );
-};
-
 const SettingsView = () => {
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl } = useContext(AppContext);
+  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user, voicePreset, setVoicePreset } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
-  const testCustomVoice = async (url) => {
-    if (!url) return alert('Enter a custom TTS endpoint URL to test.');
-    try {
-      const text = encodeURIComponent('This is a Nexuss voice test.');
-      const fetchUrl = url.includes('?') ? `${url}&text=${text}` : `${url}?text=${text}`;
-      const res = await fetch(fetchUrl);
-      if (!res.ok) throw new Error('Failed to fetch audio');
-      const blob = await res.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      const a = new Audio(audioUrl);
-      await a.play();
-    } catch (e) {
-      alert('Unable to play custom voice. Ensure the endpoint returns audio (mp3/wav) and allows CORS.');
-    }
-  };
 
   const handleTestVoice = (preset) => {
-    // Import and call testVoice from voiceEngine
     import('./utils/voiceEngine').then(({ testVoice }) => testVoice(preset));
   };
   
@@ -601,54 +548,46 @@ const SettingsView = () => {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ minWidth: 220 }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
-                    <select value={['default', 'jarvis', 'realjarvis', 'ironman_en', 'ironman_hi', 'custom', 'system'].includes(voicePreset) ? voicePreset : 'system'} onChange={(e) => setVoicePreset(e.target.value)} style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}>
-                      <option value="default">Default (system)</option>
-                      <option value="jarvis">🎙️ J.A.R.V.I.S. — Indian English, Clear & Natural</option>
-                      <option value="realjarvis">✨ Real J.A.R.V.I.S. — Most natural voice</option>
-                      <option value="ironman_en">🦾 Ironman Jarvis (English)</option>
-                      <option value="ironman_hi">🦾 Ironman Jarvis (Hindi)</option>
-                      <option value="custom">Custom TTS Endpoint (URL)</option>
-                      <option value="system">Choose System Voice...</option>
+                    <select 
+                      value={voicePreset === 'ironman_hi' ? 'ironman_hi' : 'ironman_en'} 
+                      onChange={(e) => setVoicePreset(e.target.value)} 
+                      style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}
+                    >
+                      <option value="ironman_en">🎙️ J.A.R.V.I.S. (English)</option>
+                      <option value="ironman_hi">🎙️ J.A.R.V.I.S. (Hindi)</option>
                     </select>
                   </div>
-                  <div style={{ minWidth: 280 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>System Voice (advanced)</div>
-                    <SystemVoiceSelector voicePreset={voicePreset} setVoicePreset={setVoicePreset} />
-                  </div>
-                  {(['jarvis', 'realjarvis', 'default'].includes(voicePreset) || (typeof voicePreset === 'string' && !['custom', 'system'].includes(voicePreset))) && (
-                    <button onClick={() => handleTestVoice(voicePreset)} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-                      🔊 Test Voice
-                    </button>
-                  )}
-                  {(typeof voicePreset === 'string' && !['custom', 'system', 'default', 'jarvis', 'realjarvis'].includes(voicePreset)) && (
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>
-                      Selected system voice: <strong>{voicePreset}</strong>
-                    </div>
-                  )}
+                  <button 
+                    onClick={() => handleTestVoice(voicePreset === 'ironman_hi' ? 'ironman_hi' : 'ironman_en')} 
+                    style={{ 
+                      padding: '8px 16px', 
+                      borderRadius: 8, 
+                      background: 'linear-gradient(135deg, #2563eb, #7c3aed)', 
+                      color: 'white', 
+                      fontWeight: 700, 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      fontSize: '13px', 
+                      transition: 'all 0.2s', 
+                      boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
+                      marginTop: '20px'
+                    }}
+                  >
+                    🔊 Test Voice
+                  </button>
                 </div>
-                {voicePreset === 'custom' && (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input placeholder="https://your-tts.example/api/speak" value={customVoiceUrl} onChange={(e) => setCustomVoiceUrl(e.target.value)} style={{ padding: 8, borderRadius: 8, minWidth: 360, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)' }} />
-                    <button onClick={() => testCustomVoice(customVoiceUrl)} style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--accent)', color: 'white', fontWeight: 700 }}>Test</button>
-                  </div>
-                )}
-                {voicePreset === 'jarvis' && (
-                  <div style={{ background: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.15)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Voice Profile</div>
+                {voicePreset === 'ironman_hi' ? (
+                  <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
+                    <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Hindi Voice Profile</div>
                     <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Indian-accented, polished & calm delivery with a natural Hindi/English tone.
-                      Speaks both <strong style={{ color: '#60a5fa' }}>Hindi</strong> and <strong style={{ color: '#60a5fa' }}>English</strong> naturally 
-                      with auto-detection. Fast, clear, and confident — not slow or robotic. 
-                      Uses a smooth, natural cadence for better Indian-style speech.
+                      Indian-accented Jarvis voice. Speaks natural Hindi and Hinglish. Uses custom transliteration fallbacks if your system does not have native Hindi voices installed.
                     </div>
                   </div>
-                )}
-                {voicePreset === 'realjarvis' && (
-                  <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>✨ Real J.A.R.V.I.S. Voice</div>
+                ) : (
+                  <div style={{ background: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.15)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
+                    <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>🤖 J.A.R.V.I.S. English Voice Profile</div>
                     <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      The most realistic Jarvis sound available in the browser. Uses premium voice fallback logic,
-                      faster delivery, and a richer tone for a more human-like response. Ideal for a strong, confident AI assistant voice.
+                      Strong, natural, and confident English voice. Speaks clear and professional Jarvis-grade English.
                     </div>
                   </div>
                 )}
@@ -1042,7 +981,10 @@ const PwaInstallBanner = () => {
 function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [ttsEnabled, setTtsEnabled] = useState(false);
-  const [voicePreset, setVoicePreset] = useState(() => localStorage.getItem('tts_voice') || 'jarvis');
+  const [voicePreset, setVoicePreset] = useState(() => {
+    const saved = localStorage.getItem('tts_voice');
+    return saved === 'ironman_hi' ? 'ironman_hi' : 'ironman_en';
+  });
   const [customVoiceUrl, setCustomVoiceUrl] = useState(() => localStorage.getItem('tts_custom_url') || '');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);

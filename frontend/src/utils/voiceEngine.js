@@ -569,17 +569,13 @@ export const getAvailableVoices = () => {
 /**
  * Play a test phrase with the given preset.
  */
-export const testVoice = (preset = 'jarvis', customVoiceUrl = '') => {
+export const testVoice = (preset = 'ironman_en', customVoiceUrl = '') => {
   const phrases = {
-    jarvis: "नमस्ते, सर। सभी सिस्टम ऑनलाइन हैं और आपके आदेश के लिए तैयार हैं।",
-    realjarvis: "This is the Real Jarvis voice check. Listen to the natural tone, speed, and clarity.",
-    ironman_en: "Testing Ironman Jarvis English voice. Ready for heroic commands.",
-    ironman_hi: "परीक्षण आइरनमैन जार्विस हिंदी आवाज़। तैयार हैं आपके आदेश के लिए।",
-    default: "Hello, this is Nexuss. Please listen to the voice quality and clarity.",
-    system: "This is Savi verifying your selected system voice. Please listen to tone, speed, and clarity."
+    ironman_en: "Welcome back, sir. All systems are fully operational, and I am ready for your command.",
+    ironman_hi: "स्वागत है सर। सभी सिस्टम चालू हैं, और मैं आपके आदेशों के लिए तैयार हूँ।"
   };
-  const phrase = phrases[preset] || `This is Savi testing the selected voice: ${preset}. Please listen carefully.`;
-  return speak(phrase, { voicePreset: preset === 'system' ? 'default' : preset, customVoiceUrl });
+  const phrase = phrases[preset] || phrases['ironman_en'];
+  return speak(phrase, { voicePreset: preset, customVoiceUrl });
 };
 
 const VoiceEngine = {
