@@ -12,6 +12,10 @@ injectTableStyles();
    
 
 function Chat() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
@@ -42,9 +46,8 @@ function Chat() {
   useEffect(() => {
     localStorage.setItem('nexus_chat_history', JSON.stringify(messages));
   }, [messages]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+
+
   // prompt modal moved to dedicated Prompt Manager page
   const messagesEndRef = useRef(null);
 

@@ -503,7 +503,7 @@ export const testVoice = (preset = 'jarvis', customVoiceUrl = '') => {
     ironman_en: "Testing Ironman Jarvis English voice. Ready for heroic commands.",
     ironman_hi: "परीक्षण आइरनमैन जार्विस हिंदी आवाज़। तैयार हैं आपके आदेश के लिए।",
     default: "Hello, this is Nexuss. Please listen to the voice quality and clarity.",
-    system: "This is Savi verifying your selected system voice. Please listen to tone, speed, and clarity.",
+    system: "This is Savi verifying your selected system voice. Please listen to tone, speed, and clarity."
   };
   const phrase = phrases[preset] || `This is Savi testing the selected voice: ${preset}. Please listen carefully.`;
   return speak(phrase, { voicePreset: preset === 'system' ? 'default' : preset, customVoiceUrl });
