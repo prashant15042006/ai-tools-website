@@ -361,15 +361,18 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
       } else if (voicePreset === 'ironman_hi') {
         // ── Ironman Hindi Mode ──
         // Uses a bold Hindi voice with clear articulation.
-        const ironHindiVoice = findBestVoice([
-          'Google हिन्दी',
-          'Microsoft Madhur Online (Natural)',
-          'Microsoft Swara Online (Natural)'
-        ], voices) || findBestVoice(HINDI_VOICE_PRIORITY, voices);
+        // Prioritize natural Hindi voices first.
+        const ironHindiVoice = findBestVoice(HINDI_VOICE_PRIORITY, voices)
+          || findBestVoice([
+            'Google हिन्दी',
+            'Microsoft Madhur Online (Natural)',
+            'Microsoft Swara Online (Natural)'
+          ], voices);
         if (ironHindiVoice) utterance.voice = ironHindiVoice;
         utterance.lang = ironHindiVoice?.lang || 'hi-IN';
-        utterance.rate = 1.4;
-        utterance.pitch = 1.05;
+        // Reduce rate for better comprehension (previously 1.4)
+        utterance.rate = 1.2;
+        utterance.pitch = 1.0;
         utterance.volume = 1;
       } else if (voicePreset === 'jarvis') {
       // ── J.A.R.V.I.S. Mode ──
