@@ -500,7 +500,8 @@ export const testVoice = (preset = 'jarvis', customVoiceUrl = '') => {
   const phrases = {
     jarvis: "Namaste, sir. All systems are online and ready for your command.",
     realjarvis: "This is the Real Jarvis voice check. Listen to the natural tone, speed, and clarity.",
-    ironman_hi: "नमस्ते, मैं आयरनमैन जार्विस हूँ। आपकी हिंदी आवाज़ अब सक्रिय है।",
+    ironman_en: "Testing Ironman Jarvis English voice. Ready for heroic commands.",
+    ironman_hi: "परीक्षण आइरनमैन जार्विस हिंदी आवाज़। तैयार हैं आपके आदेश के लिए।",
     default: "Hello, this is Nexuss. Please listen to the voice quality and clarity.",
     system: "This is Savi verifying your selected system voice. Please listen to tone, speed, and clarity.",
   };

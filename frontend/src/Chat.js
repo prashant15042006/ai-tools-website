@@ -26,7 +26,22 @@ function Chat() {
     return () => stopKeepAlive();
   }, [ttsEnabled]);
 
-  const [messages, setMessages] = useState([]);
+  // Load persisted chat history on component mount
+  useEffect(() => {
+    const stored = localStorage.getItem('nexus_chat_history');
+    if (stored) {
+      try {
+        setMessages(JSON.parse(stored));
+      } catch (e) {
+        console.warn('Failed to parse chat history', e);
+      }
+    }
+  }, []);
+
+  // Persist chat history whenever it changes
+  useEffect(() => {
+    localStorage.setItem('nexus_chat_history', JSON.stringify(messages));
+  }, [messages]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
