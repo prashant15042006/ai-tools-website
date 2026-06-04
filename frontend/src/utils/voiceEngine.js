@@ -338,9 +338,9 @@ const playAudioWithJarvisFilter = (url, isHindi, ttsEnabledRef) => {
     currentPlayingAudio = audio;
 
     // Adjust playback rate to match cinematic tone
-    // Hindi (Atul Kapoor) has a calm, deeper cadence -> 0.98
-    // English (Paul Bettany) is crisp and British -> 1.05
-    audio.playbackRate = isHindi ? 0.98 : 1.05;
+    // Hindi: 1.2 for quick, natural speech
+    // English: 1.3 for professional, crisp speed
+    audio.playbackRate = isHindi ? 1.2 : 1.3;
 
     audio.onended = () => {
       if (currentPlayingAudio === audio) currentPlayingAudio = null;
