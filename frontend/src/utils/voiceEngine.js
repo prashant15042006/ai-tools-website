@@ -23,7 +23,12 @@ export const preloadVoices = () => {
   };
   loadVoices();
   if (!voicesLoaded) {
-    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    if (typeof window.speechSynthesis.addEventListener === 'function') {
+      window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    } else {
+      // Older browsers may only support the onvoiceschanged handler
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
   }
 };
 
@@ -224,21 +229,23 @@ const isAllowedVoice = (voice) => {
  */
 const findBestVoice = (priorityList, voices) => {
   // Filter out undesired languages and keep only allowed voices
-  const filteredVoices = voices.filter(v => !isArabicVoice(v) && isAllowedVoice(v));
+  const filteredVoices = (voices || []).filter(v => v && !isArabicVoice(v) && isAllowedVoice(v));
   for (const target of priorityList) {
     // Try exact name match first
-    const byName = filteredVoices.find(v => v.name === target);
+    const byName = filteredVoices.find(v => v.name === target || (v.name && v.name.toLowerCase() === String(target).toLowerCase()));
     if (byName) return byName;
     
     // Try partial name match
-    const byPartial = filteredVoices.find(v => v.name && v.name.includes(target));
+    const byPartial = filteredVoices.find(v => v.name && v.name.toLowerCase().includes(String(target).toLowerCase()));
     if (byPartial) return byPartial;
     
-    // Try lang match (for entries like 'en-GB', 'hi-IN')
-    if (target.includes('-') && target.length <= 5) {
-      const byLang = filteredVoices.find(v => v.lang === target || v.lang.startsWith(target));
-      if (byLang) return byLang;
-    }
+    // Try lang match (handles 'en', 'en-IN', 'hi', 'hi-IN', etc.)
+    const tLower = String(target).toLowerCase();
+    const byLang = filteredVoices.find(v => {
+      const lang = (v.lang || '').toLowerCase();
+      return lang === tLower || lang.startsWith(tLower + '-') || lang.startsWith(tLower);
+    });
+    if (byLang) return byLang;
   }
   return null;
 };
