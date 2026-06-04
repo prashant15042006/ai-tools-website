@@ -553,8 +553,8 @@ const SettingsView = () => {
                       onChange={(e) => setVoicePreset(e.target.value)} 
                       style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}
                     >
-                      <option value="ironman_en">🎙️ J.A.R.V.I.S. (English)</option>
-                      <option value="ironman_hi">🎙️ J.A.R.V.I.S. (Hindi)</option>
+                      <option value="ironman_en">🎙️ J.A.R.V.I.S. (English - Movie Premium)</option>
+                      <option value="ironman_hi">🎙️ J.A.R.V.I.S. (Hindi - Movie Premium)</option>
                     </select>
                   </div>
                   <button 
@@ -578,16 +578,16 @@ const SettingsView = () => {
                 </div>
                 {voicePreset === 'ironman_hi' ? (
                   <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Hindi Voice Profile</div>
+                    <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Hindi Movie Premium Profile</div>
                     <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Indian-accented Jarvis voice. Speaks natural Hindi and Hinglish. Uses custom transliteration fallbacks if your system does not have native Hindi voices installed.
+                      Cinematic Movie Premium Jarvis voice with metallic intercom suit effect (Atul Kapoor style). Plays high-fidelity Hindi & Hinglish audio bypassing local system limitations.
                     </div>
                   </div>
                 ) : (
                   <div style={{ background: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.15)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>🤖 J.A.R.V.I.S. English Voice Profile</div>
+                    <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>🤖 J.A.R.V.I.S. English Movie Premium Profile</div>
                     <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Strong, natural, and confident English voice. Speaks clear and professional Jarvis-grade English.
+                      Cinematic Movie Premium Jarvis voice with metallic intercom suit effect (Paul Bettany style). High-fidelity English speech synthesis with calm, polite tone.
                     </div>
                   </div>
                 )}

@@ -8,6 +8,8 @@
  * ╚═══════════════════════════════════════════════════════════════╝
  */
 
+import API_BASE_URL from "../apiConfig";
+
 // ── Voice cache to avoid repeated lookups ────────────────────────────
 let cachedVoices = [];
 let voicesLoaded = false;
@@ -317,6 +319,92 @@ const chunkText = (text, maxLen = 200) => {
 
 // ── Main Speak Function ─────────────────────────────────────────────
 
+let audioContext = null;
+let currentPlayingAudio = null;
+
+/**
+ * Play audio through Web Audio API with a cinematic metallic J.A.R.V.I.S. filter
+ */
+const playAudioWithJarvisFilter = (url, isHindi, ttsEnabledRef) => {
+  return new Promise((resolve) => {
+    // Stop any existing audio first
+    if (currentPlayingAudio) {
+      currentPlayingAudio.pause();
+      currentPlayingAudio.src = "";
+    }
+
+    const audio = new Audio(url);
+    audio.crossOrigin = "anonymous";
+    currentPlayingAudio = audio;
+
+    // Adjust playback rate to match cinematic tone
+    // Hindi (Atul Kapoor) has a calm, deeper cadence -> 0.98
+    // English (Paul Bettany) is crisp and British -> 1.05
+    audio.playbackRate = isHindi ? 0.98 : 1.05;
+
+    audio.onended = () => {
+      if (currentPlayingAudio === audio) currentPlayingAudio = null;
+      resolve();
+    };
+
+    audio.onerror = (e) => {
+      console.warn("[VoiceEngine] Premium audio playback failed, resolving to prevent hang:", e);
+      if (currentPlayingAudio === audio) currentPlayingAudio = null;
+      resolve();
+    };
+
+    try {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+
+      const source = audioContext.createMediaElementSource(audio);
+
+      // ── EFFECTS PIPELINE ──
+      // 1. Highpass Filter: Cuts muddy low frequencies below 200Hz (creates the intercom feel)
+      const highpass = audioContext.createBiquadFilter();
+      highpass.type = "highpass";
+      highpass.frequency.value = 200;
+
+      // 2. Bandpass Filter: Boosts mid frequencies for a metallic/radio HUD resonance
+      const bandpass = audioContext.createBiquadFilter();
+      bandpass.type = "bandpass";
+      bandpass.frequency.value = 1700; // Peaks around 1.7kHz
+      bandpass.Q.value = 1.4; // Tight resonance for metallic "ring"
+
+      // 3. Gain Node: Boosts the filtered signal slightly
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 1.25;
+
+      // Connect nodes
+      source.connect(highpass);
+      highpass.connect(bandpass);
+      bandpass.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+    } catch (err) {
+      console.warn("[VoiceEngine] Web Audio API failed to configure, playing clean audio:", err);
+    }
+
+    // Double check if TTS was disabled while initializing
+    if (ttsEnabledRef && !ttsEnabledRef.current) {
+      audio.pause();
+      audio.src = "";
+      if (currentPlayingAudio === audio) currentPlayingAudio = null;
+      resolve();
+      return;
+    }
+
+    audio.play().catch((err) => {
+      console.error("[VoiceEngine] Audio play failed:", err);
+      resolve();
+    });
+  });
+};
+
 /**
  * Speak text with the configured voice preset.
  * 
@@ -340,6 +428,29 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
   
   const cleaned = cleanTextForSpeech(text);
   if (!cleaned) return;
+
+  // ── Premium Movie Jarvis Mode (Server-side Google TTS + Web Audio Filter) ──
+  if (voicePreset === 'ironman_hi' || voicePreset === 'ironman_en') {
+    const langCode = voicePreset === 'ironman_hi' ? 'hi' : 'en';
+    const chunks = chunkText(cleaned);
+    
+    for (let i = 0; i < chunks.length; i++) {
+      if (ttsEnabledRef && !ttsEnabledRef.current) {
+        if (currentPlayingAudio) {
+          currentPlayingAudio.pause();
+          currentPlayingAudio.src = "";
+          currentPlayingAudio = null;
+        }
+        return;
+      }
+      
+      const chunkTextEncoded = encodeURIComponent(chunks[i]);
+      const audioUrl = `${API_BASE_URL}/api/tts/google?lang=${langCode}&text=${chunkTextEncoded}`;
+      
+      await playAudioWithJarvisFilter(audioUrl, voicePreset === 'ironman_hi', ttsEnabledRef);
+    }
+    return;
+  }
   
   // ── Custom TTS endpoint ──
   if (voicePreset === 'custom' && customVoiceUrl) {
@@ -524,6 +635,11 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
  * Immediately stop all speech.
  */
 export const stopSpeaking = () => {
+  if (currentPlayingAudio) {
+    currentPlayingAudio.pause();
+    currentPlayingAudio.src = "";
+    currentPlayingAudio = null;
+  }
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }

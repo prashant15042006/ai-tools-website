@@ -1195,6 +1195,33 @@ app.post("/api/tts/synthesize", async (req, res) => {
   }
 });
 
+// Google Translate TTS Proxy (supports reliable multi-device movie-grade voice streaming)
+app.get("/api/tts/google", async (req, res) => {
+  try {
+    const { text, lang = "hi" } = req.query;
+    if (!text) return res.status(400).json({ error: "text is required" });
+
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${encodeURIComponent(lang)}&client=tw-ob&q=${encodeURIComponent(text)}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google TTS proxy request failed with status ${response.status}`);
+    }
+
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    response.body.pipe(res);
+  } catch (err) {
+    console.error("Google TTS Proxy Error:", err.message || err);
+    res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
 const startServer = async () => {
   try {
     // Attempt to kill the port before starting the server
