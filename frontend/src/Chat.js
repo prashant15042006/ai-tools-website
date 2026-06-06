@@ -30,9 +30,16 @@ function Chat() {
     return () => stopKeepAlive();
   }, [ttsEnabled]);
 
-  // Load persisted chat history on component mount
+  const storageKey = user?.email ? `nexus_chat_history_${user.email}` : 'nexus_chat_history_anonymous';
+
+  // Load persisted chat history for this session on component mount or when user changes
   useEffect(() => {
-    const stored = localStorage.getItem('nexus_chat_history');
+    const legacy = localStorage.getItem('nexus_chat_history');
+    if (legacy) {
+      localStorage.removeItem('nexus_chat_history');
+    }
+
+    const stored = sessionStorage.getItem(storageKey);
     if (stored) {
       try {
         setMessages(JSON.parse(stored));
@@ -40,12 +47,12 @@ function Chat() {
         console.warn('Failed to parse chat history', e);
       }
     }
-  }, []);
+  }, [storageKey]);
 
-  // Persist chat history whenever it changes
+  // Persist chat history in sessionStorage so it survives route switches but clears when the browser/tab closes
   useEffect(() => {
-    localStorage.setItem('nexus_chat_history', JSON.stringify(messages));
-  }, [messages]);
+    sessionStorage.setItem(storageKey, JSON.stringify(messages));
+  }, [messages, storageKey]);
 
 
   // prompt modal moved to dedicated Prompt Manager page

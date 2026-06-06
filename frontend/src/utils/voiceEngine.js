@@ -290,18 +290,20 @@ const cleanTextForSpeech = (text) => {
   return cleaned;
 };
 
-// ── Smart Text Chunking for Long Responses ──────────────────────────
-
 /**
  * Break long text into sentence-level chunks for smoother delivery.
  * Prevents the "buffering pause" that makes TTS sound robotic.
+ * 
+ * Splits on:  . ! ? । , ; : — (sentence & clause boundaries)
+ * This aggressive splitting ensures Hinglish auto-detection works
+ * per-clause, not just per-paragraph.
  */
-const chunkText = (text, maxLen = 200) => {
+const chunkText = (text, maxLen = 150) => {
   if (text.length <= maxLen) return [text];
   
   const chunks = [];
-  // Split on sentence boundaries
-  const sentences = text.split(/(?<=[.!?।])\s+/);
+  // Split on sentence AND clause boundaries (period, comma, semicolon, colon, dash, Hindi danda)
+  const sentences = text.split(/(?<=[.!?।;:,—–])\s+/);
   let current = '';
   
   for (const sentence of sentences) {
@@ -314,7 +316,8 @@ const chunkText = (text, maxLen = 200) => {
   }
   if (current.trim()) chunks.push(current.trim());
   
-  return chunks;
+  // Filter out empty/whitespace-only chunks
+  return chunks.filter(c => c.length > 0);
 };
 
 // ── Main Speak Function ─────────────────────────────────────────────
@@ -323,7 +326,19 @@ let audioContext = null;
 let currentPlayingAudio = null;
 
 /**
- * Play audio through Web Audio API with a cinematic metallic J.A.R.V.I.S. filter
+ * Play audio through Web Audio API with a cinematic metallic J.A.R.V.I.S. filter.
+ * 
+ * 8-Stage Premium Audio Pipeline:
+ * ┌─────────┐   ┌──────────┐   ┌───────────┐   ┌────────────┐   ┌──────────┐
+ * │ Source  │──▶│ Highpass │──▶│ Low Shelf │──▶│ Mid Peak 1 │──▶│Mid Peak 2│
+ * └─────────┘   │ 120 Hz   │   │ +3dB@280 │   │ +5dB@1.8k  │   │+4dB@3.2k │
+ *               └──────────┘   └───────────┘   └────────────┘   └──────────┘
+ *                                                                     │
+ *  ┌────────────┐   ┌────────────┐   ┌───────────────┐   ┌───────────┘
+ *  │ Master Out │◀──│ Compressor │◀──│ Delay Mix     │◀──│ Presence   │
+ *  │  Gain 1.4  │   │ Broadcast  │   │ Dry + 35ms    │   │ +3dB@4.5k  │
+ *  └────────────┘   └────────────┘   │ Wet at 15%    │   │ HiShelf -6 │
+ *                                    └───────────────┘   └────────────┘
  */
 const playAudioWithJarvisFilter = (url, isHindi, ttsEnabledRef) => {
   return new Promise((resolve) => {
@@ -337,10 +352,10 @@ const playAudioWithJarvisFilter = (url, isHindi, ttsEnabledRef) => {
     audio.crossOrigin = "anonymous";
     currentPlayingAudio = audio;
 
-    // Adjust playback rate to match cinematic tone
-    // Hindi: 1.2 for quick, natural speech
-    // English: 1.3 for professional, crisp speed
-    audio.playbackRate = isHindi ? 1.2 : 1.3;
+    // Playback rate tuning:
+    //   Hindi:    1.15 — natural, warm, conversational pace
+    //   English:  1.22 — confident, crisp, professional pace
+    audio.playbackRate = isHindi ? 1.15 : 1.22;
 
     audio.onended = () => {
       if (currentPlayingAudio === audio) currentPlayingAudio = null;
@@ -348,7 +363,7 @@ const playAudioWithJarvisFilter = (url, isHindi, ttsEnabledRef) => {
     };
 
     audio.onerror = (e) => {
-      console.warn("[VoiceEngine] Premium audio playback failed, resolving to prevent hang:", e);
+      console.warn("[VoiceEngine] Premium audio playback failed:", e);
       if (currentPlayingAudio === audio) currentPlayingAudio = null;
       resolve();
     };
@@ -363,28 +378,141 @@ const playAudioWithJarvisFilter = (url, isHindi, ttsEnabledRef) => {
       }
 
       const source = audioContext.createMediaElementSource(audio);
+      const ctx = audioContext;
 
-      // ── EFFECTS PIPELINE ──
-      // 1. Highpass Filter: Cuts muddy low frequencies below 200Hz (creates the intercom feel)
-      const highpass = audioContext.createBiquadFilter();
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 1: Highpass Filter — Remove sub-bass rumble
+      //  Creates the "intercom / radio comms" foundation.
+      //  120Hz is gentler than before, keeping vocal warmth.
+      // ═══════════════════════════════════════════════════════════
+      const highpass = ctx.createBiquadFilter();
       highpass.type = "highpass";
-      highpass.frequency.value = 200;
+      highpass.frequency.value = 120;
+      highpass.Q.value = 0.7; // Butterworth — smooth rolloff
 
-      // 2. Bandpass Filter: Boosts mid frequencies for a metallic/radio HUD resonance
-      const bandpass = audioContext.createBiquadFilter();
-      bandpass.type = "bandpass";
-      bandpass.frequency.value = 1700; // Peaks around 1.7kHz
-      bandpass.Q.value = 1.4; // Tight resonance for metallic "ring"
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 2: Low Shelf — Add chest/body warmth
+      //  A subtle +3dB boost below 280Hz gives the voice weight
+      //  and prevents the highpass from making it thin.
+      // ═══════════════════════════════════════════════════════════
+      const lowShelf = ctx.createBiquadFilter();
+      lowShelf.type = "lowshelf";
+      lowShelf.frequency.value = 280;
+      lowShelf.gain.value = isHindi ? 3.5 : 2.5; // Hindi gets warmer body
 
-      // 3. Gain Node: Boosts the filtered signal slightly
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = 1.25;
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 3: Mid Resonance Peak 1 — Metallic "suit" tone
+      //  A peaking EQ at 1.8kHz with moderate Q creates the
+      //  distinctive metallic resonance of Jarvis in the helmet.
+      // ═══════════════════════════════════════════════════════════
+      const midPeak1 = ctx.createBiquadFilter();
+      midPeak1.type = "peaking";
+      midPeak1.frequency.value = 1800;
+      midPeak1.Q.value = 1.8;
+      midPeak1.gain.value = 5; // Strong metallic ring
 
-      // Connect nodes
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 4: Mid Resonance Peak 2 — Upper harmonic shimmer
+      //  A second, lighter peak at 3.2kHz adds the "digital AI"
+      //  shimmer. The dual-peak creates that unmistakable Jarvis
+      //  character — one peak alone sounds like a phone call.
+      // ═══════════════════════════════════════════════════════════
+      const midPeak2 = ctx.createBiquadFilter();
+      midPeak2.type = "peaking";
+      midPeak2.frequency.value = 3200;
+      midPeak2.Q.value = 2.0;
+      midPeak2.gain.value = 4;
+
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 5: Presence Boost — Speech clarity & intelligibility
+      //  A gentle lift at 4.5kHz makes consonants crisp and clear
+      //  without being harsh. Critical for "sir" sounding premium.
+      // ═══════════════════════════════════════════════════════════
+      const presence = ctx.createBiquadFilter();
+      presence.type = "peaking";
+      presence.frequency.value = 4500;
+      presence.Q.value = 1.0;
+      presence.gain.value = 3;
+
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 6: High Shelf Rolloff — Smooth out harshness
+      //  Cuts frequencies above 9kHz by -6dB to remove sibilance
+      //  and digital artifacts. Makes the voice feel "enclosed"
+      //  in a premium helmet/HUD environment.
+      // ═══════════════════════════════════════════════════════════
+      const hiShelf = ctx.createBiquadFilter();
+      hiShelf.type = "highshelf";
+      hiShelf.frequency.value = 9000;
+      hiShelf.gain.value = -6;
+
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 7: Slapback Delay — "Inside the suit" spatial feel
+      //  A very short delay (35ms) mixed at low volume creates
+      //  the impression of sound bouncing inside a metal helmet.
+      //  The dry signal stays dominant; the wet is just a ghost.
+      // ═══════════════════════════════════════════════════════════
+      const dryGain = ctx.createGain();
+      dryGain.gain.value = 1.0; // Full volume dry signal
+
+      const wetGain = ctx.createGain();
+      wetGain.gain.value = 0.15; // 15% wet — subtle spatial cue
+
+      const delayNode = ctx.createDelay(0.1);
+      delayNode.delayTime.value = 0.035; // 35ms slapback
+
+      // Feedback filter on delay — darken the echo so it sits behind
+      const delayFilter = ctx.createBiquadFilter();
+      delayFilter.type = "lowpass";
+      delayFilter.frequency.value = 2200; // Muffled echo
+
+      // Merge node to combine dry + wet
+      const merger = ctx.createGain();
+      merger.gain.value = 1.0;
+
+      // ═══════════════════════════════════════════════════════════
+      //  STAGE 8: Dynamics Compressor — Broadcast-quality leveling
+      //  Evens out volume spikes and dips, giving the voice that
+      //  consistent "news anchor / AI announcement" power.
+      // ═══════════════════════════════════════════════════════════
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-24, ctx.currentTime);
+      compressor.knee.setValueAtTime(12, ctx.currentTime);
+      compressor.ratio.setValueAtTime(4, ctx.currentTime);
+      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      compressor.release.setValueAtTime(0.15, ctx.currentTime);
+
+      // ═══════════════════════════════════════════════════════════
+      //  MASTER GAIN — Final output level
+      // ═══════════════════════════════════════════════════════════
+      const masterGain = ctx.createGain();
+      masterGain.gain.value = 1.4;
+
+      // ── CONNECT THE CHAIN ──
+      // Source → Highpass → LowShelf → MidPeak1 → MidPeak2 → Presence → HiShelf
       source.connect(highpass);
-      highpass.connect(bandpass);
-      bandpass.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      highpass.connect(lowShelf);
+      lowShelf.connect(midPeak1);
+      midPeak1.connect(midPeak2);
+      midPeak2.connect(presence);
+      presence.connect(hiShelf);
+
+      // HiShelf splits into dry path and wet (delay) path
+      hiShelf.connect(dryGain);
+      hiShelf.connect(delayNode);
+
+      // Delay → DarkenFilter → WetGain
+      delayNode.connect(delayFilter);
+      delayFilter.connect(wetGain);
+
+      // Both paths merge
+      dryGain.connect(merger);
+      wetGain.connect(merger);
+
+      // Merger → Compressor → MasterGain → Output
+      merger.connect(compressor);
+      compressor.connect(masterGain);
+      masterGain.connect(ctx.destination);
+
     } catch (err) {
       console.warn("[VoiceEngine] Web Audio API failed to configure, playing clean audio:", err);
     }
@@ -430,8 +558,7 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
   if (!cleaned) return;
 
   // ── Premium Movie Jarvis Mode (Server-side Google TTS + Web Audio Filter) ──
-  if (voicePreset === 'ironman_hi' || voicePreset === 'ironman_en') {
-    const langCode = voicePreset === 'ironman_hi' ? 'hi' : 'en';
+  if (voicePreset === 'ironman_hi' || voicePreset === 'ironman_en' || voicePreset === 'ironman_hinglish') {
     const chunks = chunkText(cleaned);
     
     for (let i = 0; i < chunks.length; i++) {
@@ -444,10 +571,21 @@ export const speak = async (text, { voicePreset = 'jarvis', customVoiceUrl = '',
         return;
       }
       
+      // For Hinglish: auto-detect language per chunk
+      // For pure Hindi/English: use fixed lang
+      let langCode;
+      if (voicePreset === 'ironman_hinglish') {
+        const chunkLang = detectLanguage(chunks[i]);
+        langCode = chunkLang === 'hi-IN' ? 'hi' : 'en';
+      } else {
+        langCode = voicePreset === 'ironman_hi' ? 'hi' : 'en';
+      }
+      
+      const isHindiChunk = langCode === 'hi';
       const chunkTextEncoded = encodeURIComponent(chunks[i]);
       const audioUrl = `${API_BASE_URL}/api/tts/google?lang=${langCode}&text=${chunkTextEncoded}`;
       
-      await playAudioWithJarvisFilter(audioUrl, voicePreset === 'ironman_hi', ttsEnabledRef);
+      await playAudioWithJarvisFilter(audioUrl, isHindiChunk, ttsEnabledRef);
     }
     return;
   }
@@ -695,7 +833,8 @@ export const getAvailableVoices = () => {
 export const testVoice = (preset = 'ironman_en', customVoiceUrl = '') => {
   const phrases = {
     ironman_en: "Welcome back, sir. All systems are fully operational, and I am ready for your command.",
-    ironman_hi: "स्वागत है सर। सभी सिस्टम चालू हैं, और मैं आपके आदेशों के लिए तैयार हूँ।"
+    ironman_hi: "स्वागत है सर। सभी सिस्टम चालू हैं, और मैं आपके आदेशों के लिए तैयार हूँ।",
+    ironman_hinglish: "Welcome back sir. Aapke sabhi systems fully operational hain. Main aapke commands ke liye ready hoon."
   };
   const phrase = phrases[preset] || phrases['ironman_en'];
   return speak(phrase, { voicePreset: preset, customVoiceUrl });

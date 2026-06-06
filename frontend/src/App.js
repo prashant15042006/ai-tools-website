@@ -549,16 +549,17 @@ const SettingsView = () => {
                   <div style={{ minWidth: 220 }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
                     <select 
-                      value={voicePreset === 'ironman_hi' ? 'ironman_hi' : 'ironman_en'} 
+                      value={voicePreset} 
                       onChange={(e) => setVoicePreset(e.target.value)} 
                       style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}
                     >
                       <option value="ironman_en">🎙️ J.A.R.V.I.S. (English - Movie Premium)</option>
                       <option value="ironman_hi">🎙️ J.A.R.V.I.S. (Hindi - Movie Premium)</option>
+                      <option value="ironman_hinglish">🎙️ J.A.R.V.I.S. (Hinglish Mix - Movie Premium)</option>
                     </select>
                   </div>
                   <button 
-                    onClick={() => handleTestVoice(voicePreset === 'ironman_hi' ? 'ironman_hi' : 'ironman_en')} 
+                    onClick={() => handleTestVoice(voicePreset)} 
                     style={{ 
                       padding: '8px 16px', 
                       borderRadius: 8, 
@@ -576,7 +577,14 @@ const SettingsView = () => {
                     🔊 Test Voice
                   </button>
                 </div>
-                {voicePreset === 'ironman_hi' ? (
+                {voicePreset === 'ironman_hinglish' ? (
+                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
+                    <div style={{ fontWeight: 700, color: '#10b981', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Hinglish Mix Movie Premium Profile</div>
+                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      Cinematic Movie Premium Jarvis voice with metallic intercom suit effect. Auto-detects Hindi & English in each sentence and speaks with the matching voice. Perfect for mixed Hindi-English (Hinglish) conversations.
+                    </div>
+                  </div>
+                ) : voicePreset === 'ironman_hi' ? (
                   <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
                     <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Hindi Movie Premium Profile</div>
                     <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
@@ -845,7 +853,13 @@ const PwaInstallBanner = () => {
         </div>
 
         <div className="new-chat-container">
-          <button className="new-chat-btn" onClick={() => { setChatKey(prev => prev + 1); navigate('/chat'); handleMobileNav(); }}>
+          <button className="new-chat-btn" onClick={() => {
+            const storageKey = user?.email ? `nexus_chat_history_${user.email}` : 'nexus_chat_history_anonymous';
+            sessionStorage.removeItem(storageKey);
+            setChatKey(prev => prev + 1);
+            navigate('/chat');
+            handleMobileNav();
+          }}>
             <Plus size={18} />
             New Chat
           </button>
@@ -949,7 +963,12 @@ const PwaInstallBanner = () => {
             <button className="icon-btn">
               <Bell size={20} />
             </button>
-            <div className="profile-btn" style={{ overflow: 'hidden', padding: 0 }} title={user?.email || displayName || 'Profile'}>
+            <div 
+              className="profile-btn" 
+              style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }} 
+              title={user?.email || displayName || 'Profile'}
+              onClick={() => navigate('/settings')}
+            >
               <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} alt="P" style={{ width: '100%', height: '100%' }} />
             </div>
           </div>
