@@ -134,7 +134,49 @@ h1 {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive tweaks */
+.layout {
+  display: flex;
+  gap: 1rem;
+}
+
+.sidebar {
+  width: 200px;
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  color: var(--text-primary);
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  color: var(--primary);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li a {
+  color: var(--text-primary);
+  text-decoration: none;
+  display: block;
+  padding: 0.4rem 0;
+}
+
+.sidebar li a.active {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.main-content {
+  flex: 1;
+}
+
 @media (max-width: 480px) {
   .app-container {
     padding: 1.5rem;

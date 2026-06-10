@@ -37,17 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
     generateBtn.disabled = true;
     generateBtn.textContent = 'Generating…';
     try {
-      // Puter.generateImage is a placeholder for the real API
-      const result = await Puter.generateImage(prompt);
-      // Accept Blob, DataURL or direct URL string
-      let imgUrl;
-      if (result instanceof Blob) {
-        imgUrl = URL.createObjectURL(result);
-      } else if (typeof result === 'string') {
-        imgUrl = result.startsWith('data:') ? result : result;
-      } else {
-        throw new Error('Unsupported image format returned');
-      }
+      // Use Unsplash source for placeholder image generation (no API key needed)
+      const response = await fetch(`https://source.unsplash.com/800x800/?${encodeURIComponent(prompt)}`);
+      const imgUrl = response.url;
       imgEl.src = imgUrl;
       imgEl.onload = () => {
         imgEl.style.opacity = '0';
