@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Image Generator</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Puter.js library (hypothetical CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/puter/dist/puter.min.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Menu</h2>
+      <ul>
+        <li><a href="#" class="active">Image Generator</a></li>
+        <!-- Add more sidebar items here -->
+      </ul>
+    </aside>
+    <main class="main-content">
+      <div class="app-container">
+        <h1>AI Image Generator</h1>
+        <div class="prompt-section">
+          <textarea id="promptInput" placeholder="Enter your image prompt here..." rows="3"></textarea>
+          <button id="generateBtn">Generate Image</button>
+        </div>
+        <div class="output-section" id="outputSection" hidden>
+          <div class="image-box" id="imageBox">
+            <img id="generatedImg" src="" alt="Generated" />
+          </div>
+          <div class="message-box" id="messageBox">
+            <p>Here is your generated image based on the prompt.</p>
+            <button id="downloadBtn">Download Image</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

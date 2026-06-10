@@ -1,0 +1,143 @@
+/* style.css */
+/* Premium modern design – glassmorphism, subtle gradients, smooth animations */
+
+:root {
+  --font-family: 'Inter', sans-serif;
+  --primary-hue: 210; /* teal‑blue */
+  --primary: hsl(var(--primary-hue), 70%, 55%);
+  --bg: #0f0f0f; /* dark background */
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --card-blur: 12px;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --border-radius: 12px;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background: linear-gradient(135deg, #111, #1a1a2e);
+  color: var(--text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 600px;
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  border-radius: var(--border-radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  padding: 2rem;
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  background: linear-gradient(90deg, #6dd5fa, #2980b9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.prompt-section textarea {
+  width: 100%;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 0.75rem 1rem;
+  resize: vertical;
+  background: rgba(255,255,255,0.12);
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  outline: none;
+}
+
+.prompt-section button {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.prompt-section button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.output-section {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.image-box {
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 1 / 1;
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.message-box {
+  width: 100%;
+  max-width: 500px;
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--card-blur));
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  position: relative;
+  animation: slideUp 0.5s ease-out;
+}
+
+.message-box button {
+  position: absolute;
+  right: 1rem;
+  top: 0.8rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive tweaks */
+@media (max-width: 480px) {
+  .app-container {
+    padding: 1.5rem;
+  }
+  h1 { font-size: 1.5rem; }
+}
