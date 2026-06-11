@@ -105,6 +105,7 @@ export default function ImageGenerator() {
   const [activeTab, setActiveTab]   = useState("generate");
   const [history, setHistory]       = useState([]);
   const [errorDetail, setErrorDetail] = useState(null);
+  const [errorDetailMessage, setErrorDetailMessage] = useState("");
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -122,6 +123,7 @@ export default function ImageGenerator() {
     setImageUrl(null);
     setLoadFailed(false);
     setErrorDetail(null);
+    setErrorDetailMessage("");
 
     try {
       const puter = await loadPuter();
@@ -144,6 +146,7 @@ export default function ImageGenerator() {
     } catch (err) {
       console.error("Puter Image generation error:", err);
       const msg = err?.message || String(err);
+      setErrorDetailMessage(msg);
 
       // Detect Puter login requirement
       if (msg.toLowerCase().includes("auth") || msg.toLowerCase().includes("sign") || msg.toLowerCase().includes("login")) {
@@ -504,8 +507,13 @@ export default function ImageGenerator() {
               <div style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.7" }}>
                 <strong style={{ color: "#f87171", display: "block", marginBottom: "6px" }}>Puter AI Generation Failed</strong>
                 Puter.js could not generate the image. This can happen due to ad-blockers, network firewalls blocking the Puter CDN, or if Puter servers are offline.
+                {errorDetailMessage && (
+                  <div style={{ marginTop: "10px", padding: "10px 14px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "10px", color: "#f87171", fontFamily: "monospace", fontSize: "13px", wordBreak: "break-all" }}>
+                    <strong>Error:</strong> {errorDetailMessage}
+                  </div>
+                )}
                 <br />
-                <strong style={{ color: "#e2e8f0" }}>Troubleshooting:</strong>
+                <strong style={{ color: "#e2e8f0", marginTop: "8px", display: "block" }}>Troubleshooting:</strong>
                 <ul style={{ margin: "6px 0 0 16px", padding: 0, lineHeight: "2" }}>
                   <li>Disable any VPN or aggressive ad-blockers.</li>
                   <li>Verify you are connected to the internet.</li>
