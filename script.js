@@ -37,9 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
     generateBtn.disabled = true;
     generateBtn.textContent = 'Generating…';
     try {
-      // Use Unsplash source for placeholder image generation (no API key needed)
-      const response = await fetch(`https://source.unsplash.com/800x800/?${encodeURIComponent(prompt)}`);
-      const imgUrl = response.url;
+      if (!window.puter || !window.puter.ai) {
+        throw new Error('Puter.js library not loaded yet or failed to load.');
+      }
+      // Generate image using Puter.js
+      const imgElResp = await puter.ai.txt2img(prompt);
+      if (!imgElResp || !imgElResp.src) {
+        throw new Error('Puter AI did not return a valid image source.');
+      }
+      const imgUrl = imgElResp.src;
       imgEl.src = imgUrl;
       imgEl.onload = () => {
         imgEl.style.opacity = '0';
@@ -50,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       downloadBtn.dataset.img = imgUrl;
     } catch (e) {
       console.error(e);
-      showToast('Failed to generate image');
+      showToast('Failed to generate image: ' + (e.message || e));
     } finally {
       generateBtn.disabled = false;
       generateBtn.textContent = 'Generate Image';
