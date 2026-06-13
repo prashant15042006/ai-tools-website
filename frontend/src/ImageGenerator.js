@@ -112,55 +112,6 @@ export default function ImageGenerator() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // ── Generate image with Puter AI ────────────────────────
-  const generateImagePuter = async (isTestMode = false) => {
-    if (!prompt.trim()) {
-      showToast("Please enter a prompt first!", "error");
-      return;
-    }
-
-    setLoading(true);
-    setImageUrl(null);
-    setLoadFailed(false);
-    setErrorDetail(null);
-    setErrorDetailMessage("");
-
-    try {
-      const puter = await loadPuter();
-
-      // puter.ai.txt2img returns an HTMLImageElement
-      // Pass `true` as second arg for test_mode to skip Puter login
-      const imgEl = await puter.ai.txt2img(prompt.trim(), isTestMode);
-
-      if (!(imgEl instanceof HTMLImageElement)) {
-        throw new Error("Unexpected response from puter.ai.txt2img");
-      }
-
-      const url = imgEl.src;
-      setImageUrl(url);
-      setHistory(prev =>
-        [{ url, prompt: prompt.trim() + (isTestMode ? " (test)" : ""), generator: "puter", model: "Puter default", seed: isTestMode ? "test-mode" : "live", id: Date.now() }, ...prev].slice(0, 20)
-      );
-      setActiveTab("view");
-      showToast(isTestMode ? "Test image generated! 🧪" : "Image generated successfully! ✨");
-    } catch (err) {
-      console.error("Puter Image generation error:", err);
-      const msg = err?.message || String(err);
-      setErrorDetailMessage(msg);
-
-      // Detect Puter login requirement
-      if (msg.toLowerCase().includes("auth") || msg.toLowerCase().includes("sign") || msg.toLowerCase().includes("login")) {
-        setErrorDetail("puter-login");
-      } else {
-        setErrorDetail("generic");
-      }
-      setLoadFailed(true);
-      showToast("Failed to generate image — see details below.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // ── Generate image with Pollinations AI ─────────────────
   const generateImagePollinations = () => {
     if (!prompt.trim()) {
@@ -220,6 +171,65 @@ export default function ImageGenerator() {
         showToast("Generation failed. Check your internet connection.", "error");
       };
     };
+  };
+
+  // ── Generate image with Puter AI ────────────────────────
+  const generateImagePuter = async (isTestMode = false) => {
+    if (!prompt.trim()) {
+      showToast("Please enter a prompt first!", "error");
+      return;
+    }
+
+    setLoading(true);
+    setImageUrl(null);
+    setLoadFailed(false);
+    setErrorDetail(null);
+    setErrorDetailMessage("");
+
+    try {
+      // Access window.puter synchronously first to bypass browser popup blockers
+      let puterInstance = window.puter && window.puter.ai ? window.puter : null;
+      if (!puterInstance) {
+        puterInstance = await loadPuter();
+      }
+
+      // Call puter.ai.txt2img. Since the call context is synchronous (when window.puter is already loaded),
+      // it is safe from popup blockers.
+      const imgEl = await puterInstance.ai.txt2img(prompt.trim(), isTestMode);
+
+      if (!(imgEl instanceof HTMLImageElement)) {
+        throw new Error("Unexpected response from puter.ai.txt2img");
+      }
+
+      const url = imgEl.src;
+      setImageUrl(url);
+      setHistory(prev =>
+        [{ url, prompt: prompt.trim() + (isTestMode ? " (test)" : ""), generator: "puter", model: "Puter default", seed: isTestMode ? "test-mode" : "live", id: Date.now() }, ...prev].slice(0, 20)
+      );
+      setActiveTab("view");
+      showToast(isTestMode ? "Test image generated! 🧪" : "Image generated successfully! ✨");
+    } catch (err) {
+      console.error("Puter Image generation error:", err);
+      const msg = err?.message || String(err);
+      setErrorDetailMessage(msg);
+
+      // Detect Puter login requirement
+      if (msg.toLowerCase().includes("auth") || msg.toLowerCase().includes("sign") || msg.toLowerCase().includes("login")) {
+        setErrorDetail("puter-login");
+      } else {
+        setErrorDetail("generic");
+      }
+      setLoadFailed(true);
+      showToast("Puter.js failed. Auto-switching to Pollinations AI...", "error");
+
+      // Auto-fallback: Wait 1.5 seconds so user can read toast, then generate with Pollinations AI
+      setTimeout(() => {
+        setGeneratorType("pollinations");
+        generateImagePollinations();
+      }, 1500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Main Generate function ──────────────────────────────
