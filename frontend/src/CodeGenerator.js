@@ -6,6 +6,7 @@ import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL from "./apiConfig";
+import { PreRenderer } from "./utils/PreRenderer";
 
 // Inject table styles on component mount
 injectTableStyles();

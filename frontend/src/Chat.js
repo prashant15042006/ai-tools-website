@@ -6,6 +6,7 @@ import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
+import { PreRenderer } from "./utils/PreRenderer";
 
 // Inject table styles on component mount
 injectTableStyles();
@@ -254,7 +255,7 @@ function Chat() {
                   {msg.sender === "user" ? (
                     msg.text
                   ) : msg.text ? (
-                    <ReactMarkdown components={{ a: LinkRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   ) : (
                     <div className="typing-indicator">
                       <div className="typing-dot"></div>
