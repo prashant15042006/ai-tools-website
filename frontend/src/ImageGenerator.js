@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Download, ImageIcon, Sparkles, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Download, ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 
 // ── Load Puter.js from official CDN ────────────────────────
 function loadPuter() {
@@ -96,7 +96,6 @@ const SUGGESTIONS = [
 // ══════════════════════════════════════════════════════════════
 export default function ImageGenerator() {
   const [prompt, setPrompt]         = useState("");
-  const [generatorType, setGeneratorType] = useState("puter"); // "puter" | "pollinations"
   const [model, setModel]           = useState("flux");
   const [imageUrl, setImageUrl]     = useState(null);
   const [loading, setLoading]       = useState(false);
@@ -104,8 +103,9 @@ export default function ImageGenerator() {
   const [toast, setToast]           = useState(null);
   const [activeTab, setActiveTab]   = useState("generate");
   const [history, setHistory]       = useState([]);
+  const [engine, setEngine]         = useState("pollinations");
   const [errorDetail, setErrorDetail] = useState(null);
-  const [errorDetailMessage, setErrorDetailMessage] = useState("");
+
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -125,7 +125,6 @@ export default function ImageGenerator() {
     setImageUrl(null);
     setLoadFailed(false);
     setLoading(true);
-    setErrorDetail(null);
 
     // Pre-load the image
     const img = new Image();
@@ -174,59 +173,82 @@ export default function ImageGenerator() {
   };
 
   // ── Generate image with Puter AI ────────────────────────
-  const generateImagePuter = async (isTestMode = false) => {
+  const generateImagePuter = async () => {
     if (!prompt.trim()) {
       showToast("Please enter a prompt first!", "error");
       return;
     }
 
-    setLoading(true);
     setImageUrl(null);
-    setLoadFailed(false);
     setErrorDetail(null);
-    setErrorDetailMessage("");
+    setLoadFailed(false);
+    setLoading(true);
 
     try {
-      // Access window.puter synchronously first to bypass browser popup blockers
-      let puterInstance = window.puter && window.puter.ai ? window.puter : null;
-      if (!puterInstance) {
-        puterInstance = await loadPuter();
-      }
+      const puter = await loadPuter();
+      // puter.ai.txt2img returns an HTMLImageElement
+      const imgEl = await puter.ai.txt2img(prompt.trim());
 
-      // Call puter.ai.txt2img. Since the call context is synchronous (when window.puter is already loaded),
-      // it is safe from popup blockers.
-      const imgEl = await puterInstance.ai.txt2img(prompt.trim(), isTestMode);
-
-      if (!(imgEl instanceof HTMLImageElement)) {
-        throw new Error("Unexpected response from puter.ai.txt2img");
+      if (!imgEl || !imgEl.src) {
+        throw new Error("Puter AI did not return a valid image source.");
       }
 
       const url = imgEl.src;
       setImageUrl(url);
       setHistory(prev =>
-        [{ url, prompt: prompt.trim() + (isTestMode ? " (test)" : ""), generator: "puter", model: "Puter default", seed: isTestMode ? "test-mode" : "live", id: Date.now() }, ...prev].slice(0, 20)
+        [{ url, prompt: prompt.trim(), generator: "puter", id: Date.now() }, ...prev].slice(0, 20)
       );
       setActiveTab("view");
-      showToast(isTestMode ? "Test image generated! 🧪" : "Image generated successfully! ✨");
+      showToast("Image generated! ✨");
     } catch (err) {
-      console.error("Puter Image generation error:", err);
+      console.error("Puter AI error:", err);
       const msg = err?.message || String(err);
-      setErrorDetailMessage(msg);
 
-      // Detect Puter login requirement
       if (msg.toLowerCase().includes("auth") || msg.toLowerCase().includes("sign") || msg.toLowerCase().includes("login")) {
         setErrorDetail("puter-login");
       } else {
         setErrorDetail("generic");
       }
       setLoadFailed(true);
-      showToast("Puter.js failed. Auto-switching to Pollinations AI...", "error");
+      showToast("Puter AI generation failed.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Auto-fallback: Wait 1.5 seconds so user can read toast, then generate with Pollinations AI
-      setTimeout(() => {
-        setGeneratorType("pollinations");
-        generateImagePollinations();
-      }, 1500);
+  // ── Generate test image with Puter AI ────────────────────
+  const generateTestImage = async () => {
+    if (!prompt.trim()) {
+      showToast("Please enter a prompt first!", "error");
+      return;
+    }
+
+    setImageUrl(null);
+    setErrorDetail(null);
+    setLoadFailed(false);
+    setLoading(true);
+
+    try {
+      const puter = await loadPuter();
+      // Pass true as second arg for test mode
+      const imgEl = await puter.ai.txt2img(prompt.trim(), true);
+
+      if (!imgEl || !imgEl.src) {
+        throw new Error("Puter AI did not return a valid image source.");
+      }
+
+      const url = imgEl.src;
+      setImageUrl(url);
+      setHistory(prev =>
+        [{ url, prompt: prompt.trim() + " (test)", generator: "puter", id: Date.now() }, ...prev].slice(0, 20)
+      );
+      setActiveTab("view");
+      showToast("Test image loaded! ✨ (Login for real AI images)");
+    } catch (err) {
+      console.error("Puter Test error:", err);
+      setErrorDetail("generic");
+      setLoadFailed(true);
+      showToast("Test mode failed. Check internet connection.", "error");
     } finally {
       setLoading(false);
     }
@@ -234,12 +256,13 @@ export default function ImageGenerator() {
 
   // ── Main Generate function ──────────────────────────────
   const generateImage = () => {
-    if (generatorType === "puter") {
-      generateImagePuter(false);
-    } else {
+    if (engine === "pollinations") {
       generateImagePollinations();
+    } else {
+      generateImagePuter();
     }
   };
+
 
   // ── Regenerate with same prompt ─────────────────────────
   const regenerate = () => {
@@ -288,10 +311,13 @@ export default function ImageGenerator() {
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <CheckCircle2 size={15} color="#4ade80" />
           <p style={{ color: "#4ade80", fontSize: "14px", fontWeight: "600", margin: 0 }}>
-            Powered by Puter.js & Pollinations AI • 100% Free
+            {engine === "pollinations" 
+              ? "Powered by Pollinations AI (Flux) • 100% Free • No Login Required"
+              : "Powered by Puter AI (Official) • 100% Free • Login Required for Real Images"}
           </p>
         </div>
       </div>
+
 
       {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
@@ -320,49 +346,7 @@ export default function ImageGenerator() {
             borderRadius: "20px", padding: "24px", marginBottom: "20px", backdropFilter: "blur(10px)"
           }}>
 
-            {/* Generator Selector */}
-            <div style={{ marginBottom: "24px" }}>
-              <label style={{
-                fontSize: "12px", fontWeight: "700", color: "#a855f7",
-                textTransform: "uppercase", letterSpacing: "0.6px", display: "block", marginBottom: "10px"
-              }}>
-                🤖 Select AI Generator Engine
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "12px" }}>
-                <div
-                  onClick={() => { setGeneratorType("puter"); setErrorDetail(null); }}
-                  style={{
-                    padding: "16px 20px", borderRadius: "14px", cursor: "pointer",
-                    border: generatorType === "puter" ? "2px solid #a855f7" : "1px solid var(--border-color)",
-                    background: generatorType === "puter" ? "rgba(168,85,247,0.08)" : "rgba(255,255,255,0.01)",
-                    transition: "all 0.2s", display: "flex", flexDirection: "column", gap: "4px"
-                  }}
-                >
-                  <strong style={{ color: generatorType === "puter" ? "#c084fc" : "var(--text-primary)", fontSize: "14px" }}>
-                    🔌 Puter AI (Official)
-                  </strong>
-                  <span style={{ color: "var(--text-secondary)", fontSize: "12px", lineHeight: "1.4" }}>
-                    Runs in browser. Standard AI models. Requires a free Puter account login.
-                  </span>
-                </div>
-                <div
-                  onClick={() => { setGeneratorType("pollinations"); setErrorDetail(null); }}
-                  style={{
-                    padding: "16px 20px", borderRadius: "14px", cursor: "pointer",
-                    border: generatorType === "pollinations" ? "2px solid #a855f7" : "1px solid var(--border-color)",
-                    background: generatorType === "pollinations" ? "rgba(168,85,247,0.08)" : "rgba(255,255,255,0.01)",
-                    transition: "all 0.2s", display: "flex", flexDirection: "column", gap: "4px"
-                  }}
-                >
-                  <strong style={{ color: generatorType === "pollinations" ? "#c084fc" : "var(--text-primary)", fontSize: "14px" }}>
-                    ⚡ Pollinations AI (Flux)
-                  </strong>
-                  <span style={{ color: "var(--text-secondary)", fontSize: "12px", lineHeight: "1.4" }}>
-                    No account required. Fast Flux/Realism engines. Completely anonymous.
-                  </span>
-                </div>
-              </div>
-            </div>
+
 
             {/* Prompt label */}
             <label style={{
@@ -405,133 +389,101 @@ export default function ImageGenerator() {
 
             {/* Options + Generate button */}
             <div style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              marginTop: "18px", flexWrap: "wrap", gap: "12px"
+              display: "flex", flexDirection: "column", gap: "16px",
+              marginTop: "18px"
             }}>
-              {/* Left Side options */}
+              {/* Engine Selector */}
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                {generatorType === "pollinations" ? (
-                  <>
-                    <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>Model:</span>
-                    {MODELS.map(m => (
-                      <button key={m.id} onClick={() => setModel(m.id)} style={{
-                        padding: "6px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "600",
-                        cursor: "pointer", transition: "all 0.2s",
-                        border:     model === m.id ? "1px solid rgba(168,85,247,0.6)" : "1px solid var(--border-color)",
-                        background: model === m.id ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.03)",
-                        color:      model === m.id ? "#c084fc" : "var(--text-secondary)",
-                      }}>
-                        {m.label}
-                      </button>
-                    ))}
-                  </>
-                ) : (
-                  <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>
-                    Engine: Puter Client-Side Integration
-                  </span>
-                )}
+                <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>Engine:</span>
+                {[
+                  { id: "pollinations", label: "⚡ Pollinations AI (Flux)" },
+                  { id: "puter",        label: "🤖 Puter AI (Official)" }
+                ].map(e => (
+                  <button key={e.id} onClick={() => { setEngine(e.id); setErrorDetail(null); }} style={{
+                    padding: "6px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "600",
+                    cursor: "pointer", transition: "all 0.2s",
+                    border:     engine === e.id ? "1px solid rgba(168,85,247,0.6)" : "1px solid var(--border-color)",
+                    background: engine === e.id ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.03)",
+                    color:      engine === e.id ? "#c084fc" : "var(--text-secondary)",
+                  }}>
+                    {e.label}
+                  </button>
+                ))}
               </div>
 
-              {/* Right Side Buttons */}
-              <div style={{ display: "flex", gap: "10px" }}>
-                {generatorType === "puter" && (
+              {/* Model Selector (Pollinations only) */}
+              {engine === "pollinations" && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", animation: "slideUp 0.2s ease-out" }}>
+                  <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>Model:</span>
+                  {MODELS.map(m => (
+                    <button key={m.id} onClick={() => setModel(m.id)} style={{
+                      padding: "6px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "600",
+                      cursor: "pointer", transition: "all 0.2s",
+                      border:     model === m.id ? "1px solid rgba(168,85,247,0.6)" : "1px solid var(--border-color)",
+                      background: model === m.id ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.03)",
+                      color:      model === m.id ? "#c084fc" : "var(--text-secondary)",
+                    }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Buttons row */}
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                flexWrap: "wrap", gap: "12px", marginTop: "4px"
+              }}>
+                <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                  Ctrl + Enter to generate instantly • Powered by {engine === "pollinations" ? "⚡ Pollinations AI" : "🤖 Puter AI"}
+                </div>
+
+                <div style={{ display: "flex", gap: "10px" }}>
+                  {engine === "puter" && (
+                    <button
+                      onClick={generateTestImage}
+                      disabled={loading}
+                      style={{
+                        background: "rgba(168,85,247,0.08)",
+                        color: "#c084fc",
+                        border: "1px solid rgba(168,85,247,0.25)",
+                        padding: "13px 20px", borderRadius: "14px",
+                        fontWeight: "600", fontSize: "14px",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      🧪 Test Mode
+                    </button>
+                  )}
                   <button
-                    onClick={() => generateImagePuter(true)}
+                    onClick={generateImage}
                     disabled={loading}
                     style={{
-                      background: "rgba(168,85,247,0.12)", color: "#c084fc",
-                      border: "1px solid rgba(168,85,247,0.3)",
-                      padding: "13px 22px", borderRadius: "14px",
-                      fontWeight: "700", fontSize: "15px", cursor: loading ? "not-allowed" : "pointer",
-                      display: "flex", alignItems: "center", gap: "8px", transition: "all 0.2s"
+                      background: loading
+                        ? "rgba(168,85,247,0.25)"
+                        : "linear-gradient(135deg, #a855f7, #ec4899)",
+                      color: "white", border: "none",
+                      padding: "13px 32px", borderRadius: "14px",
+                      fontWeight: "800", fontSize: "15px",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", gap: "9px",
+                      transition: "all 0.2s",
+                      boxShadow: loading ? "none" : "0 4px 24px rgba(168,85,247,0.45)"
                     }}
                   >
-                    🧪 Test Mode
+                    {loading
+                      ? <><RefreshCw size={17} style={{ animation: "spin 0.8s linear infinite" }} /> Generating…</>
+                      : <><Sparkles size={17} /> Generate Image</>
+                    }
                   </button>
-                )}
-
-                <button
-                  onClick={generateImage}
-                  disabled={loading}
-                  style={{
-                    background: loading
-                      ? "rgba(168,85,247,0.25)"
-                      : "linear-gradient(135deg, #a855f7, #ec4899)",
-                    color: "white", border: "none",
-                    padding: "13px 32px", borderRadius: "14px",
-                    fontWeight: "800", fontSize: "15px",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    display: "flex", alignItems: "center", gap: "9px",
-                    transition: "all 0.2s",
-                    boxShadow: loading ? "none" : "0 4px 24px rgba(168,85,247,0.45)"
-                  }}
-                >
-                  {loading
-                    ? <><RefreshCw size={17} style={{ animation: "spin 0.8s linear infinite" }} /> Generating…</>
-                    : <><Sparkles size={17} /> Generate Image</>
-                  }
-                </button>
+                </div>
               </div>
-            </div>
-
-            <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--text-secondary)" }}>
-              Ctrl + Enter to generate instantly • Powered by {generatorType === "puter" ? "Puter.js" : "Pollinations AI"}
             </div>
           </div>
 
-          {/* ── Detailed Error Boxes for Puter ── */}
-          {errorDetail === "puter-login" && (
-            <div style={{
-              background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)",
-              borderRadius: "16px", padding: "20px", marginBottom: "20px",
-              display: "flex", gap: "14px", alignItems: "flex-start",
-              animation: "slideUp 0.3s ease-out"
-            }}>
-              <AlertCircle size={22} color="#fbbf24" style={{ flexShrink: 0, marginTop: "2px" }} />
-              <div>
-                <div style={{ fontWeight: "700", color: "#fbbf24", marginBottom: "8px", fontSize: "15px" }}>
-                  🔑 Puter Account Login Required
-                </div>
-                <p style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.7", margin: 0 }}>
-                  Puter AI runs completely free of cost but requires a Puter account to manage your requests.
-                  <br />
-                  <strong style={{ color: "#e2e8f0" }}>Quick Steps:</strong>
-                  <ol style={{ margin: "8px 0 8px 16px", padding: 0, lineHeight: "2" }}>
-                    <li>Go to <a href="https://puter.com" target="_blank" rel="noreferrer" style={{ color: "#a855f7", textDecoration: "underline" }}>puter.com</a> and sign up (Takes 10 seconds, 100% Free).</li>
-                    <li>Come back here, click <strong>"Generate Image"</strong> again, and allow the login popup window.</li>
-                  </ol>
-                  Alternatively, use <strong style={{ color: "#c084fc" }}>🧪 Test Mode</strong> to try out the system instantly, or switch to the <strong style={{ color: "#c084fc" }}>Pollinations AI</strong> engine.
-                </p>
-              </div>
-            </div>
-          )}
 
-          {errorDetail === "generic" && (
-            <div style={{
-              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
-              borderRadius: "16px", padding: "18px", marginBottom: "20px",
-              display: "flex", gap: "14px", alignItems: "flex-start",
-              animation: "slideUp 0.3s ease-out"
-            }}>
-              <AlertCircle size={22} color="#f87171" style={{ flexShrink: 0 }} />
-              <div style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.7" }}>
-                <strong style={{ color: "#f87171", display: "block", marginBottom: "6px" }}>Puter AI Generation Failed</strong>
-                Puter.js could not generate the image. This can happen due to ad-blockers, network firewalls blocking the Puter CDN, or if Puter servers are offline.
-                {errorDetailMessage && (
-                  <div style={{ marginTop: "10px", padding: "10px 14px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "10px", color: "#f87171", fontFamily: "monospace", fontSize: "13px", wordBreak: "break-all" }}>
-                    <strong>Error:</strong> {errorDetailMessage}
-                  </div>
-                )}
-                <br />
-                <strong style={{ color: "#e2e8f0", marginTop: "8px", display: "block" }}>Troubleshooting:</strong>
-                <ul style={{ margin: "6px 0 0 16px", padding: 0, lineHeight: "2" }}>
-                  <li>Disable any VPN or aggressive ad-blockers.</li>
-                  <li>Verify you are connected to the internet.</li>
-                  <li>Try using **Test Mode** or switch to the **Pollinations AI** engine.</li>
-                </ul>
-              </div>
-            </div>
-          )}
+
 
           {/* Loading skeleton */}
           {loading && (
@@ -547,13 +499,68 @@ export default function ImageGenerator() {
               <RefreshCw size={48} color="#a855f7" style={{ animation: "spin 1s linear infinite" }} />
               <div style={{ textAlign: "center" }}>
                 <p style={{ color: "#c084fc", fontWeight: "700", fontSize: "16px", margin: "0 0 6px" }}>
-                  {generatorType === "puter" ? "Puter AI is thinking..." : "Creating your image…"}
+                  Creating your image…
                 </p>
                 <p style={{ color: "var(--text-secondary)", fontSize: "13px", margin: 0, padding: "0 20px" }}>
-                  {generatorType === "puter" 
-                    ? "If a popup appears, please log in/authorize Puter.js to generate the image." 
-                    : "This takes 10–20 seconds"}
+                  This takes 10–20 seconds
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Puter login instructions */}
+          {errorDetail === "puter-login" && !loading && (
+            <div style={{
+              background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)",
+              borderRadius: "16px", padding: "20px", marginTop: "16px",
+              display: "flex", gap: "14px", alignItems: "flex-start",
+              animation: "slideUp 0.3s ease-out"
+            }}>
+              <AlertCircle size={22} color="#fbbf24" style={{ flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <div style={{ fontWeight: "700", color: "#fbbf24", marginBottom: "8px", fontSize: "15px" }}>
+                  Puter Account Required for AI Generation
+                </div>
+                <div style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.7" }}>
+                  Puter AI utilizes your own free Puter account to run. Follow these steps:
+                  <ol style={{ margin: "10px 0 10px 18px", padding: 0, lineHeight: "2" }}>
+                    <li>Go to <a href="https://puter.com" target="_blank" rel="noreferrer" style={{ color: "#a855f7", textDecoration: "underline" }}>puter.com</a> and sign up (100% free)</li>
+                    <li>Come back here and click <strong>"Generate Image"</strong> — Puter will show a popup to authorize/login</li>
+                    <li>Once authorized, your image will generate automatically!</li>
+                  </ol>
+                  Or click <strong style={{ color: "#c084fc" }}>🧪 Test Mode</strong> above to quickly generate a sample image without signing in.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Puter generic failure */}
+          {errorDetail === "generic" && !loading && (
+            <div style={{
+              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
+              borderRadius: "16px", padding: "20px", marginTop: "16px",
+              display: "flex", gap: "14px", alignItems: "flex-start",
+              animation: "slideUp 0.3s ease-out"
+            }}>
+              <AlertCircle size={22} color="#f87171" style={{ flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <div style={{ fontWeight: "700", color: "#f87171", marginBottom: "8px" }}>Puter AI Generation Failed</div>
+                <p style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.7", margin: "0 0 12px" }}>
+                  Something went wrong while connecting to Puter. Please try:
+                </p>
+                <ul style={{ color: "var(--text-secondary)", fontSize: "14px", margin: "0 0 12px 16px", lineHeight: "2" }}>
+                  <li>Make sure your browser is not blocking popups from this site</li>
+                  <li>Disable any aggressive ad-blockers or VPNs which might block Puter SDK</li>
+                  <li>Verify your internet connection and refresh the page</li>
+                </ul>
+                <button onClick={generateImage} style={{
+                  background: "linear-gradient(135deg, #a855f7, #ec4899)",
+                  color: "white", border: "none", padding: "10px 22px",
+                  borderRadius: "10px", fontWeight: "700", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: "8px"
+                }}>
+                  <RefreshCw size={14} /> Try Again
+                </button>
               </div>
             </div>
           )}
@@ -587,6 +594,7 @@ export default function ImageGenerator() {
               </div>
             </div>
           )}
+
         </div>
       )}
 
