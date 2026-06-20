@@ -37,15 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
     generateBtn.disabled = true;
     generateBtn.textContent = 'Generating…';
     try {
-      if (!window.puter || !window.puter.ai) {
-        throw new Error('Puter.js library not loaded yet or failed to load.');
-      }
-      // Generate image using Puter.js
-      const imgElResp = await puter.ai.txt2img(prompt);
-      if (!imgElResp || !imgElResp.src) {
-        throw new Error('Puter AI did not return a valid image source.');
-      }
-      const imgUrl = imgElResp.src;
+      const seed = Math.floor(Math.random() * 999999);
+      const encoded = encodeURIComponent(prompt);
+      const imgUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&model=flux&seed=${seed}&nologo=true&enhance=true`;
+      
       imgEl.src = imgUrl;
       imgEl.onload = () => {
         imgEl.style.opacity = '0';
