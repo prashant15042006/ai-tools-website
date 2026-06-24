@@ -206,7 +206,7 @@ function CodeGenerator() {
                   {msg.sender === "user" ? (
                     msg.text
                   ) : (
-                    <ReactMarkdown components={{ a: LinkRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   )}}
                 </div>
               </div>

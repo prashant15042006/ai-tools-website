@@ -218,22 +218,17 @@ export default function ImageGenerator() {
   };
 
   return (
-    <div className="page-view" style={{ padding: "24px 28px", maxWidth: "1280px", margin: "0 auto" }}>
+    <div className="page-view img-gen-page" style={{ maxWidth: "1280px", margin: "0 auto" }}>
       
       {/* ── Title Card ── */}
-      <div style={{ marginBottom: "28px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}>
+      <div className="img-gen-header">
         <div>
-          <h2 style={{
-            fontSize: "34px", fontWeight: "800",
-            background: "linear-gradient(135deg, #a855f7, #ec4899)",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "6px",
-            letterSpacing: "-0.5px"
-          }}>
+          <h2 className="img-gen-title">
             🎨 AI Image Generator
           </h2>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <CheckCircle2 size={15} color="#4ade80" />
-            <p style={{ color: "#4ade80", fontSize: "14px", fontWeight: "600", margin: 0 }}>
+            <p className="img-gen-subtitle">
               Powered by ⚡ Pollinations AI (Flux) • 100% Free • No Login Required
             </p>
           </div>
@@ -241,25 +236,10 @@ export default function ImageGenerator() {
       </div>
 
       {/* ── Workspace Grid ── */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
-        gap: "28px",
-        marginBottom: "40px"
-      }}>
+      <div className="img-gen-workspace-grid">
         
         {/* ── LEFT PANE: Generator Controls ── */}
-        <div style={{
-          background: "rgba(11, 14, 26, 0.4)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(168, 85, 247, 0.15)",
-          borderRadius: "24px",
-          padding: "28px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "24px",
-          boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)"
-        }}>
+        <div className="img-gen-panel">
           
           {/* Prompt Section */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -300,6 +280,21 @@ export default function ImageGenerator() {
                 </button>
               ))}
             </div>
+            {/* Copy Prompt Button */}
+            {prompt.trim() && (
+              <button
+                onClick={() => { navigator.clipboard.writeText(prompt).then(() => showToast("Prompt copied! 📋")).catch(() => showToast("Failed to copy.", "error")); }}
+                style={{
+                  alignSelf: "flex-start",
+                  background: "rgba(168, 85, 247, 0.08)", border: "1px solid rgba(168, 85, 247, 0.2)",
+                  borderRadius: "10px", padding: "6px 14px", fontSize: "11px",
+                  color: "#c084fc", cursor: "pointer", transition: "all 0.2s", fontWeight: "600",
+                  display: "flex", alignItems: "center", gap: "5px"
+                }}
+              >
+                <Copy size={12} /> Copy Prompt
+              </button>
+            )}
           </div>
 
           {/* Model Selector */}
@@ -310,7 +305,7 @@ export default function ImageGenerator() {
             }}>
               🤖 AI Model
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div className="img-gen-model-grid">
               {MODELS.map(m => (
                 <button
                   key={m.id}
@@ -342,7 +337,7 @@ export default function ImageGenerator() {
             }}>
               📐 Aspect Ratio
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+            <div className="img-gen-ratio-grid">
               {ASPECT_RATIOS.map(ratio => (
                 <button
                   key={ratio.id}
@@ -422,20 +417,7 @@ export default function ImageGenerator() {
         </div>
 
         {/* ── RIGHT PANE: Output Canvas ── */}
-        <div style={{
-          background: "rgba(11, 14, 26, 0.4)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(168, 85, 247, 0.15)",
-          borderRadius: "24px",
-          padding: "28px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "480px",
-          position: "relative",
-          boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)"
-        }}>
+        <div className="img-gen-panel img-gen-output-panel">
           
           {loading && (
             <div style={{
@@ -544,7 +526,7 @@ export default function ImageGenerator() {
                 borderRadius: "16px", padding: "16px",
                 display: "flex", flexDirection: "column", gap: "12px"
               }}>
-                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                <div className="img-gen-action-row">
                   <span style={{ fontSize: "11px", fontWeight: "700", color: "#a855f7", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                     ✨ Generated Design
                   </span>
@@ -575,7 +557,7 @@ export default function ImageGenerator() {
                   paddingTop: "10px", lineHeight: "1.5"
                 }}>
                   <strong style={{ color: "#d1d5db" }}>Prompt:</strong> "<em>{history[0]?.prompt}</em>"
-                  <div style={{ marginTop: "6px", display: "flex", gap: "12px", color: "#8a94a6", fontSize: "11px" }}>
+                  <div className="img-gen-meta-row">
                     <span>Model: {MODELS.find(m => m.id === history[0]?.model)?.label.split(" (")[0] || "Flux"}</span>
                     <span>Ratio: {history[0]?.ratio || "1:1"}</span>
                     <span>Seed: {history[0]?.seed}</span>
@@ -591,12 +573,7 @@ export default function ImageGenerator() {
 
       {/* ── HISTORY WORKSPACE ── */}
       {history.length > 0 && (
-        <div style={{
-          background: "rgba(11, 14, 26, 0.2)",
-          border: "1px solid rgba(255, 255, 255, 0.05)",
-          borderRadius: "24px",
-          padding: "28px"
-        }}>
+        <div className="img-gen-history-panel">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
             <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#d1d5db", margin: 0 }}>
               📚 Creation History ({history.length})
@@ -624,11 +601,7 @@ export default function ImageGenerator() {
             </button>
           </div>
 
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-            gap: "18px"
-          }}>
+          <div className="img-gen-history-grid">
             {history.map(item => (
               <div
                 key={item.id}
@@ -699,6 +672,70 @@ export default function ImageGenerator() {
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes pulse   { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: 0.7; } }
+
+        /* ── Image Generator Layout System ── */
+        .img-gen-page { padding: 24px 28px; }
+        .img-gen-header { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+        .img-gen-title {
+          font-size: 34px; font-weight: 800;
+          background: linear-gradient(135deg, #a855f7, #ec4899);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          margin-bottom: 6px; letter-spacing: -0.5px;
+        }
+        .img-gen-subtitle { color: #4ade80; font-size: 14px; font-weight: 600; margin: 0; }
+        .img-gen-workspace-grid {
+          display: grid; grid-template-columns: 1fr 1fr;
+          gap: 28px; margin-bottom: 40px;
+        }
+        .img-gen-panel {
+          background: rgba(11, 14, 26, 0.4); backdrop-filter: blur(20px);
+          border: 1px solid rgba(168, 85, 247, 0.15); border-radius: 24px;
+          padding: 28px; display: flex; flex-direction: column; gap: 24px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        .img-gen-output-panel {
+          align-items: center; justify-content: center;
+          min-height: 480px; position: relative;
+        }
+        .img-gen-model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .img-gen-ratio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .img-gen-action-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .img-gen-meta-row { margin-top: 6px; display: flex; gap: 12px; color: #8a94a6; font-size: 11px; flex-wrap: wrap; }
+        .img-gen-history-panel {
+          background: rgba(11, 14, 26, 0.2); border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 24px; padding: 28px;
+        }
+        .img-gen-history-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px;
+        }
+
+        /* ── Mobile Responsive ── */
+        @media (max-width: 768px) {
+          .img-gen-page { padding: 16px 12px !important; }
+          .img-gen-title { font-size: 24px !important; }
+          .img-gen-subtitle { font-size: 11px !important; }
+          .img-gen-workspace-grid {
+            grid-template-columns: 1fr !important;
+            gap: 18px !important;
+          }
+          .img-gen-panel { padding: 18px !important; gap: 18px !important; border-radius: 18px !important; }
+          .img-gen-output-panel { min-height: 300px !important; }
+          .img-gen-model-grid { grid-template-columns: 1fr !important; }
+          .img-gen-ratio-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .img-gen-history-panel { padding: 16px !important; border-radius: 18px !important; }
+          .img-gen-history-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important; gap: 12px !important; }
+          .img-gen-action-row { flex-direction: column; align-items: stretch; }
+          .img-gen-action-row > div { display: flex; gap: 8px; }
+          .img-gen-action-row > div button { flex: 1; justify-content: center; }
+          .img-gen-meta-row { flex-direction: column; gap: 4px !important; }
+        }
+
+        @media (max-width: 400px) {
+          .img-gen-page { padding: 10px 8px !important; }
+          .img-gen-title { font-size: 20px !important; }
+          .img-gen-panel { padding: 14px !important; border-radius: 14px !important; }
+          .img-gen-history-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important; }
+        }
       `}</style>
     </div>
   );
