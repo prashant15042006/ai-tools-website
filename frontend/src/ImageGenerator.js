@@ -641,26 +641,18 @@ export default function ImageGenerator() {
                 </div>
 
                 {/* Quick actions overlay */}
-                <div style={{ position: "absolute", top: "8px", right: "8px", display: "flex", gap: "4px" }}>
+                <div className="img-gen-history-actions">
                   <button
                     onClick={e => { e.stopPropagation(); handleDownload(item.url); }}
-                    style={{
-                      background: "rgba(0, 0, 0, 0.6)", backdropFilter: "blur(4px)",
-                      border: "none", borderRadius: "8px", padding: "6px",
-                      color: "white", cursor: "pointer"
-                    }}
+                    className="img-gen-history-action-btn"
                   >
-                    <Download size={12} />
+                    <Download className="img-gen-history-icon" />
                   </button>
                   <button
                     onClick={e => deleteItem(item.id, e)}
-                    style={{
-                      background: "rgba(239, 68, 68, 0.75)", backdropFilter: "blur(4px)",
-                      border: "none", borderRadius: "8px", padding: "6px",
-                      color: "white", cursor: "pointer"
-                    }}
+                    className="img-gen-history-action-btn delete"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 className="img-gen-history-icon" />
                   </button>
                 </div>
               </div>
@@ -723,6 +715,30 @@ export default function ImageGenerator() {
           display: none;
         }
 
+        /* History card action buttons layout */
+        .img-gen-history-actions {
+          position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 10;
+        }
+        .img-gen-history-action-btn {
+          background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px);
+          border: none; border-radius: 8px; padding: 6px;
+          color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          transition: all 0.2s;
+        }
+        .img-gen-history-action-btn:hover {
+          background: rgba(6, 182, 212, 0.85);
+          transform: scale(1.08);
+        }
+        .img-gen-history-action-btn.delete {
+          background: rgba(239, 68, 68, 0.8);
+        }
+        .img-gen-history-action-btn.delete:hover {
+          background: rgba(239, 68, 68, 0.95);
+        }
+        .img-gen-history-icon {
+          width: 12px; height: 12px; display: block;
+        }
+
         /* ── Mobile Responsive & UX Enhancements ── */
         @media (max-width: 768px) {
           .img-gen-page { padding: 16px 12px !important; }
@@ -776,13 +792,25 @@ export default function ImageGenerator() {
             border-radius: 10px !important;
           }
 
+          /* Larger history image items on mobile */
           .img-gen-history-grid > div {
-            flex: 0 0 155px !important;
-            height: 155px !important;
+            flex: 0 0 180px !important;
+            height: 180px !important;
             aspect-ratio: 1/1 !important;
             border-radius: 16px !important;
             box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2) !important;
             border: 1px solid rgba(6, 182, 212, 0.25) !important;
+          }
+
+          /* Smaller buttons and icon symbols on mobile */
+          .img-gen-history-actions {
+            top: 4px !important; right: 4px !important; gap: 3px !important;
+          }
+          .img-gen-history-action-btn {
+            padding: 4px !important; border-radius: 6px !important;
+          }
+          .img-gen-history-icon {
+            width: 10px !important; height: 10px !important;
           }
 
           .img-gen-action-row { flex-direction: column; align-items: stretch; }
@@ -796,8 +824,8 @@ export default function ImageGenerator() {
           .img-gen-title { font-size: 22px !important; }
           .img-gen-panel { padding: 14px !important; border-radius: 14px !important; }
           .img-gen-history-grid > div {
-            flex: 0 0 120px !important;
-            height: 120px !important;
+            flex: 0 0 145px !important;
+            height: 145px !important;
           }
         }
       `}</style>
