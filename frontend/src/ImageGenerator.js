@@ -33,11 +33,10 @@ const ASPECT_RATIOS = [
 
 // ── Quick suggestions ──
 const SUGGESTIONS = [
-  "Futuristic cyberpunk city at sunset, glowing neon lights, rain, high detail",
-  "Cute little cat sitting on a rainbow cloud, 3D style, digital painting",
-  "Realistic portrait of an astronaut on Mars, dramatic lighting, cinematic",
-  "Magical forest with glowing mushrooms, fireflies, mystical atmosphere, 8K",
-  "Abstract colorful waves, fluid art style, vibrant hues, ultra resolution",
+  "Cyberpunk cat, neon details, 3D style",
+  "Astronaut walking on Mars, cinematic",
+  "Lofi study room, rain outside, cozy",
+  "Floating fantasy castle, detailed art",
 ];
 
 // ── Toast component ──
@@ -47,9 +46,9 @@ function Toast({ message, type }) {
       position: "fixed", bottom: "80px", right: "20px",
       background: type === "error"
         ? "rgba(239,68,68,0.2)"
-        : "rgba(217, 70, 239, 0.15)",
-      border: `1px solid ${type === "error" ? "rgba(239,68,68,0.4)" : "rgba(217, 70, 239, 0.4)"}`,
-      color: type === "error" ? "#f87171" : "#f5d0fe",
+        : "rgba(6, 182, 212, 0.15)",
+      border: `1px solid ${type === "error" ? "rgba(239,68,68,0.4)" : "rgba(6, 182, 212, 0.4)"}`,
+      color: type === "error" ? "#f87171" : "#e0f7fa",
       padding: "14px 20px", borderRadius: "14px",
       fontSize: "14px", fontWeight: "600",
       backdropFilter: "blur(12px)", zIndex: 9999,
@@ -244,7 +243,7 @@ export default function ImageGenerator() {
           {/* Prompt Section */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <label style={{
-              fontSize: "12px", fontWeight: "800", color: "#f472b6",
+              fontSize: "12px", fontWeight: "800", color: "#22d3ee",
               textTransform: "uppercase", letterSpacing: "0.8px"
             }}>
               🖊️ Image Prompt
@@ -257,24 +256,24 @@ export default function ImageGenerator() {
               rows={4}
               style={{
                 width: "100%", boxSizing: "border-box",
-                background: "rgba(0, 0, 0, 0.3)", border: "1px solid rgba(217, 70, 239, 0.25)",
+                background: "rgba(0, 0, 0, 0.3)", border: "1px solid rgba(6, 182, 212, 0.25)",
                 borderRadius: "16px", padding: "14px 16px", color: "#f3f4f6",
                 fontSize: "15px", lineHeight: "1.6", resize: "vertical", outline: "none",
                 fontFamily: "Outfit, Inter, sans-serif", transition: "all 0.2s"
               }}
-              onFocus={e => (e.target.style.borderColor = "rgba(217, 70, 239, 0.7)")}
-              onBlur={e  => (e.target.style.borderColor = "rgba(217, 70, 239, 0.25)")}
+              onFocus={e => (e.target.style.borderColor = "rgba(6, 182, 212, 0.7)")}
+              onBlur={e  => (e.target.style.borderColor = "rgba(6, 182, 212, 0.25)")}
             />
             {/* Quick Suggestions */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
               {SUGGESTIONS.map((s, i) => (
                 <button key={i} onClick={() => setPrompt(s)} style={{
-                  background: "rgba(139, 92, 246, 0.05)", border: "1px solid rgba(139, 92, 246, 0.2)",
+                  background: "rgba(6, 182, 212, 0.05)", border: "1px solid rgba(6, 182, 212, 0.2)",
                   borderRadius: "20px", padding: "5px 12px", fontSize: "11px",
-                  color: "#d8b4fe", cursor: "pointer", transition: "all 0.2s", fontWeight: "500"
+                  color: "#22d3ee", cursor: "pointer", transition: "all 0.2s", fontWeight: "500"
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(139, 92, 246, 0.15)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(139, 92, 246, 0.05)"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.15)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.05)"; }}
                 >
                   {s.length > 32 ? s.slice(0, 30) + "…" : s}
                 </button>
@@ -286,9 +285,9 @@ export default function ImageGenerator() {
                 onClick={() => { navigator.clipboard.writeText(prompt).then(() => showToast("Prompt copied! 📋")).catch(() => showToast("Failed to copy.", "error")); }}
                 style={{
                   alignSelf: "flex-start",
-                  background: "rgba(217, 70, 239, 0.08)", border: "1px solid rgba(217, 70, 239, 0.2)",
+                  background: "rgba(6, 182, 212, 0.08)", border: "1px solid rgba(6, 182, 212, 0.2)",
                   borderRadius: "10px", padding: "6px 14px", fontSize: "11px",
-                  color: "#f5d0fe", cursor: "pointer", transition: "all 0.2s", fontWeight: "600",
+                  color: "#22d3ee", cursor: "pointer", transition: "all 0.2s", fontWeight: "600",
                   display: "flex", alignItems: "center", gap: "5px"
                 }}
               >
@@ -300,7 +299,7 @@ export default function ImageGenerator() {
           {/* Model Selector */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <label style={{
-              fontSize: "12px", fontWeight: "800", color: "#f472b6",
+              fontSize: "12px", fontWeight: "800", color: "#22d3ee",
               textTransform: "uppercase", letterSpacing: "0.8px"
             }}>
               🤖 AI Model
@@ -313,12 +312,12 @@ export default function ImageGenerator() {
                   style={{
                     padding: "12px 14px", borderRadius: "14px",
                     cursor: "pointer", transition: "all 0.2s", textAlign: "left",
-                    background: model === m.id ? "rgba(217, 70, 239, 0.12)" : "rgba(0, 0, 0, 0.25)",
-                    border: model === m.id ? "2px solid rgba(217, 70, 239, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)",
-                    boxShadow: model === m.id ? "0 4px 15px rgba(217, 70, 239, 0.2)" : "none"
+                    background: model === m.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)",
+                    border: model === m.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)",
+                    boxShadow: model === m.id ? "0 4px 15px rgba(6, 182, 212, 0.2)" : "none"
                   }}
                 >
-                  <div style={{ fontSize: "13px", fontWeight: "700", color: model === m.id ? "#f5d0fe" : "#d1d5db" }}>
+                  <div style={{ fontSize: "13px", fontWeight: "700", color: model === m.id ? "#22d3ee" : "#d1d5db" }}>
                     {m.label}
                   </div>
                   <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "3px", lineHeight: "1.3" }}>
@@ -332,7 +331,7 @@ export default function ImageGenerator() {
           {/* Aspect Ratio Selector */}
           <div className="img-gen-ratio-wrapper" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <label style={{
-              fontSize: "12px", fontWeight: "800", color: "#f472b6",
+              fontSize: "12px", fontWeight: "800", color: "#22d3ee",
               textTransform: "uppercase", letterSpacing: "0.8px"
             }}>
               📐 Aspect Ratio
@@ -345,8 +344,8 @@ export default function ImageGenerator() {
                   style={{
                     padding: "10px 8px", borderRadius: "12px", cursor: "pointer",
                     transition: "all 0.2s", textAlign: "center",
-                    background: aspectRatio === ratio.id ? "rgba(217, 70, 239, 0.12)" : "rgba(0, 0, 0, 0.25)",
-                    border: aspectRatio === ratio.id ? "2px solid rgba(217, 70, 239, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)"
+                    background: aspectRatio === ratio.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)",
+                    border: aspectRatio === ratio.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)"
                   }}
                 >
                   <div style={{ fontSize: "20px", marginBottom: "4px" }}>{ratio.icon}</div>
@@ -372,7 +371,7 @@ export default function ImageGenerator() {
               />
               <span style={{
                 position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: enhance ? "#d946ef" : "rgba(255,255,255,0.1)",
+                backgroundColor: enhance ? "#06b6d4" : "rgba(255,255,255,0.1)",
                 transition: "0.3s", borderRadius: "24px"
               }}>
                 <span style={{
@@ -390,15 +389,15 @@ export default function ImageGenerator() {
             disabled={loading}
             style={{
               background: loading
-                ? "rgba(217,70,239,0.25)"
-                : "linear-gradient(135deg, #8b5cf6, #d946ef)",
+                ? "rgba(6,182,212,0.25)"
+                : "linear-gradient(135deg, #6366f1, #06b6d4)",
               color: "white", border: "none",
               padding: "16px 20px", borderRadius: "16px",
               fontWeight: "800", fontSize: "16px",
               cursor: loading ? "not-allowed" : "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
               transition: "all 0.2s",
-              boxShadow: loading ? "none" : "0 6px 28px rgba(217,70,239,0.4)",
+              boxShadow: loading ? "none" : "0 6px 28px rgba(6,182,212,0.4)",
               marginTop: "8px"
             }}
           >
@@ -431,10 +430,10 @@ export default function ImageGenerator() {
               }}>
                 <div style={{
                   position: "absolute", width: "100%", height: "100%",
-                  border: "4px solid rgba(217, 70, 239, 0.15)", borderTopColor: "#d946ef",
+                  border: "4px solid rgba(6, 182, 212, 0.15)", borderTopColor: "#06b6d4",
                   borderRadius: "50%", animation: "spin 1s linear infinite"
                 }} />
-                <Sparkles size={32} color="#d946ef" style={{ animation: "pulse 1.5s infinite" }} />
+                <Sparkles size={32} color="#06b6d4" style={{ animation: "pulse 1.5s infinite" }} />
               </div>
               <div style={{ textAlign: "center" }}>
                 <h4 style={{ color: "#e9d5ff", fontSize: "16px", fontWeight: "700", margin: "0 0 6px 0" }}>
@@ -478,10 +477,10 @@ export default function ImageGenerator() {
             }}>
               <div style={{
                 width: "90px", height: "90px", borderRadius: "50%",
-                background: "rgba(217, 70, 239, 0.06)", border: "1px dashed rgba(217, 70, 239, 0.3)",
+                background: "rgba(6, 182, 212, 0.06)", border: "1px dashed rgba(6, 182, 212, 0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px"
               }}>
-                <ImageIcon size={44} color="rgba(217, 70, 239, 0.4)" />
+                <ImageIcon size={44} color="rgba(6, 182, 212, 0.4)" />
               </div>
               <div>
                 <h4 style={{ color: "#e5e7eb", fontSize: "18px", fontWeight: "700", margin: "0 0 6px 0" }}>
@@ -505,7 +504,7 @@ export default function ImageGenerator() {
                 borderRadius: "18px",
                 overflow: "hidden",
                 boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
-                border: "2px solid rgba(217, 70, 239, 0.25)",
+                border: "2px solid rgba(6, 182, 212, 0.25)",
                 background: "#07070d",
                 margin: "0 auto",
                 display: "flex",
@@ -522,18 +521,18 @@ export default function ImageGenerator() {
               {/* Action Buttons & Prompt Detail Box */}
               <div style={{
                 background: "rgba(255, 255, 255, 0.02)",
-                border: "1px solid rgba(217, 70, 239, 0.15)",
+                border: "1px solid rgba(6, 182, 212, 0.15)",
                 borderRadius: "16px", padding: "16px",
                 display: "flex", flexDirection: "column", gap: "12px"
               }}>
                 <div className="img-gen-action-row">
-                  <span style={{ fontSize: "11px", fontWeight: "700", color: "#d946ef", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                     ✨ Generated Design
                   </span>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button onClick={() => copyUrlToClipboard(imageUrl)} style={{
-                      background: "rgba(255,255,255,0.03)", color: "#f5d0fe",
-                      border: "1px solid rgba(217,70,239,0.25)",
+                      background: "rgba(255,255,255,0.03)", color: "#22d3ee",
+                      border: "1px solid rgba(6, 182, 212, 0.25)",
                       padding: "8px 14px", borderRadius: "10px",
                       fontSize: "12px", fontWeight: "600", cursor: "pointer",
                       display: "flex", alignItems: "center", gap: "5px"
@@ -541,7 +540,7 @@ export default function ImageGenerator() {
                       <Copy size={13} /> Copy Link
                     </button>
                     <button onClick={() => handleDownload(imageUrl)} style={{
-                      background: "linear-gradient(135deg, #8b5cf6, #d946ef)",
+                      background: "linear-gradient(135deg, #6366f1, #06b6d4)",
                       color: "white", border: "none",
                       padding: "8px 18px", borderRadius: "10px",
                       fontSize: "12px", fontWeight: "700", cursor: "pointer",
@@ -574,10 +573,15 @@ export default function ImageGenerator() {
       {/* ── HISTORY WORKSPACE ── */}
       {history.length > 0 && (
         <div className="img-gen-history-panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#d1d5db", margin: 0 }}>
-              📚 Creation History ({history.length})
-            </h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#d1d5db", margin: 0 }}>
+                📚 Creation History ({history.length})
+              </h3>
+              <span className="img-gen-swipe-hint" style={{ fontSize: "11px", color: "#06b6d4", background: "rgba(6, 182, 212, 0.08)", padding: "4px 8px", borderRadius: "8px", fontWeight: "600" }}>
+                ← Swipe to browse →
+              </span>
+            </div>
             <button
               onClick={clearHistory}
               style={{
@@ -611,12 +615,12 @@ export default function ImageGenerator() {
                   border: "1px solid rgba(255, 255, 255, 0.05)",
                   background: "rgba(0, 0, 0, 0.2)",
                   cursor: "pointer", transition: "transform 0.2s, box-shadow 0.2s",
-                  position: "relative", aspectRatio: "1/1"
+                  position: "relative", aspectRatio: "1/1", flexShrink: 0
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = "scale(1.03)";
-                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(217, 70, 239, 0.25)";
-                  e.currentTarget.style.borderColor = "rgba(217, 70, 239, 0.35)";
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(6, 182, 212, 0.35)";
+                  e.currentTarget.style.borderColor = "rgba(6, 182, 212, 0.6)";
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform = "scale(1)";
@@ -676,17 +680,17 @@ export default function ImageGenerator() {
         /* ── Image Generator Layout System ── */
         .img-gen-page {
           padding: 24px 28px;
-          background-image: radial-gradient(rgba(139, 92, 246, 0.07) 1.5px, transparent 1.5px);
+          background-image: radial-gradient(rgba(6, 182, 212, 0.08) 1.5px, transparent 1.5px);
           background-size: 24px 24px;
           min-height: 100vh;
         }
         .img-gen-header { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
         .img-gen-title {
           font-size: 34px; font-weight: 800;
-          background: linear-gradient(135deg, #8b5cf6, #d946ef, #ec4899);
+          background: linear-gradient(135deg, #6366f1, #06b6d4, #3b82f6);
           -webkit-background-clip: text; -webkit-text-fill-color: transparent;
           margin-bottom: 6px; letter-spacing: -0.5px;
-          filter: drop-shadow(0 2px 10px rgba(139, 92, 246, 0.25));
+          filter: drop-shadow(0 2px 10px rgba(6, 182, 212, 0.25));
         }
         .img-gen-subtitle { color: #4ade80; font-size: 14px; font-weight: 600; margin: 0; }
         .img-gen-workspace-grid {
@@ -695,9 +699,9 @@ export default function ImageGenerator() {
         }
         .img-gen-panel {
           background: rgba(11, 14, 26, 0.45); backdrop-filter: blur(24px);
-          border: 1px solid rgba(217, 70, 239, 0.15); border-radius: 24px;
+          border: 1px solid rgba(6, 182, 212, 0.18); border-radius: 24px;
           padding: 28px; display: flex; flex-direction: column; gap: 24px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(139, 92, 246, 0.05);
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(6, 182, 212, 0.05);
         }
         .img-gen-output-panel {
           align-items: center; justify-content: center;
@@ -708,11 +712,15 @@ export default function ImageGenerator() {
         .img-gen-action-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
         .img-gen-meta-row { margin-top: 6px; display: flex; gap: 12px; color: #8a94a6; font-size: 11px; flex-wrap: wrap; }
         .img-gen-history-panel {
-          background: rgba(11, 14, 26, 0.25); border: 1px solid rgba(255, 255, 255, 0.05);
+          background: rgba(11, 14, 26, 0.25); border: 1px solid rgba(6, 182, 212, 0.1);
           border-radius: 24px; padding: 28px;
         }
         .img-gen-history-grid {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px;
+        }
+
+        .img-gen-swipe-hint {
+          display: none;
         }
 
         /* ── Mobile Responsive & UX Enhancements ── */
@@ -728,8 +736,8 @@ export default function ImageGenerator() {
           }
           .img-gen-panel {
             padding: 18px !important; gap: 18px !important; border-radius: 18px !important;
-            border: 1px solid rgba(217, 70, 239, 0.2) !important;
-            box-shadow: 0 8px 32px rgba(11, 14, 26, 0.5), inset 0 0 20px rgba(139, 92, 246, 0.08) !important;
+            border: 1px solid rgba(6, 182, 212, 0.25) !important;
+            box-shadow: 0 8px 32px rgba(11, 14, 26, 0.5), inset 0 0 20px rgba(6, 182, 212, 0.08) !important;
           }
           .img-gen-output-panel { min-height: 300px !important; }
           .img-gen-model-grid { grid-template-columns: 1fr !important; }
@@ -739,22 +747,42 @@ export default function ImageGenerator() {
           
           .img-gen-history-panel { padding: 16px !important; border-radius: 18px !important; }
           
+          .img-gen-swipe-hint {
+            display: inline-block !important;
+            animation: pulse 2s infinite ease-in-out;
+          }
+
           /* Convert history grid into a premium horizontal gallery slider */
           .img-gen-history-grid {
             display: flex !important;
             overflow-x: auto !important;
             flex-wrap: nowrap !important;
-            gap: 12px !important;
-            padding: 8px 4px 16px 4px !important;
+            gap: 14px !important;
+            padding: 10px 4px 16px 4px !important;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
           }
-          .img-gen-history-grid::-webkit-scrollbar { display: none; }
+          /* Styled scrollbar for clear visibility */
+          .img-gen-history-grid::-webkit-scrollbar {
+            display: block !important;
+            height: 5px !important;
+          }
+          .img-gen-history-grid::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02) !important;
+            border-radius: 10px !important;
+          }
+          .img-gen-history-grid::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.4) !important;
+            border-radius: 10px !important;
+          }
+
           .img-gen-history-grid > div {
-            flex: 0 0 130px !important;
-            height: 130px !important;
+            flex: 0 0 155px !important;
+            height: 155px !important;
             aspect-ratio: 1/1 !important;
-            border-radius: 14px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2) !important;
+            border: 1px solid rgba(6, 182, 212, 0.25) !important;
           }
 
           .img-gen-action-row { flex-direction: column; align-items: stretch; }
@@ -768,8 +796,8 @@ export default function ImageGenerator() {
           .img-gen-title { font-size: 22px !important; }
           .img-gen-panel { padding: 14px !important; border-radius: 14px !important; }
           .img-gen-history-grid > div {
-            flex: 0 0 110px !important;
-            height: 110px !important;
+            flex: 0 0 120px !important;
+            height: 120px !important;
           }
         }
       `}</style>
