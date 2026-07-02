@@ -6,6 +6,12 @@ import admin from "firebase-admin";
 import fs from "fs";
 import killPort from "kill-port";
 
+// Simple fallback when no external model is available
+const fallbackResponse = (message) => {
+  // You can customize this static reply as needed
+  return `🤖 (fallback) I couldn't reach any AI provider, but here's a simple echo of your query: ${message}`;
+};
+
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -618,7 +624,9 @@ app.post("/api/chat", async (req, res) => {
     }
 
     // 4. No valid keys configured
-    res.write(`data: ${JSON.stringify({ error: "⚠️ **API Keys Configured नहीं हैं!** कृपया बैकएंड की `.env` फ़ाइल या Render Dashboard में `GEMINI_API_KEY`, `NEMOTRON_API_KEY` या `ZAI_API_KEY` सेट करें ताकि AI रिप्लाई कर सके।" })}\n\n`);
+    const fallback = fallbackResponse(message);
+    res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
+    res.write(`data: [DONE]\n\n`);
     res.end();
 
   } catch (error) {
@@ -707,7 +715,8 @@ app.post("/api/chat/complete", async (req, res) => {
       return res.json({ success: true, model: 'zai', reply });
     }
 
-    return res.status(503).json({ success: false, error: "No API Key configured. Please set GEMINI_API_KEY, NEMOTRON_API_KEY, or ZAI_API_KEY." });
+    const fallback = fallbackResponse(message);
+    return res.json({ success: true, model: "fallback", reply: fallback });
 
   } catch (error) {
     console.error('Chat Complete Error:', error.message);
