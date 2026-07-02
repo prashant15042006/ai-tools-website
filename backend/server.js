@@ -228,7 +228,7 @@ const callGeminiDirect = async (message, userName = "User") => {
   // Use enhanced prompt for table requests
   const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
   
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+  const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -239,7 +239,7 @@ const callGeminiDirect = async (message, userName = "User") => {
         parts: [{ text: systemPrompt }]
       }
     }),
-  });
+  }, 10000);
 
   const data = await response.json();
   if (!response.ok) {
@@ -257,7 +257,7 @@ const callGeminiDirectStream = async (message, res, userName = "User", userEmail
   // Use enhanced prompt for table requests
   const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
   
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
+  const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -268,7 +268,7 @@ const callGeminiDirectStream = async (message, res, userName = "User", userEmail
         parts: [{ text: systemPrompt }]
       }
     }),
-  });
+  }, 10000);
 
   if (!response.ok) {
     const errText = await response.text();
