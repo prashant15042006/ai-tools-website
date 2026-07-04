@@ -18,10 +18,10 @@ const isValidKey = (val) =>
   !val.includes("example.com") &&
   !val.includes("example");
 
-// Fallback keys (from .env) so the function works even without Vercel env vars set
-const GEMINI_KEY = process.env.GEMINI_API_KEY || "AIzaSyBRPfvwtRbFY7Yd0FW8T7Sy0zNxWicvvfg";
-const ZAI_KEY = process.env.ZAI_API_KEY || "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";
-const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "csk-md8vyycf4emykcktmk4c6m52rhc6fefnyk2pm4pfmwpv4e4t";
+// Keys are read from Vercel Environment Variables (set in Vercel Dashboard)
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const ZAI_KEY = process.env.ZAI_API_KEY || "";
+const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "";
 
 
 // ──────────────────────────────────────────────
@@ -204,21 +204,23 @@ export default async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try Gemini
-  try {
-    reply = await callGemini(message, userName, history);
-    usedProvider = "Gemini";
-  } catch (e) {
-    console.warn("Gemini failed:", e.message);
-  }
-
-  // 2. Try OpenRouter
+  // 1. Try OpenRouter / ZAI first so the app keeps responding if Gemini is down
   if (!reply) {
     try {
       reply = await callOpenRouter(message, userName, history);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
+    }
+  }
+
+  // 2. Try Gemini next
+  if (!reply) {
+    try {
+      reply = await callGemini(message, userName, history);
+      usedProvider = "Gemini";
+    } catch (e) {
+      console.warn("Gemini failed:", e.message);
     }
   }
 

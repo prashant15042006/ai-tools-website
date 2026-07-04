@@ -12,6 +12,27 @@ const fallbackResponse = (message) => {
   return `🤖 (fallback) I couldn't reach any AI provider, but here's a simple echo of your query: ${message}`;
 };
 
+const writeFallbackSSE = (res, message) => {
+  if (res.writableEnded) return;
+  res.write(`data: ${JSON.stringify({ content: fallbackResponse(message) })}\n\n`);
+  res.write("data: [DONE]\n\n");
+  res.end();
+};
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -132,14 +153,16 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
 
 const callZAI = async (message, userName = "User") => {
   const models = [
-    "google/gemini-2.0-flash-001",
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "nvidia/llama-3.1-nemotron-70b-instruct:free",
-    "nvidia/llama-3.1-nemotron-70b-instruct",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-flash-1.5",
     "openai/gpt-4o-mini",
-    "auto"
+    "google/gemini-2.5-flash",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "liquid/lfm-2.5-1.2b-instruct:free",
+    "poolside/laguna-xs-2.1:free",
+    "cohere/north-mini-code:free",
+    "openai/gpt-oss-120b:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "google/gemma-4-31b-it:free",
+    "qwen/qwen3-coder:free"
   ];
   let lastError = null;
 
@@ -158,6 +181,7 @@ const callZAI = async (message, userName = "User") => {
             { role: "system", content: SYSTEM_PROMPT(userName) },
             { role: "user", content: message }
           ],
+          max_tokens: 1024,
         }),
       });
 
@@ -166,11 +190,6 @@ const callZAI = async (message, userName = "User") => {
       if (!response.ok) {
         let errorMsg = data.error?.message || `Status ${response.status}`;
         console.error(`❌ ${model} failed:`, errorMsg);
-        
-        if (errorMsg.toLowerCase().includes("balance") || errorMsg.toLowerCase().includes("credit")) {
-           throw new Error("INSUFFICIENT_BALANCE: Your OpenRouter account is empty. Please add credits.");
-        }
-        
         lastError = errorMsg;
         continue;
       }
@@ -181,7 +200,6 @@ const callZAI = async (message, userName = "User") => {
       
       continue;
     } catch (err) {
-      if (err.message.startsWith("INSUFFICIENT_BALANCE")) throw err;
       lastError = err.message;
     }
   }
@@ -392,63 +410,168 @@ const callNemotron = async (message, userName = "User", userEmail = "") => {
 
 const callCerebras = async (message, userName = "User", userEmail = "") => {
   const apiKey = process.env.CEREBRAS_API_KEY;
-  const apiUrl = process.env.CEREBRAS_API_URL || "https://api.cerebras.net/v1/generate";
-  const model = process.env.CEREBRAS_MODEL || "cerebras-gpt";
-
   if (!isValidKey(apiKey)) {
     throw new Error("Cerebras not configured");
   }
 
-  const response = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      prompt: `${SYSTEM_PROMPT(userName)}\n\n${message}`,
-      max_tokens: 1024,
-      temperature: 0.7,
-    }),
-  });
+  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  let lastError = null;
 
-  const contentType = (response.headers.get("content-type") || "").toLowerCase();
-  if (!response.ok) {
-    const txt = await response.text();
-    throw new Error(`Cerebras error: ${txt}`);
+  for (const model of models) {
+    try {
+      console.log(`🚀 [CEREBRAS] Attempting model: ${model}`);
+      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT(userName) },
+            { role: "user", content: message }
+          ],
+          max_tokens: 1024,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        const txt = await response.text();
+        console.error(`❌ [CEREBRAS] ${model} failed:`, txt);
+        lastError = txt;
+        continue;
+      }
+
+      const data = await response.json();
+      if (data.choices?.[0]?.message?.content) {
+        return data.choices[0].message.content;
+      }
+    } catch (err) {
+      console.error(`❌ [CEREBRAS] Exception with ${model}:`, err.message);
+      lastError = err.message;
+    }
   }
 
-  if (contentType.includes("application/json")) {
-    const data = await response.json();
-    if (typeof data === "string") return data;
-    if (data.output) return data.output;
-    if (data.response) return data.response;
-    if (data.result) return data.result;
-    if (data.text) return data.text;
-    if (data.generated_text) return data.generated_text;
-    if (data.choices?.[0]?.message?.content) return data.choices[0].message.content;
-    if (data.choices?.[0]?.text) return data.choices[0].text;
-    return JSON.stringify(data);
+  throw new Error(`Cerebras failed all models: ${lastError}`);
+};
+
+const callCerebrasStream = async (message, res, userName = "User", userEmail = "", history = []) => {
+  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  const apiKey = process.env.CEREBRAS_API_KEY;
+  if (!isValidKey(apiKey)) {
+    throw new Error("Cerebras not configured");
   }
 
-  if (contentType.includes("text/")) {
-    return await response.text();
+  const apiMessages = [
+    { role: "system", content: SYSTEM_PROMPT(userName) },
+    ...history,
+    { role: "user", content: message }
+  ];
+
+  let lastErr = "Unknown error";
+  for (const model of models) {
+    try {
+      console.log(`🚀 [CEREBRAS STREAM] Attempting model: ${model}`);
+      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: model,
+          stream: true,
+          messages: apiMessages,
+          max_tokens: 1024,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`❌ [CEREBRAS STREAM] ${model} failed:`, errText);
+        lastErr = errText;
+        continue;
+      }
+
+      let buffer = "";
+      let fullReply = "";
+      let streamStarted = false;
+
+      return new Promise((resolve, reject) => {
+        response.body.on("data", (chunk) => {
+          buffer += chunk.toString();
+          let lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+            const dataStr = trimmed.slice(6);
+            if (dataStr === "[DONE]") {
+              res.write("data: [DONE]\n\n");
+              continue;
+            }
+
+            try {
+              const data = JSON.parse(dataStr);
+              const content = data.choices?.[0]?.delta?.content || "";
+              if (content) {
+                streamStarted = true;
+                fullReply += content;
+                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+              }
+            } catch (e) {
+              // Fragmented JSON
+            }
+          }
+        });
+
+        response.body.on("end", async () => {
+          console.log(`✅ [CEREBRAS STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
+          await saveChatMetadata({
+            question: message,
+            userName,
+            userEmail,
+            model: model,
+            provider: "Cerebras"
+          });
+          res.end();
+          resolve(true);
+        });
+
+        response.body.on("error", (err) => {
+          console.error("❌ [CEREBRAS STREAM] Body error:", err.message);
+          err.streamStarted = streamStarted;
+          reject(err);
+        });
+      });
+    } catch (err) {
+      console.error(`❌ [CEREBRAS STREAM] Exception with ${model}:`, err.message);
+      if (err?.streamStarted) {
+        throw err;
+      }
+      lastErr = err.message;
+    }
   }
 
-  const buffer = await response.arrayBuffer();
-  return Buffer.from(buffer).toString('base64');
+  throw new Error(`Cerebras stream failed all models: ${lastErr}`);
 };
 
 const callZAIStream = async (message, res, userName = "User", userEmail = "", history = []) => {
   const models = [
-    "google/gemini-2.0-flash-001",
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "nvidia/llama-3.1-nemotron-70b-instruct:free",
-    "nvidia/llama-3.1-nemotron-70b-instruct",
+    "openai/gpt-4o-mini",
+    "google/gemini-2.5-flash",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-flash-1.5",
-    "openai/gpt-4o-mini"
+    "liquid/lfm-2.5-1.2b-instruct:free",
+    "poolside/laguna-xs-2.1:free",
+    "cohere/north-mini-code:free",
+    "openai/gpt-oss-120b:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "google/gemma-4-31b-it:free",
+    "qwen/qwen3-coder:free"
   ];
 
   // Format messages for OpenRouter
@@ -473,6 +596,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
           model: model,
           stream: true,
           messages: apiMessages,
+          max_tokens: 1024,
         }),
       });
 
@@ -484,6 +608,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
 
       let buffer = "";
       let fullReply = "";
+      let streamStarted = false;
 
       return new Promise((resolve, reject) => {
         response.body.on("data", (chunk) => {
@@ -505,6 +630,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
               const data = JSON.parse(dataStr);
               const content = data.choices?.[0]?.delta?.content || "";
               if (content) {
+                streamStarted = true;
                 fullReply += content;
                 res.write(`data: ${JSON.stringify({ content })}\n\n`);
               }
@@ -532,19 +658,20 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
 
         response.body.on("error", (err) => {
           console.error("❌ [STREAM] Body error:", err.message);
+          err.streamStarted = streamStarted;
           reject(err);
         });
       });
 
     } catch (err) {
       console.error(`❌ [STREAM] Exception with ${model}:`, err.message);
+      if (err?.streamStarted) {
+        throw err;
+      }
     }
   }
-  
-  if (!res.writableEnded) {
-    res.write(`data: ${JSON.stringify({ error: "All AI models failed to respond. Please check your connection and OpenRouter balance." })}\n\n`);
-    res.end();
-  }
+
+  throw new Error("OpenRouter stream exhausted all models");
 };
 
 
@@ -562,43 +689,61 @@ app.post("/api/chat", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    const tryStreamProvider = async (label, runner) => {
+      try {
+        return await runner();
+      } catch (err) {
+        console.error(`${label} stream failed, falling back:`, err.message || err);
+        if (err?.streamStarted) {
+          throw err;
+        }
+        return null;
+      }
+    };
+
     // 0. If MODE=CEREBRAS, prefer Cerebras provider first
     if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(message, userName, userEmail);
-        res.write(`data: ${JSON.stringify({ content: reply })}\n\n`);
-        res.write("data: [DONE]\n\n");
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "cerebras",
-          provider: "Cerebras"
-        });
-        res.end();
-        return;
-      } catch (err) {
-        console.error('Cerebras stream failed, falling back:', err.message || err);
-      }
+      const reply = await tryStreamProvider("Cerebras (Preferred)", async () => {
+        await callCerebrasStream(message, res, userName, userEmail, history);
+        return true;
+      });
+      if (reply) return;
     }
 
     // 1. Try Direct Google Gemini if configured (extremely fast & free)
     if (isValidKey(process.env.GEMINI_API_KEY)) {
-      try {
+      const reply = await tryStreamProvider("Direct Gemini", async () => {
         await callGeminiDirectStream(message, res, userName, userEmail, history);
-        return;
-      } catch (err) {
-        console.error('Direct Gemini stream failed, falling back:', err.message || err);
-      }
+        return true;
+      });
+      if (reply) return;
     }
 
-    // 2. If Nemotron is configured (fast provider), use it for a single non-streaming reply
+    // 2. Try Cerebras if configured (using our new streaming helper)
+    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      const reply = await tryStreamProvider("Cerebras", async () => {
+        await callCerebrasStream(message, res, userName, userEmail, history);
+        return true;
+      });
+      if (reply) return;
+    }
+
+    // 3. Try OpenRouter / ZAI
+    if (isValidKey(process.env.ZAI_API_KEY)) {
+      const reply = await tryStreamProvider("OpenRouter", async () => {
+        await callZAIStream(message, res, userName, userEmail, history);
+        return true;
+      });
+      if (reply) return;
+    }
+
+    // 4. If Nemotron is configured (fast provider), use it for a single non-streaming reply
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
-      try {
-        const reply = await callNemotron(message, userName, userEmail);
+      const reply = await tryStreamProvider("Nemotron", async () => {
+        const replyText = await callNemotron(message, userName, userEmail);
 
         // Send as a single SSE message and mark done
-        res.write(`data: ${JSON.stringify({ content: reply })}\n\n`);
+        res.write(`data: ${JSON.stringify({ content: replyText })}\n\n`);
         res.write("data: [DONE]\n\n");
 
         // Save metadata only, without AI reply text
@@ -611,19 +756,12 @@ app.post("/api/chat", async (req, res) => {
         });
 
         res.end();
-        return;
-      } catch (err) {
-        console.error('Nemotron streaming fallback failed, continuing to OpenRouter stream:', err.message || err);
-      }
+        return replyText;
+      });
+      if (reply) return;
     }
 
-    // 3. Try OpenRouter / ZAI if configured
-    if (isValidKey(process.env.ZAI_API_KEY)) {
-      await callZAIStream(message, res, userName, userEmail, history);
-      return;
-    }
-
-    // 4. No valid keys configured
+    // 5. No valid providers completed successfully
     const fallback = fallbackResponse(message);
     res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
     res.write(`data: [DONE]\n\n`);
@@ -631,11 +769,15 @@ app.post("/api/chat", async (req, res) => {
 
   } catch (error) {
     console.error("Chat Error:", error.message);
-    if (!res.headersSent) {
+    if (!res.writableEnded) {
+      if (error?.streamStarted) {
+        res.write("data: [DONE]\n\n");
+        res.end();
+      } else {
+        writeFallbackSSE(res, req.body?.message || "your request");
+      }
+    } else if (!res.headersSent) {
       res.status(500).json({ success: false, error: error.message });
-    } else {
-      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-      res.end();
     }
   }
 });
@@ -685,7 +827,41 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // 2. Prefer Nemotron when available
+    // 2. Prefer Cerebras if configured (and not preferred first)
+    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(message, userName, userEmail);
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "cerebras",
+          provider: "Cerebras"
+        });
+        return res.json({ success: true, model: 'cerebras', reply });
+      } catch (err) {
+        console.error('Cerebras call failed, falling back:', err.message);
+      }
+    }
+
+    // 3. Prefer OpenRouter / ZAI
+    if (isValidKey(process.env.ZAI_API_KEY)) {
+      try {
+        const reply = await callZAI(message, userName);
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "zai",
+          provider: "OpenRouter"
+        });
+        return res.json({ success: true, model: 'zai', reply });
+      } catch (err) {
+        console.error('ZAI call failed, falling back:', err.message);
+      }
+    }
+
+    // 4. Prefer Nemotron when available
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(message, userName, userEmail);
@@ -700,19 +876,6 @@ app.post("/api/chat/complete", async (req, res) => {
       } catch (err) {
         console.error('Nemotron call failed, falling back:', err.message);
       }
-    }
-
-    // 3. Fallback to existing ZAI (non-streaming)
-    if (isValidKey(process.env.ZAI_API_KEY)) {
-      const reply = await callZAI(message, userName);
-      await saveChatMetadata({
-        question: message,
-        userName,
-        userEmail,
-        model: "zai",
-        provider: "OpenRouter"
-      });
-      return res.json({ success: true, model: 'zai', reply });
     }
 
     const fallback = fallbackResponse(message);
@@ -756,7 +919,17 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 2. Prefer Nemotron if configured
+    // 2. Prefer Cerebras if configured (and not tried yet)
+    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Generate clean code for: ${prompt}`, userName);
+        return res.json({ success: true, provider: 'cerebras', result: reply });
+      } catch (err) {
+        console.warn('Cerebras code generation failed, falling back:', err.message);
+      }
+    }
+
+    // 3. Prefer Nemotron if configured
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Generate clean code for: ${prompt}`, userName);
@@ -766,7 +939,7 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 3. Fallback to ZAI
+    // 4. Fallback to ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
       const result = await callZAI(`Generate clean code for: ${prompt}`, userName);
       return res.json({ success: true, provider: 'zai', result });
@@ -812,7 +985,17 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 2. Prefer Nemotron if configured
+    // 2. Prefer Cerebras if configured (and not tried yet)
+    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Write detailed content about: ${prompt}`, userName);
+        return res.json({ success: true, provider: 'cerebras', result: reply });
+      } catch (err) {
+        console.warn('Cerebras content generation failed, falling back:', err.message);
+      }
+    }
+
+    // 3. Prefer Nemotron if configured
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Write detailed content about: ${prompt}`, userName);
@@ -822,7 +1005,7 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 3. Fallback to ZAI
+    // 4. Fallback to ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
       const result = await callZAI(`Write detailed content about: ${prompt}`, userName);
       return res.json({ success: true, provider: 'zai', result });
