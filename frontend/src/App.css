@@ -120,11 +120,11 @@
   color: #0f172a;
 }
 
-.light-mode .action-btn {
+.light-mode .input-box-wrapper .action-btn {
   color: #64748b;
 }
 
-.light-mode .action-btn:hover {
+.light-mode .input-box-wrapper .action-btn:hover {
   background-color: rgba(0,0,0,0.06);
   color: #0f172a;
 }
@@ -133,7 +133,7 @@
   color: #0f172a;
 }
 
-.light-mode .send-btn {
+.light-mode .input-box-wrapper .send-btn {
   background-color: #0f172a;
   color: #ffffff;
 }
@@ -801,7 +801,7 @@ body {
 }
 
 /* LEFT paste + RIGHT mic buttons */
-.action-btn {
+.input-box-wrapper .action-btn {
   background: transparent;
   border: none;
   color: #94a3b8;
@@ -819,12 +819,12 @@ body {
   padding: 0;
 }
 
-.action-btn:hover {
+.input-box-wrapper .action-btn:hover {
   background-color: rgba(255,255,255,0.12);
   color: #ffffff;
 }
 
-.action-btn.listening {
+.input-box-wrapper .action-btn.listening {
   color: #ef4444;
   animation: pulse-glow 1.5s infinite;
 }
@@ -836,7 +836,7 @@ body {
 }
 
 /* CENTER textarea - takes all remaining space */
-.chat-textarea {
+.input-box-wrapper .chat-textarea {
   flex: 1 1 0%;
   min-width: 0;
   background: transparent;
@@ -855,12 +855,12 @@ body {
   display: block;
 }
 
-.chat-textarea::placeholder {
+.input-box-wrapper .chat-textarea::placeholder {
   color: var(--text-secondary);
 }
 
 /* SEND button */
-.send-btn {
+.input-box-wrapper .send-btn {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
   border: none;
@@ -879,7 +879,7 @@ body {
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
 }
 
-.send-btn:hover:not(:disabled) {
+.input-box-wrapper .send-btn:hover:not(:disabled) {
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
 }
