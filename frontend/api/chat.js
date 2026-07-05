@@ -20,7 +20,7 @@ const isValidKey = (val) =>
 
 // Keys are read from Vercel Environment Variables (set in Vercel Dashboard)
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
-// const ZAI_KEY = process.env.ZAI_API_KEY || "";
+ const ZAI_KEY = process.env.ZAI_API_KEY || "";
 const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "";
 
 
