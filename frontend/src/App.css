@@ -777,9 +777,10 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 24px;
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 8px 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -790,20 +791,24 @@ body {
   background-color: #131c30;
 }
 
-/* Right-side action buttons group */
+/* RIGHT group: Mic + Send */
 .input-actions-right {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
 }
 
+/* LEFT paste + RIGHT mic buttons */
 .action-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  width: 36px;
-  height: 36px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -830,50 +835,59 @@ body {
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
+/* CENTER textarea - takes all remaining space */
 .chat-textarea {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
   background: transparent;
   border: none;
   color: var(--text-primary);
   font-size: 16px;
   font-family: inherit;
-  padding: 10px 4px;
+  padding: 8px 2px;
   resize: none;
-  min-height: 44px;
-  max-height: 200px;
+  min-height: 40px;
+  max-height: 180px;
   outline: none;
   line-height: 1.5;
+  overflow-y: auto;
   align-self: center;
+  display: block;
 }
 
 .chat-textarea::placeholder {
   color: var(--text-secondary);
 }
 
+/* SEND button */
 .send-btn {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
   border: none;
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
+  border-radius: 10px;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  padding: 0;
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
 }
 
 .send-btn:hover:not(:disabled) {
-  transform: scale(1.05) translateY(-2px);
+  transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
 }
 
 .send-btn:disabled {
-  background-color: var(--border-color);
+  background: var(--border-color);
   color: var(--text-secondary);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -1752,7 +1766,7 @@ body {
 
   /* ── Input Area (mobile) ── */
   .input-container {
-    padding: 8px 12px calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
+    padding: 8px 10px calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
     border-top: 1px solid rgba(255,255,255,0.05);
   }
 
@@ -1763,30 +1777,30 @@ body {
     align-items: center;
   }
 
-  .action-btn {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    min-height: 38px;
+  /* Override the global mobile button min sizes ONLY for input bar */
+  .input-box-wrapper .action-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
   }
 
-  .send-btn {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    min-height: 38px;
-    border-radius: 10px;
+  .input-box-wrapper .send-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    border-radius: 9px;
   }
 
   .chat-textarea {
-    font-size: 16px !important; /* Prevents iOS auto-zoom */
-    min-height: 38px;
-    padding: 8px 4px;
-    align-self: center;
+    font-size: 16px !important;
+    min-height: 36px;
+    padding: 7px 2px;
   }
 
   .input-actions-right {
-    gap: 2px;
+    gap: 3px;
   }
 
   /* ── Page Views (Settings, Projects) ── */
@@ -1812,10 +1826,16 @@ body {
     overflow-y: auto;
   }
 
-  /* ── Larger touch targets ── */
-  button, a, .menu-item {
+  /* ── Larger touch targets (except input bar) ── */
+  button:not(.action-btn):not(.send-btn), a, .menu-item {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Input bar buttons: keep compact size */
+  .input-box-wrapper button {
+    min-height: unset !important;
+    min-width: unset !important;
   }
 
   /* ── PWA Install Banner (shown by JS) ── */
