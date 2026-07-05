@@ -132,38 +132,36 @@
 /* Category Filter Pills */
 .pane-filters-scroll {
   display: flex;
-  gap: 8px;
-  padding: 8px 24px 16px;
-  overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-}
-
-.pane-filters-scroll::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 16px 12px;
 }
 
 .filter-pill {
   white-space: nowrap;
-  padding: 6px 12px;
+  padding: 5px 12px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 99px;
-  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.55);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  line-height: 1.5;
 }
 
 .filter-pill:hover {
   background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
 .filter-pill.active {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.14);
+  border-color: rgba(99, 102, 241, 0.4);
   color: #a5b4fc;
+  box-shadow: inset 0 0 0 1px rgba(99,102,241,0.2);
 }
 
 /* Scrollable Prompt List */

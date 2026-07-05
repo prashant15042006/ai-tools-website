@@ -174,8 +174,10 @@ export default function PromptManager() {
 
   const handleUseInChat = () => {
     if (!edited.trim()) return;
+    // Save to localStorage as reliable bridge — Chat.js reads and clears it on mount
+    localStorage.setItem("prefilled_prompt_transfer", edited);
     navigate('/chat', { state: { prefilledPrompt: edited } });
-    showToast('Prompt loaded into chat workspace! 💬');
+    showToast('Prompt loaded into Chat! 💬');
   };
 
   const filtered = prompts.filter((prompt) => {

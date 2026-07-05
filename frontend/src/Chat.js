@@ -17,10 +17,21 @@ injectTableStyles();
 function Chat() {
   const location = useLocation();
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(() => {
+    const transfer = localStorage.getItem("prefilled_prompt_transfer");
+    if (transfer) {
+      localStorage.removeItem("prefilled_prompt_transfer");
+      return transfer;
+    }
+    return location.state?.prefilledPrompt || "";
+  });
 
   useEffect(() => {
-    if (location.state?.prefilledPrompt) {
+    const transfer = localStorage.getItem("prefilled_prompt_transfer");
+    if (transfer) {
+      setInput(transfer);
+      localStorage.removeItem("prefilled_prompt_transfer");
+    } else if (location.state?.prefilledPrompt) {
       setInput(location.state.prefilledPrompt);
     }
   }, [location.state]);
