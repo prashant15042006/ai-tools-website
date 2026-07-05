@@ -521,7 +521,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  position: relative;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -530,7 +530,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 24px;
-  padding-bottom: 180px;
+  padding-bottom: 24px;
   scroll-behavior: smooth;
   background-image: 
     radial-gradient(circle at 50% 120%, var(--accent-glow), transparent 40%),
@@ -761,15 +761,13 @@ body {
   opacity: 0.3;
 }
 
-/* Input Area */
+/* Input Area — sticky flex footer (no position:absolute, no pointer-events tricks) */
 .input-container {
-  position: absolute;
-  bottom: 0;
-  left: 0;
+  flex-shrink: 0;
   width: 100%;
-  padding: 24px;
-  background: linear-gradient(to top, var(--bg-main) 70%, transparent);
-  pointer-events: none;
+  padding: 12px 24px 20px;
+  background: linear-gradient(to top, var(--bg-main) 80%, transparent);
+  border-top: 1px solid rgba(255,255,255,0.04);
 }
 
 .input-box-wrapper {
@@ -779,17 +777,16 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 24px;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-  pointer-events: auto;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .input-box-wrapper:focus-within {
   border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 20px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 12px 32px rgba(0, 0, 0, 0.4);
   background-color: #131c30;
 }
 
@@ -1744,19 +1741,21 @@ body {
     font-size: 15px !important;
   }
 
-  /* ── Input Area ── */
+  /* ── Input Area (mobile) ── */
   .input-container {
-    padding: 12px 12px calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 12px);
+    padding: 8px 12px calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
+    border-top: 1px solid rgba(255,255,255,0.05);
   }
 
   .input-box-wrapper {
     border-radius: 18px;
-    padding: 8px 12px;
+    padding: 8px 10px;
+    gap: 6px;
   }
 
   .chat-textarea {
     font-size: 16px !important; /* Prevents iOS auto-zoom */
-    min-height: 40px;
+    min-height: 38px;
   }
 
   /* ── Page Views (Settings, Projects) ── */
