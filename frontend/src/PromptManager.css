@@ -4,12 +4,36 @@
 
 .prompt-studio-container {
   display: flex;
-  height: calc(100vh - 64px); /* Subtract top header height if any */
+  height: calc(100vh - 60px); /* Matches exact topbar height */
   background: var(--bg-main, #0b0f19);
   color: var(--text-primary, #f3f4f6);
   font-family: 'Outfit', 'Inter', sans-serif;
   overflow: hidden;
   position: relative;
+  min-height: 0;
+  width: 100%;
+}
+
+.mobile-back-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: rgba(129, 140, 248, 0.06);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  color: #a5b4fc;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  align-self: flex-start;
+  transition: all 0.15s ease;
+}
+
+.mobile-back-btn:hover {
+  background: rgba(129, 140, 248, 0.12);
+  border-color: rgba(129, 140, 248, 0.45);
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -755,35 +779,88 @@
    ──────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .prompt-studio-container {
-    flex-direction: column;
-    overflow-y: auto;
-    height: auto;
+    flex-direction: row;
+    height: calc(100dvh - 56px - var(--bottom-nav-height, 64px) - var(--safe-area-bottom, 0px));
+    overflow: hidden;
+  }
+
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  .mobile-back-btn {
+    display: flex;
   }
 
   .prompt-list-pane {
-    width: 100%;
-    height: auto;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .prompts-scrollable-list {
-    max-height: 300px;
+    max-height: none;
+    padding-bottom: 24px;
   }
 
   .prompt-workspace-pane {
-    height: auto;
+    width: 100% !important;
+    height: 100% !important;
+    overflow-y: auto;
   }
 
   .workspace-editor-container {
-    padding: 24px 20px;
+    padding: 16px;
+    gap: 16px;
   }
-  
+
+  .editor-title-input {
+    font-size: 22px;
+    padding: 2px 0;
+  }
+
+  .editor-meta-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .meta-field {
+    min-width: 100%;
+  }
+
+  .editor-textarea {
+    min-height: 160px;
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .editor-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .left-actions, .right-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+  }
+
   .empty-state-card {
-    padding: 24px;
+    padding: 20px;
+    border-radius: 20px;
   }
 
   .stats-row {
     grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
   }
 }

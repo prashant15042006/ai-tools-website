@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Search, Copy, Check, Play, MessageSquare, Sparkles, BookOpen, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Search, Copy, Check, Play, MessageSquare, Sparkles, BookOpen, ArrowRight, ArrowLeft } from "lucide-react";
 import API_BASE_URL from "./apiConfig";
 import './PromptManager.css';
 
@@ -199,7 +199,7 @@ export default function PromptManager() {
       )}
 
       {/* Left Sidebar Pane */}
-      <aside className="prompt-list-pane">
+      <aside className={`prompt-list-pane ${selected ? 'mobile-hidden' : ''}`}>
         <div className="pane-header">
           <div className="pane-title-group">
             <span className="pane-badge">Prompts</span>
@@ -265,9 +265,12 @@ export default function PromptManager() {
       </aside>
 
       {/* Right Content/Editor Pane */}
-      <main className="prompt-workspace-pane">
+      <main className={`prompt-workspace-pane ${!selected ? 'mobile-hidden' : ''}`}>
         {selected ? (
           <div className="workspace-editor-container">
+            <button className="mobile-back-btn" onClick={() => setSelected(null)}>
+              <ArrowLeft size={16} /> Back to list
+            </button>
             <div className="editor-top-bar">
               <div className="editor-title-row">
                 <input
