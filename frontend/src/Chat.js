@@ -297,6 +297,12 @@ function Chat() {
 
       <div className="input-container">
         <div className="input-box-wrapper">
+          {/* LEFT: Paste button */}
+          <button className="action-btn" title="Paste" onClick={handlePaste}>
+            <ClipboardPaste size={20} />
+          </button>
+
+          {/* CENTER: Textarea */}
           <textarea
             className="chat-textarea"
             value={input}
@@ -312,25 +318,23 @@ function Chat() {
             }}
           />
 
-          <button className="action-btn" title="Paste" onClick={handlePaste}>
-            <ClipboardPaste size={20} />
-          </button>
-
-          <button 
-            className={`action-btn ${isListening ? "listening" : ""}`} 
-            title="Voice Input" 
-            onClick={startListening} 
-          >
-            <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
-          </button>
-
-          <button 
-            className="send-btn" 
-            onClick={() => sendMessage()} 
-            disabled={loading || !input.trim()}
-          >
-            <Send size={18} />
-          </button>
+          {/* RIGHT: Mic + Send */}
+          <div className="input-actions-right">
+            <button 
+              className={`action-btn ${isListening ? "listening" : ""}`} 
+              title="Voice Input" 
+              onClick={startListening} 
+            >
+              <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
+            </button>
+            <button 
+              className="send-btn" 
+              onClick={() => sendMessage()} 
+              disabled={loading || !input.trim()}
+            >
+              <Send size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -777,9 +777,9 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 24px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -788,6 +788,14 @@ body {
   border-color: rgba(59, 130, 246, 0.5);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 12px 32px rgba(0, 0, 0, 0.4);
   background-color: #131c30;
+}
+
+/* Right-side action buttons group */
+.input-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .action-btn {
@@ -802,8 +810,8 @@ body {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 2px;
   flex-shrink: 0;
+  padding: 0;
 }
 
 .action-btn:hover {
@@ -812,7 +820,7 @@ body {
 }
 
 .action-btn.listening {
-  color: #ef4444; /* Red color when listening */
+  color: #ef4444;
   animation: pulse-glow 1.5s infinite;
 }
 
@@ -829,12 +837,13 @@ body {
   color: var(--text-primary);
   font-size: 16px;
   font-family: inherit;
-  padding: 12px 4px;
+  padding: 10px 4px;
   resize: none;
-  min-height: 48px;
+  min-height: 44px;
   max-height: 200px;
   outline: none;
   line-height: 1.5;
+  align-self: center;
 }
 
 .chat-textarea::placeholder {
@@ -846,8 +855,8 @@ body {
   color: white;
   border: none;
   border-radius: 12px;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1748,14 +1757,36 @@ body {
   }
 
   .input-box-wrapper {
-    border-radius: 18px;
-    padding: 8px 10px;
-    gap: 6px;
+    border-radius: 20px;
+    padding: 6px 8px;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .action-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  .send-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    border-radius: 10px;
   }
 
   .chat-textarea {
     font-size: 16px !important; /* Prevents iOS auto-zoom */
     min-height: 38px;
+    padding: 8px 4px;
+    align-self: center;
+  }
+
+  .input-actions-right {
+    gap: 2px;
   }
 
   /* ── Page Views (Settings, Projects) ── */
