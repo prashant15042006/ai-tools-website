@@ -8,13 +8,22 @@ import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 
+import { useLocation } from "react-router-dom";
+
 // Inject table styles on component mount
 injectTableStyles();
-   
+
 
 function Chat() {
+  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+
+  useEffect(() => {
+    if (location.state?.prefilledPrompt) {
+      setInput(location.state.prefilledPrompt);
+    }
+  }, [location.state]);
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
