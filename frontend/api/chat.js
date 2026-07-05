@@ -1,7 +1,7 @@
 // ================================================================
 // Vercel Serverless Function: /api/chat
 // Handles AI chat with full provider fallback chain:
-//   Gemini → OpenRouter (ZAI) → Cerebras → static fallback
+//   Gemini → Cerebras → OpenRouter (ZAI) → static fallback
 // ================================================================
 
 const SYSTEM_PROMPT = (userName = "User") =>
@@ -20,9 +20,8 @@ const isValidKey = (val) =>
 
 // Keys are read from Vercel Environment Variables (set in Vercel Dashboard)
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
- const ZAI_KEY = process.env.ZAI_API_KEY || "";
+const ZAI_KEY = process.env.ZAI_API_KEY || "";
 const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "";
-
 
 // ──────────────────────────────────────────────
 // 1. Google Gemini (direct)
@@ -69,15 +68,65 @@ async function callGemini(message, userName, history = []) {
 }
 
 // ──────────────────────────────────────────────
-// 2. OpenRouter (ZAI) — tries multiple free models
+// 2. Cerebras — fast inference with active models
+// ──────────────────────────────────────────────
+async function callCerebras(message, userName) {
+  const key = CEREBRAS_KEY;
+  if (!isValidKey(key)) throw new Error("Cerebras key not configured");
+
+  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  let lastErr = "Unknown error";
+
+  for (const model of models) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT(userName) },
+            { role: "user", content: message },
+          ],
+          max_tokens: 1024,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const data = await res.json();
+      if (!res.ok) {
+        lastErr = data.error?.message || `${res.status}`;
+        continue;
+      }
+      const text = data.choices?.[0]?.message?.content;
+      if (!text) { lastErr = "Empty response"; continue; }
+      return text;
+    } catch(e) {
+      lastErr = e.message;
+    }
+  }
+  throw new Error(`Cerebras all models failed: ${lastErr}`);
+}
+
+// ──────────────────────────────────────────────
+// 3. OpenRouter (ZAI) — tries multiple free/paid models
 // ──────────────────────────────────────────────
 const OPENROUTER_MODELS = [
-  "google/gemini-2.0-flash-001",
-  "google/gemini-2.0-flash-lite-preview-02-05:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "nvidia/llama-3.1-nemotron-70b-instruct:free",
-  "google/gemini-flash-1.5",
   "openai/gpt-4o-mini",
+  "google/gemini-2.5-flash",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "liquid/lfm-2.5-1.2b-instruct:free",
+  "poolside/laguna-xs-2.1:free",
+  "cohere/north-mini-code:free",
+  "openai/gpt-oss-120b:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "google/gemma-4-31b-it:free",
+  "qwen/qwen3-coder:free",
 ];
 
 async function callOpenRouter(message, userName, history = []) {
@@ -103,7 +152,7 @@ async function callOpenRouter(message, userName, history = []) {
           "HTTP-Referer": "https://nexuss-ai.io",
           "X-Title": "Nexuss Workspace",
         },
-        body: JSON.stringify({ model, messages }),
+        body: JSON.stringify({ model, messages, max_tokens: 1024 }),
         signal: controller.signal,
       });
       clearTimeout(timer);
@@ -122,50 +171,6 @@ async function callOpenRouter(message, userName, history = []) {
     }
   }
   throw new Error(`OpenRouter all models failed: ${lastErr}`);
-}
-
-// ──────────────────────────────────────────────
-// 3. Cerebras
-// ──────────────────────────────────────────────
-async function callCerebras(message, userName) {
-  const key = CEREBRAS_KEY;
-  const url = process.env.CEREBRAS_API_URL || "https://api.cerebras.ai/v1/chat/completions";
-  const model = process.env.CEREBRAS_MODEL || "llama3.1-8b";
-  if (!isValidKey(key)) throw new Error("Cerebras key not configured");
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT(userName) },
-          { role: "user", content: message },
-        ],
-        max_tokens: 1024,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `Cerebras ${res.status}`);
-    const text =
-      data.choices?.[0]?.message?.content ||
-      data.choices?.[0]?.text ||
-      data.output ||
-      data.response;
-    if (!text) throw new Error("Empty Cerebras response");
-    return text;
-  } catch(e) {
-    clearTimeout(timer);
-    throw e;
-  }
 }
 
 // ──────────────────────────────────────────────
@@ -204,17 +209,7 @@ export default async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try OpenRouter / ZAI first so the app keeps responding if Gemini is down
-  if (!reply) {
-    try {
-      reply = await callOpenRouter(message, userName, history);
-      usedProvider = "OpenRouter";
-    } catch (e) {
-      console.warn("OpenRouter failed:", e.message);
-    }
-  }
-
-  // 2. Try Gemini next
+  // 1. Try Gemini first
   if (!reply) {
     try {
       reply = await callGemini(message, userName, history);
@@ -224,13 +219,23 @@ export default async function handler(req, res) {
     }
   }
 
-  // 3. Try Cerebras
+  // 2. Try Cerebras (fast, reliable free inference)
   if (!reply) {
     try {
       reply = await callCerebras(message, userName);
       usedProvider = "Cerebras";
     } catch (e) {
       console.warn("Cerebras failed:", e.message);
+    }
+  }
+
+  // 3. Try OpenRouter
+  if (!reply) {
+    try {
+      reply = await callOpenRouter(message, userName, history);
+      usedProvider = "OpenRouter";
+    } catch (e) {
+      console.warn("OpenRouter failed:", e.message);
     }
   }
 
