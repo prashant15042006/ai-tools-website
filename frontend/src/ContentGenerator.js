@@ -238,9 +238,6 @@ function ContentGenerator() {
 
       <div className="input-container">
         <div className="input-box-wrapper">
-          <button className="action-btn" title="Paste from Clipboard" onClick={handlePaste}>
-            <ClipboardPaste size={20} />
-          </button>
           <textarea
             className="chat-textarea"
             value={input}
@@ -255,6 +252,9 @@ function ContentGenerator() {
               }
             }}
           />
+          <button className="action-btn" title="Paste from Clipboard" onClick={handlePaste}>
+            <ClipboardPaste size={20} />
+          </button>
           <button
             className={`action-btn ${isListening ? "listening" : ""}`}
             title={isListening ? "Listening..." : "Voice Input"}

@@ -297,10 +297,6 @@ function Chat() {
 
       <div className="input-container">
         <div className="input-box-wrapper">
-          <button className="action-btn" title="Paste" onClick={handlePaste}>
-            <ClipboardPaste size={20} />
-          </button>
-          
           <textarea
             className="chat-textarea"
             value={input}
@@ -315,6 +311,10 @@ function Chat() {
               }
             }}
           />
+
+          <button className="action-btn" title="Paste" onClick={handlePaste}>
+            <ClipboardPaste size={20} />
+          </button>
 
           <button 
             className={`action-btn ${isListening ? "listening" : ""}`} 
