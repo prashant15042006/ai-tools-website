@@ -23,6 +23,10 @@
       "dest": "/build/static/$1"
     },
     {
+      "src": "/(sitemap\\.xml|robots\\.txt|manifest\\.json|favicon\\.ico|.*\\.png|.*\\.jpg|.*\\.js)",
+      "dest": "/build/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/build/index.html"
     }
