@@ -15,6 +15,22 @@ function buildImageUrl(prompt, options = {}) {
   return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=${enhance}`;
 }
 
+// ── Detect aspect ratio from prompt text ──
+// Returns matching ASPECT_RATIOS id (e.g. "16:9") or null
+function detectRatioFromPrompt(promptText) {
+  const p = promptText.toLowerCase();
+  // Explicit ratio keywords
+  if (/\b16[:\s\/x]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
+  if (/\b9[:\s\/x]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
+  if (/\b4[:\s\/x]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
+  if (/\b1[:\s\/x]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
+  // Also detect dimension keywords without "ratio" word
+  if (/\b(16x9|16\/9)\b/.test(p)) return "16:9";
+  if (/\b(9x16|9\/16)\b/.test(p)) return "9:16";
+  if (/\b(4x3|4\/3)\b/.test(p)) return "4:3";
+  return null;
+}
+
 // ── Models Data ──
 const MODELS = [
   { id: "flux",          label: "⚡ Flux.1 (Premium)",    desc: "Best details, realism, and text accuracy" },
@@ -101,7 +117,14 @@ export default function ImageGenerator() {
       return;
     }
 
-    const ratio = ASPECT_RATIOS.find(r => r.id === aspectRatio) || ASPECT_RATIOS[0];
+    // Auto-detect ratio from prompt text; user can override via UI buttons
+    const detectedRatioId = detectRatioFromPrompt(prompt);
+    const finalRatioId = detectedRatioId || aspectRatio;
+    if (detectedRatioId && detectedRatioId !== aspectRatio) {
+      setAspectRatio(detectedRatioId);
+      showToast(`📐 Ratio auto-detected: ${detectedRatioId}`);
+    }
+    const ratio = ASPECT_RATIOS.find(r => r.id === finalRatioId) || ASPECT_RATIOS[0];
     const seed = Math.floor(Math.random() * 999999);
     const url = buildImageUrl(prompt, {
       width: ratio.width,
@@ -123,7 +146,7 @@ export default function ImageGenerator() {
       setImageUrl(url);
       setLoading(false);
       const newHistory = [
-        { url, prompt: prompt.trim(), model, ratio: aspectRatio, seed, id: Date.now() },
+        { url, prompt: prompt.trim(), model, ratio: finalRatioId, seed, id: Date.now() },
         ...history
       ].slice(0, 30);
       saveHistory(newHistory);
@@ -149,7 +172,7 @@ export default function ImageGenerator() {
         setImageUrl(retryUrl);
         setLoading(false);
         const newHistory = [
-          { url: retryUrl, prompt: prompt.trim(), model, ratio: aspectRatio, seed: retrySeed, id: Date.now() },
+          { url: retryUrl, prompt: prompt.trim(), model, ratio: finalRatioId, seed: retrySeed, id: Date.now() },
           ...history
         ].slice(0, 30);
         saveHistory(newHistory);
@@ -264,6 +287,56 @@ export default function ImageGenerator() {
               onFocus={e => (e.target.style.borderColor = "rgba(6, 182, 212, 0.7)")}
               onBlur={e  => (e.target.style.borderColor = "rgba(6, 182, 212, 0.25)")}
             />
+            {/* AI Image Generate Badge */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              marginTop: "8px", marginBottom: "2px"
+            }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "7px",
+                background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.18))",
+                border: "1px solid rgba(16,185,129,0.35)",
+                borderRadius: "30px", padding: "5px 14px 5px 8px",
+                boxShadow: "0 0 14px rgba(6,182,212,0.18), 0 0 6px rgba(16,185,129,0.12)",
+              }}>
+                {/* Animated glowing dot */}
+                <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{
+                    display: "block", width: "9px", height: "9px", borderRadius: "50%",
+                    background: "linear-gradient(135deg, #10b981, #06b6d4)",
+                    boxShadow: "0 0 8px #10b981, 0 0 4px #06b6d4",
+                    animation: "imgGenPulse 1.8s ease-in-out infinite"
+                  }} />
+                </span>
+                {/* Icon SVG — sparkle / image stars */}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                  <defs>
+                    <linearGradient id="imgBadgeGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#10b981"/>
+                      <stop offset="100%" stopColor="#06b6d4"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="url(#imgBadgeGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  <circle cx="9" cy="9" r="1.5" fill="url(#imgBadgeGrad)"/>
+                  <path d="M21 15l-5-5L7 17" stroke="url(#imgBadgeGrad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span style={{
+                  fontSize: "11px", fontWeight: "700", letterSpacing: "0.4px",
+                  background: "linear-gradient(90deg, #10b981, #06b6d4)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                  backgroundClip: "text"
+                }}>
+                  AI Image Generate
+                </span>
+              </div>
+            </div>
+            {/* Keyframe for pulse — injected once */}
+            <style>{`
+              @keyframes imgGenPulse {
+                0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 8px #10b981, 0 0 4px #06b6d4; }
+                50% { transform: scale(1.5); opacity: 0.6; box-shadow: 0 0 16px #10b981, 0 0 10px #06b6d4; }
+              }
+            `}</style>
             {/* Quick Suggestions */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
               {SUGGESTIONS.map((s, i) => (
