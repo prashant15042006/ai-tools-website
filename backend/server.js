@@ -709,26 +709,8 @@ app.post("/api/chat", async (req, res) => {
       }
     };
 
-    // 0. If MODE=CEREBRAS, prefer Cerebras provider first
-    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      const reply = await tryStreamProvider("Cerebras (Preferred)", async () => {
-        await callCerebrasStream(message, res, userName, userEmail, history);
-        return true;
-      });
-      if (reply) return;
-    }
-
-    // 1. Try Direct Google Gemini if configured (extremely fast & free)
-    if (isValidKey(process.env.GEMINI_API_KEY)) {
-      const reply = await tryStreamProvider("Direct Gemini", async () => {
-        await callGeminiDirectStream(message, res, userName, userEmail, history);
-        return true;
-      });
-      if (reply) return;
-    }
-
-    // 2. Try Cerebras if configured (using our new streaming helper)
-    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 1. Try Cerebras first (using our streaming helper)
+    if (isValidKey(process.env.CEREBRAS_API_KEY)) {
       const reply = await tryStreamProvider("Cerebras", async () => {
         await callCerebrasStream(message, res, userName, userEmail, history);
         return true;
@@ -736,7 +718,7 @@ app.post("/api/chat", async (req, res) => {
       if (reply) return;
     }
 
-    // 3. Try OpenRouter / ZAI
+    // 2. Try OpenRouter / ZAI second
     if (isValidKey(process.env.ZAI_API_KEY)) {
       const reply = await tryStreamProvider("OpenRouter", async () => {
         await callZAIStream(message, res, userName, userEmail, history);
@@ -744,6 +726,17 @@ app.post("/api/chat", async (req, res) => {
       });
       if (reply) return;
     }
+
+    // 3. Try Direct Google Gemini as last resort (commented out for now due to expired key)
+    /*
+    if (isValidKey(process.env.GEMINI_API_KEY)) {
+      const reply = await tryStreamProvider("Direct Gemini", async () => {
+        await callGeminiDirectStream(message, res, userName, userEmail, history);
+        return true;
+      });
+      if (reply) return;
+    }
+    */
 
     // 4. If Nemotron is configured (fast provider), use it for a single non-streaming reply
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
@@ -801,8 +794,8 @@ app.post("/api/chat/complete", async (req, res) => {
     const { message, userName, userEmail, history } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
-    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled
-    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 1. Prefer Cerebras if configured
+    if (isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(message, userName, userEmail);
         await saveChatMetadata({
@@ -818,41 +811,7 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // 1. Prefer Direct Google Gemini if configured
-    if (isValidKey(process.env.GEMINI_API_KEY)) {
-      try {
-        const reply = await callGeminiDirect(message, userName);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "gemini-2.0-flash-direct",
-          provider: "Google Gemini"
-        });
-        return res.json({ success: true, model: 'gemini-2.0-flash-direct', reply });
-      } catch (err) {
-        console.error('Direct Gemini call failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Prefer Cerebras if configured (and not preferred first)
-    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(message, userName, userEmail);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "cerebras",
-          provider: "Cerebras"
-        });
-        return res.json({ success: true, model: 'cerebras', reply });
-      } catch (err) {
-        console.error('Cerebras call failed, falling back:', err.message);
-      }
-    }
-
-    // 3. Prefer OpenRouter / ZAI
+    // 2. Prefer OpenRouter / ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
       try {
         const reply = await callZAI(message, userName);
@@ -868,6 +827,25 @@ app.post("/api/chat/complete", async (req, res) => {
         console.error('ZAI call failed, falling back:', err.message);
       }
     }
+
+    // 3. Try Direct Google Gemini as last resort (commented out for now due to expired key)
+    /*
+    if (isValidKey(process.env.GEMINI_API_KEY)) {
+      try {
+        const reply = await callGeminiDirect(message, userName);
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "gemini-2.0-flash-direct",
+          provider: "Google Gemini"
+        });
+        return res.json({ success: true, model: 'gemini-2.0-flash-direct', reply });
+      } catch (err) {
+        console.error('Direct Gemini call failed, falling back:', err.message);
+      }
+    }
+    */
 
     // 4. Prefer Nemotron when available
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {

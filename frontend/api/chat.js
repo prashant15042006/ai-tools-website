@@ -217,17 +217,7 @@ module.exports = async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try Gemini first
-  if (!reply) {
-    try {
-      reply = await callGemini(message, userName, history);
-      usedProvider = "Gemini";
-    } catch (e) {
-      console.warn("Gemini failed:", e.message);
-    }
-  }
-
-  // 2. Try Cerebras (fast, reliable free inference)
+  // 1. Try Cerebras first (fast, reliable free inference)
   if (!reply) {
     try {
       reply = await callCerebras(message, userName);
@@ -237,7 +227,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 3. Try OpenRouter
+  // 2. Try OpenRouter second
   if (!reply) {
     try {
       reply = await callOpenRouter(message, userName, history);
@@ -246,6 +236,18 @@ module.exports = async function handler(req, res) {
       console.warn("OpenRouter failed:", e.message);
     }
   }
+
+  // 3. Try Gemini as last resort (commented out or skipped for now as key is expired)
+  /*
+  if (!reply) {
+    try {
+      reply = await callGemini(message, userName, history);
+      usedProvider = "Gemini";
+    } catch (e) {
+      console.warn("Gemini failed:", e.message);
+    }
+  }
+  */
 
   // 4. Static fallback — always respond
   if (!reply) {
