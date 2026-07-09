@@ -17,42 +17,26 @@
       "use": "@vercel/node"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/chat",
-      "destination": "/api/chat.js"
+      "src": "/api/chat",
+      "dest": "/api/chat.js"
     },
     {
-      "source": "/api/chat/complete",
-      "destination": "/api/chat/complete.js"
+      "src": "/api/chat/complete",
+      "dest": "/api/chat/complete.js"
     },
     {
-      "source": "/static/:path*",
-      "destination": "/build/static/:path*"
+      "src": "/static/(.*)",
+      "dest": "/build/static/$1"
     },
     {
-      "source": "/sitemap.xml",
-      "destination": "/build/sitemap.xml"
+      "src": "/(sitemap\\.xml|robots\\.txt|manifest\\.json|favicon\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.webp|.*\\.js|.*\\.css|.*\\.map)",
+      "dest": "/build/$1"
     },
     {
-      "source": "/robots.txt",
-      "destination": "/build/robots.txt"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/build/manifest.json"
-    },
-    {
-      "source": "/favicon.ico",
-      "destination": "/build/favicon.ico"
-    },
-    {
-      "source": "/:path*.(png|jpg|svg|webp|js|css|map)",
-      "destination": "/build/:path*.$1"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/build/index.html"
+      "src": "/(.*)",
+      "dest": "/build/index.html"
     }
   ]
 }

@@ -17,42 +17,26 @@
       "use": "@vercel/node"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/chat",
-      "destination": "/api/chat.js"
+      "src": "/api/chat",
+      "dest": "/api/chat.js"
     },
     {
-      "source": "/api/chat/complete",
-      "destination": "/api/chat/complete.js"
+      "src": "/api/chat/complete",
+      "dest": "/api/chat/complete.js"
     },
     {
-      "source": "/static/:path*",
-      "destination": "/frontend/build/static/:path*"
+      "src": "/static/(.*)",
+      "dest": "/frontend/build/static/$1"
     },
     {
-      "source": "/sitemap.xml",
-      "destination": "/frontend/build/sitemap.xml"
+      "src": "/(sitemap\\.xml|robots\\.txt|manifest\\.json|favicon\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.webp|.*\\.js|.*\\.css|.*\\.map)",
+      "dest": "/frontend/build/$1"
     },
     {
-      "source": "/robots.txt",
-      "destination": "/frontend/build/robots.txt"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/frontend/build/manifest.json"
-    },
-    {
-      "source": "/favicon.ico",
-      "destination": "/frontend/build/favicon.ico"
-    },
-    {
-      "source": "/:path*.(png|jpg|svg|webp|js|css|map)",
-      "destination": "/frontend/build/:path*.$1"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/frontend/build/index.html"
+      "src": "/(.*)",
+      "dest": "/frontend/build/index.html"
     }
   ]
 }
