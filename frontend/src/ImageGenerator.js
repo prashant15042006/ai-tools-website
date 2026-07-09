@@ -20,14 +20,14 @@ function buildImageUrl(prompt, options = {}) {
 function detectRatioFromPrompt(promptText) {
   const p = promptText.toLowerCase();
   // Explicit ratio keywords
-  if (/\b16[:\s\/x]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
-  if (/\b9[:\s\/x]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
-  if (/\b4[:\s\/x]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
-  if (/\b1[:\s\/x]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
+  if (/\b16[:\sx]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
+  if (/\b9[:\sx]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
+  if (/\b4[:\sx]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
+  if (/\b1[:\sx]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
   // Also detect dimension keywords without "ratio" word
-  if (/\b(16x9|16\/9)\b/.test(p)) return "16:9";
-  if (/\b(9x16|9\/16)\b/.test(p)) return "9:16";
-  if (/\b(4x3|4\/3)\b/.test(p)) return "4:3";
+  if (/\b(16x9|16[/]9)\b/.test(p)) return "16:9";
+  if (/\b(9x16|9[/]16)\b/.test(p)) return "9:16";
+  if (/\b(4x3|4[/]3)\b/.test(p)) return "4:3";
   return null;
 }
 
