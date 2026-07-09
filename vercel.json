@@ -27,16 +27,11 @@
       "dest": "/api/chat/complete.js"
     },
     {
-      "src": "/static/(.*)",
-      "dest": "/frontend/build/static/$1"
-    },
-    {
-      "src": "/(sitemap\\.xml|robots\\.txt|manifest\\.json|favicon\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.webp|.*\\.js|.*\\.css|.*\\.map)",
-      "dest": "/frontend/build/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/build/index.html"
+      "dest": "/index.html"
     }
   ]
 }
