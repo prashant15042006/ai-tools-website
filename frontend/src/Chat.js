@@ -107,19 +107,51 @@ function Chat() {
       content: msg.text
     })).filter(msg => msg.content); // Filter out empty messages (like the typing indicator)
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          message: text,
-          userName: displayName,
-          userEmail: user?.email || localStorage.getItem("nexus_mock_user") || "Anonymous",
-          history: history
-        }),
-      });
+    const payload = {
+      message: text,
+      userName: displayName,
+      userEmail: user?.email || localStorage.getItem("nexus_mock_user") || "Anonymous",
+      history: history
+    };
 
-      if (!response.ok) throw new Error(`Backend connection failed (${response.status}). If you are on Vercel, make sure REACT_APP_BACKEND_URL is set.`);
+    // ── Dual-endpoint fallback ──
+    // 1st try: Render backend (API_BASE_URL)
+    // 2nd try: Vercel same-origin /api/chat (always available)
+    const endpoints = [];
+    if (API_BASE_URL && !API_BASE_URL.includes("localhost")) {
+      endpoints.push(`${API_BASE_URL}/api/chat`);
+    }
+    // Always add Vercel same-origin as fallback (works on Vercel deployment)
+    endpoints.push("/api/chat");
+    // If on localhost, also try local backend
+    if (API_BASE_URL && API_BASE_URL.includes("localhost")) {
+      endpoints.unshift(`${API_BASE_URL}/api/chat`);
+    }
+
+    let response = null;
+    let lastErr = "";
+
+    for (const endpoint of endpoints) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 12000); // 12s timeout
+        const r = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (r.ok) { response = r; break; }
+        lastErr = `${endpoint} failed (${r.status})`;
+      } catch (e) {
+        lastErr = e.message;
+        console.warn(`⚠️ Endpoint failed: ${endpoint} —`, e.message);
+      }
+    }
+
+    try {
+      if (!response) throw new Error(lastErr || "All endpoints failed.");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -161,9 +193,6 @@ function Chat() {
 
     } catch (error) {
       let errorMsg = error.message;
-      if (errorMsg === "Failed to fetch" && window.location.hostname !== "localhost" && API_BASE_URL.includes("localhost")) {
-        errorMsg = "Backend is not configured! Please add your Render backend URL as REACT_APP_BACKEND_URL in Vercel settings.";
-      }
       setMessages((prev) => 
         prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${errorMsg}` } : msg)
       );

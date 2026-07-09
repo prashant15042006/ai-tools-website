@@ -54,17 +54,27 @@ function ContentGenerator() {
     const aiMsgId = Date.now() + Math.random();
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          message: "Write: " + text,
-          userName: displayName
-        }),
-      });
+    const payload = { message: "Write: " + text, userName: displayName };
+    const endpoints = [];
+    if (API_BASE_URL && !API_BASE_URL.includes("localhost")) endpoints.push(`${API_BASE_URL}/api/chat`);
+    endpoints.push("/api/chat");
+    if (API_BASE_URL && API_BASE_URL.includes("localhost")) endpoints.unshift(`${API_BASE_URL}/api/chat`);
 
-      if (!response.ok) throw new Error("Backend connection failed");
+    let response = null;
+    let lastErr = "";
+    for (const endpoint of endpoints) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 12000);
+        const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
+        clearTimeout(timer);
+        if (r.ok) { response = r; break; }
+        lastErr = `${endpoint} failed (${r.status})`;
+      } catch (e) { lastErr = e.message; }
+    }
+
+    try {
+      if (!response) throw new Error(lastErr || "All endpoints failed.");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
