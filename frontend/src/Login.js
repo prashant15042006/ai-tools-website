@@ -15,13 +15,19 @@ export default function Login() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // If user exists and we are not in the confirmation step, go home
+      // If user is already logged in via Google (e.g. page refresh), go home directly
       if (user && step !== "confirm-name") {
         const savedName = localStorage.getItem("nexus_user_name");
-        if (savedName) navigate("/");
-        else {
-            setName(user.displayName || "");
-            setStep("confirm-name");
+        if (savedName) {
+          navigate("/");
+        } else if (user.displayName) {
+          // Google user has a name — save it and go directly to dashboard
+          localStorage.setItem("nexus_user_name", user.displayName);
+          navigate("/");
+        } else {
+          // No name found — ask user to enter one
+          setName("");
+          setStep("confirm-name");
         }
       }
     });
@@ -34,13 +40,36 @@ export default function Login() {
       setError("");
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
-      // Move to name confirmation step
-      setName(user.displayName || "");
-      setStep("confirm-name");
+
+      const userName = user.displayName || "";
+
+      if (userName.trim()) {
+        // Google account has a name — save and go directly to dashboard
+        localStorage.setItem("nexus_user_name", userName);
+
+        // Save to Firestore (fire and forget)
+        setDoc(doc(db, "users", user.email), {
+          name: userName,
+          email: user.email,
+          lastLogin: serverTimestamp(),
+          authProvider: "google"
+        }, { merge: true }).catch(err => console.warn("Firestore save failed:", err));
+
+        navigate("/");
+      } else {
+        // Google account has no display name — ask user to enter one
+        setName("");
+        setStep("confirm-name");
+      }
     } catch (err) {
       console.error(err);
-      setError("Google Login failed. Please try again.");
+      if (err.code === "auth/popup-closed-by-user") {
+        setError("Login popup was closed. Please try again.");
+      } else if (err.code === "auth/popup-blocked") {
+        setError("Popup was blocked by browser. Please allow popups and try again.");
+      } else {
+        setError("Google Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
