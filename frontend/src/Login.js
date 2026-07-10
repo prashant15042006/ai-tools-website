@@ -1,31 +1,75 @@
 import React, { useState, useEffect } from "react";
 import { auth, googleProvider, db } from "./firebase";
-import { signInWithPopup, onAuthStateChanged } from "firebase/auth";
+import {
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  onAuthStateChanged,
+} from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Mail, ArrowRight, User, CheckCircle } from "lucide-react";
+import { Sparkles, Mail, ArrowRight, User, CheckCircle, Loader } from "lucide-react";
+
+// ── Helper: save user and go to dashboard ─────────────────────────────────
+async function saveAndRedirect(user, navigateFn) {
+  const userName = user.displayName || "";
+  if (userName.trim()) {
+    localStorage.setItem("nexus_user_name", userName);
+  }
+  // Save to Firestore (fire and forget)
+  try {
+    setDoc(
+      doc(db, "users", user.email),
+      {
+        name: userName || user.email.split("@")[0],
+        email: user.email,
+        lastLogin: serverTimestamp(),
+        authProvider: "google",
+      },
+      { merge: true }
+    ).catch((err) => console.warn("Firestore save failed:", err));
+  } catch (_) {}
+  navigateFn("/");
+}
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirectChecking, setRedirectChecking] = useState(true); // checking redirect result on load
   const [error, setError] = useState("");
-  const [step, setStep] = useState("auth"); // "auth" or "confirm-name"
+  const [step, setStep] = useState("auth"); // "auth" | "confirm-name"
   const navigate = useNavigate();
 
+  // ── 1. On mount: check if we're returning from Google redirect ────────────
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result && result.user) {
+          await saveAndRedirect(result.user, navigate);
+        }
+      })
+      .catch((err) => {
+        console.error("Redirect result error:", err);
+        setError("Google login failed. Please try again. (Code: " + err.code + ")");
+      })
+      .finally(() => {
+        setRedirectChecking(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── 2. Firebase auth state listener (handles already-logged-in users) ─────
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // If user is already logged in via Google (e.g. page refresh), go home directly
       if (user && step !== "confirm-name") {
         const savedName = localStorage.getItem("nexus_user_name");
         if (savedName) {
           navigate("/");
         } else if (user.displayName) {
-          // Google user has a name — save it and go directly to dashboard
           localStorage.setItem("nexus_user_name", user.displayName);
           navigate("/");
         } else {
-          // No name found — ask user to enter one
           setName("");
           setStep("confirm-name");
         }
@@ -34,66 +78,70 @@ export default function Login() {
     return () => unsubscribe();
   }, [navigate, step]);
 
+  // ── 3. Google Login handler ───────────────────────────────────────────────
   const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError("");
+
     try {
-      setLoading(true);
-      setError("");
+      // First try popup (faster UX on desktop)
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+      await saveAndRedirect(result.user, navigate);
+    } catch (popupErr) {
+      console.warn("Popup failed:", popupErr.code, "— trying redirect...");
 
-      const userName = user.displayName || "";
+      // If popup failed for any reason → fall back to redirect (always works)
+      const popupErrors = [
+        "auth/popup-blocked",
+        "auth/popup-closed-by-user",
+        "auth/cancelled-popup-request",
+        "auth/unauthorized-domain",
+        "auth/operation-not-supported-in-this-environment",
+      ];
 
-      if (userName.trim()) {
-        // Google account has a name — save and go directly to dashboard
-        localStorage.setItem("nexus_user_name", userName);
-
-        // Save to Firestore (fire and forget)
-        setDoc(doc(db, "users", user.email), {
-          name: userName,
-          email: user.email,
-          lastLogin: serverTimestamp(),
-          authProvider: "google"
-        }, { merge: true }).catch(err => console.warn("Firestore save failed:", err));
-
-        navigate("/");
+      if (popupErrors.includes(popupErr.code) || popupErr.code === undefined) {
+        // Use redirect — page will reload and getRedirectResult will handle it
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          // signInWithRedirect causes a page reload — code below won't run
+        } catch (redirectErr) {
+          console.error("Redirect also failed:", redirectErr);
+          setError(
+            "Google login failed. Please check your internet connection and try again."
+          );
+          setLoading(false);
+        }
       } else {
-        // Google account has no display name — ask user to enter one
-        setName("");
-        setStep("confirm-name");
+        // Some other error (e.g., network error)
+        setError("Google login failed. Please try again.");
+        setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      if (err.code === "auth/popup-closed-by-user") {
-        setError("Login popup was closed. Please try again.");
-      } else if (err.code === "auth/popup-blocked") {
-        setError("Popup was blocked by browser. Please allow popups and try again.");
-      } else {
-        setError("Google Login failed. Please try again.");
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
+  // ── 4. Finalize login (confirm name step) ────────────────────────────────
   const finalizeLogin = async (e) => {
     if (e) e.preventDefault();
     if (!name.trim()) {
-        setError("Please enter your name to continue.");
-        return;
+      setError("Please enter your name to continue.");
+      return;
     }
-    
+
     try {
       const currentUser = auth.currentUser;
       const userEmail = currentUser ? currentUser.email : email;
-      
+
       if (userEmail) {
-        // Fire and forget - don't await because it can hang indefinitely if Firebase config is invalid or offline
-        setDoc(doc(db, "users", userEmail), {
-          name: name,
-          email: userEmail,
-          lastLogin: serverTimestamp(),
-          authProvider: currentUser ? "google" : "email_mock"
-        }, { merge: true }).catch(err => console.warn("Firestore save failed:", err));
+        setDoc(
+          doc(db, "users", userEmail),
+          {
+            name: name,
+            email: userEmail,
+            lastLogin: serverTimestamp(),
+            authProvider: currentUser ? "google" : "email_mock",
+          },
+          { merge: true }
+        ).catch((err) => console.warn("Firestore save failed:", err));
       }
     } catch (err) {
       console.warn("Error getting user for Firestore:", err);
@@ -103,34 +151,33 @@ export default function Login() {
     navigate("/");
   };
 
+  // ── 5. Email (mock) login ────────────────────────────────────────────────
   const handleEmailAuth = async (e) => {
     e.preventDefault();
     if (!email.trim() || !name.trim()) {
       setError("Please fill in all fields.");
       return;
     }
-    
+
     setError("");
     setLoading(true);
-    
+
     try {
-      // Save user data to Firestore (Fire and forget to prevent hanging)
-      try {
-        setDoc(doc(db, "users", email), {
+      setDoc(
+        doc(db, "users", email),
+        {
           name: name,
           email: email,
           lastLogin: serverTimestamp(),
-          authProvider: "email_mock"
-        }, { merge: true }).catch(err => console.warn("Firestore save failed:", err));
-      } catch (err) {
-        console.warn("Error initiating Firestore save:", err);
-      }
+          authProvider: "email_mock",
+        },
+        { merge: true }
+      ).catch((err) => console.warn("Firestore save failed:", err));
 
-      // MOCK LOGIN: Save email and name to localStorage
       localStorage.setItem("nexus_mock_user", email);
       localStorage.setItem("nexus_user_name", name);
-      
-      await new Promise(resolve => setTimeout(resolve, 600));
+
+      await new Promise((resolve) => setTimeout(resolve, 600));
       window.location.href = "/";
     } catch (err) {
       setError("Login failed. Please try again.");
@@ -139,47 +186,66 @@ export default function Login() {
     }
   };
 
-  if (step === "confirm-name") {
+  // ── Loading screen while checking redirect result ─────────────────────────
+  if (redirectChecking) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0a0f1e] p-4 font-sans">
-          <div className="relative w-full max-w-[420px] bg-[#162033]/80 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle size={34} className="text-green-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">One last thing!</h2>
-            <p className="text-slate-400 mb-8 text-sm">What should we call you on the dashboard?</p>
-            
-            <form onSubmit={finalizeLogin} className="space-y-4">
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-                <input 
-                  type="text" 
-                  autoFocus
-                  placeholder="Your Name" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-[#0a0f1e] border border-slate-700/50 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                  required
-                />
-              </div>
-              <button 
-                type="submit" 
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2"
-              >
-                Go to Dashboard <ArrowRight size={20} />
-              </button>
-            </form>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0f1e]">
+        <div className="flex flex-col items-center gap-4 text-white">
+          <Loader size={36} className="animate-spin text-indigo-400" />
+          <p className="text-slate-400 text-sm">Signing you in...</p>
         </div>
+      </div>
     );
   }
 
+  // ── Confirm Name screen ───────────────────────────────────────────────────
+  if (step === "confirm-name") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0f1e] p-4 font-sans">
+        <div className="relative w-full max-w-[420px] bg-[#162033]/80 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 shadow-2xl text-center">
+          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle size={34} className="text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">One last thing!</h2>
+          <p className="text-slate-400 mb-8 text-sm">What should we call you on the dashboard?</p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={finalizeLogin} className="space-y-4">
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Your Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-[#0a0f1e] border border-slate-700/50 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2"
+            >
+              Go to Dashboard <ArrowRight size={20} />
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main Login screen ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0f1e] p-4 font-sans">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
-      
+
       <div className="relative w-full max-w-[420px] bg-[#162033]/80 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 shadow-2xl">
-        
         <div className="text-center mb-10">
           <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/20 ring-1 ring-white/20">
             <Sparkles size={34} className="text-white" />
@@ -197,9 +263,9 @@ export default function Login() {
         <form onSubmit={handleEmailAuth} className="space-y-4">
           <div className="relative">
             <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-            <input 
-              type="text" 
-              placeholder="Full Name" 
+            <input
+              type="text"
+              placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-[#0a0f1e] border border-slate-700/50 rounded-2xl text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
@@ -210,9 +276,9 @@ export default function Login() {
 
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
-            <input 
-              type="email" 
-              placeholder="Email Address" 
+            <input
+              type="email"
+              placeholder="Email Address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-[#0a0f1e] border border-slate-700/50 rounded-2xl text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
@@ -221,8 +287,8 @@ export default function Login() {
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 group disabled:opacity-70"
           >
@@ -237,18 +303,24 @@ export default function Login() {
           <div className="flex-1 h-[1px] bg-slate-800"></div>
         </div>
 
-        <button 
-          onClick={handleGoogleLogin} 
+        <button
+          onClick={handleGoogleLogin}
           disabled={loading}
           className="w-full py-4 bg-white hover:bg-slate-50 text-slate-900 font-bold rounded-2xl transition-all flex items-center justify-center gap-3 shadow-md disabled:opacity-70"
         >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-          Sign in with Google
+          {loading ? (
+            <Loader size={20} className="animate-spin text-slate-600" />
+          ) : (
+            <img
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              alt="Google"
+              className="w-5 h-5"
+            />
+          )}
+          {loading ? "Redirecting to Google..." : "Sign in with Google"}
         </button>
 
-        <p className="text-center mt-8 text-slate-500 text-xs">
-          Secure, fast, and encrypted.
-        </p>
+        <p className="text-center mt-8 text-slate-500 text-xs">Secure, fast, and encrypted.</p>
       </div>
     </div>
   );
