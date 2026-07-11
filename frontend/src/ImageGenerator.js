@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Download, ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle, Copy, Trash2 } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Download, ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle, Copy, Trash2, Upload, X } from "lucide-react";
+import API_BASE_URL from "./apiConfig";
 
 // ── Pollinations.ai URL builder ──
 function buildImageUrl(prompt, options = {}) {
@@ -9,10 +10,15 @@ function buildImageUrl(prompt, options = {}) {
     model  = "flux",
     seed   = Math.floor(Math.random() * 999999),
     enhance = true,
+    image   = null,
   } = options;
 
   const encoded = encodeURIComponent(prompt.trim());
-  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=${enhance}`;
+  let url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=${enhance}`;
+  if (image) {
+    url += `&image=${encodeURIComponent(image)}`;
+  }
+  return url;
 }
 
 // ── Detect aspect ratio from prompt text ──
@@ -87,6 +93,14 @@ export default function ImageGenerator() {
   const [loadFailed, setLoadFailed]       = useState(false);
   const [toast, setToast]                 = useState(null);
   
+  // ── New Reference Image States ──
+  const [refImage, setRefImage]           = useState(null); // Preview data URL
+  const [refImageFile, setRefImageFile]   = useState(null); // Raw file
+  const [refImageUrl, setRefImageUrl]     = useState(null); // Backend public hosted URL
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const fileInputRef                      = useRef(null);
+
   // Load history from localStorage
   const [history, setHistory]             = useState(() => {
     try {
@@ -111,10 +125,102 @@ export default function ImageGenerator() {
     }
   };
 
-  const generateImage = () => {
+  // ── File Upload / Drag & Drop Handlers ──
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const processFile = (file) => {
+    if (!file.type.startsWith("image/")) {
+      showToast("Please upload an image file only!", "error");
+      return;
+    }
+    setRefImageFile(file);
+    setRefImageUrl(null);
+
+    // Create a local data URL preview immediately
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setRefImage(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const clearRefImage = () => {
+    setRefImage(null);
+    setRefImageFile(null);
+    setRefImageUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const generateImage = async () => {
     if (!prompt.trim()) {
       showToast("Please enter a prompt first!", "error");
       return;
+    }
+
+    setImageUrl(null);
+    setLoadFailed(false);
+    setLoading(true);
+
+    let activeImageUrl = null;
+
+    // 1. If we have a reference image file, upload it to the backend first
+    if (refImageFile && !refImageUrl) {
+      setUploadingImage(true);
+      try {
+        // Read file as base64 data URL
+        const base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(refImageFile);
+        });
+
+        // Post to backend
+        const res = await fetch(`${API_BASE_URL}/api/upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ image: base64Data })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Failed to upload image to server");
+        }
+
+        setRefImageUrl(data.url);
+        activeImageUrl = data.url;
+      } catch (err) {
+        console.error("❌ Image upload failed:", err);
+        showToast("Image upload failed. Please try again.", "error");
+        setLoading(false);
+        setUploadingImage(false);
+        return;
+      } finally {
+        setUploadingImage(false);
+      }
+    } else if (refImageUrl) {
+      activeImageUrl = refImageUrl;
     }
 
     // Auto-detect ratio from prompt text; user can override via UI buttons
@@ -131,12 +237,9 @@ export default function ImageGenerator() {
       height: ratio.height,
       model,
       seed,
-      enhance
+      enhance,
+      image: activeImageUrl
     });
-
-    setImageUrl(null);
-    setLoadFailed(false);
-    setLoading(true);
 
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -161,7 +264,8 @@ export default function ImageGenerator() {
         height: ratio.height,
         model,
         seed: retrySeed,
-        enhance
+        enhance,
+        image: activeImageUrl
       });
 
       const retryImg = new Image();
@@ -368,6 +472,123 @@ export default function ImageGenerator() {
               </button>
             )}
           </div>
+
+          {/* Reference Image Section */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <label style={{
+              fontSize: "12px", fontWeight: "800", color: "#22d3ee",
+              textTransform: "uppercase", letterSpacing: "0.8px"
+            }}>
+              🖼️ Reference Image (Optional)
+            </label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              style={{ display: "none" }}
+            />
+            {!refImage ? (
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                style={{
+                  border: "2px dashed rgba(6, 182, 212, 0.25)",
+                  borderRadius: "16px",
+                  padding: "16px",
+                  textAlign: "center",
+                  background: "rgba(0, 0, 0, 0.2)",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px"
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = "rgba(6, 182, 212, 0.6)";
+                  e.currentTarget.style.background = "rgba(6, 182, 212, 0.05)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "rgba(6, 182, 212, 0.25)";
+                  e.currentTarget.style.background = "rgba(0, 0, 0, 0.2)";
+                }}
+              >
+                <Upload size={20} color="rgba(6, 182, 212, 0.6)" />
+                <div style={{ fontSize: "12px", color: "#d1d5db", fontWeight: "600" }}>
+                  Drag & Drop or Click to Upload
+                </div>
+                <div style={{ fontSize: "10px", color: "#9ca3af" }}>
+                  Select an image to modify or transform
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                background: "rgba(0, 0, 0, 0.25)",
+                border: "1px solid rgba(6, 182, 212, 0.25)",
+                borderRadius: "16px",
+                padding: "10px",
+                position: "relative"
+              }}>
+                <div style={{
+                  width: "50px",
+                  height: "50px",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  border: "1px solid rgba(6, 182, 212, 0.3)",
+                  background: "#07070d",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <img src={refImage} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "12px", fontWeight: "600", color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {refImageFile ? refImageFile.name : "Selected Image"}
+                  </div>
+                  <div style={{ fontSize: "10px", color: uploadingImage ? "#38bdf8" : "#4ade80", display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
+                    {uploadingImage ? (
+                      <>
+                        <RefreshCw size={10} className="animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={10} />
+                        <span>Ready!</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearRefImage}
+                  disabled={loading || uploadingImage}
+                  style={{
+                    background: "rgba(239, 68, 68, 0.15)",
+                    color: "#f87171",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "24px",
+                    height: "24px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.3)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)"}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
 
           {/* Model Selector */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>

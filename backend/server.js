@@ -89,7 +89,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '15mb' }));
 
 // Handle invalid JSON bodies gracefully instead of crashing
 app.use((err, req, res, next) => {
@@ -98,6 +98,52 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ success: false, error: 'Invalid JSON payload. Please send proper JSON.' });
   }
   next(err);
+});
+
+// Expose public uploads folder
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+  console.log("📁 Created uploads directory at:", uploadsDir);
+}
+app.use("/uploads", express.static(uploadsDir));
+
+// POST upload endpoint for base64 image data
+app.post("/api/upload", (req, res) => {
+  try {
+    const { image } = req.body; // base64 string
+    if (!image) {
+      return res.status(400).json({ success: false, error: "No image data provided" });
+    }
+
+    // Split base64 header (e.g. data:image/png;base64,...)
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ success: false, error: "Invalid base64 image format. Must be a valid data URL." });
+    }
+
+    const imageBuffer = Buffer.from(matches[2], 'base64');
+    const mimeType = matches[1];
+    const extension = mimeType.split('/')[1] || 'png';
+    const filename = `upload_${Date.now()}_${Math.floor(Math.random() * 100000)}.${extension}`;
+    const filepath = path.join(uploadsDir, filename);
+
+    fs.writeFileSync(filepath, imageBuffer);
+
+    // Return the URL
+    // Use the host from request headers so it automatically handles localhost and Render production URL!
+    const host = req.get("host");
+    const protocol = req.protocol; // usually http or https (in Render proxy it is http or https)
+    // Render usually sets x-forwarded-proto, let's check it to ensure we return https when appropriate
+    const finalProtocol = req.headers["x-forwarded-proto"] || protocol;
+    const url = `${finalProtocol}://${host}/uploads/${filename}`;
+
+    console.log(`📤 Image uploaded successfully. Saved locally: ${filename}. Public URL: ${url}`);
+    return res.json({ success: true, url });
+  } catch (err) {
+    console.error("❌ Upload error:", err);
+    return res.status(500).json({ success: false, error: err.message || "Internal upload error" });
+  }
 });
 
 // Use Render's PORT or default to 5001
