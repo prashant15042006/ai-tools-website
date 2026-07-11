@@ -589,6 +589,7 @@ export default function ImageGenerator() {
                 </button>
               </div>
             )}
+          </div>
 
           {/* Model Selector */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
