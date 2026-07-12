@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Download, ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle, Copy, Trash2, Upload, X } from "lucide-react";
+import { Download, ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle, Copy, Trash2, Upload, X, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import API_BASE_URL from "./apiConfig";
 
 // ── Pollinations.ai URL builder ──
@@ -99,6 +99,7 @@ export default function ImageGenerator() {
   const [refImageFile, setRefImageFile]   = useState(null); // Raw file
   const [refImageUrl, setRefImageUrl]     = useState(null); // Backend public hosted URL
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showAdvanced, setShowAdvanced]   = useState(false); // Collapsed by default
 
   const fileInputRef                      = useRef(null);
 
@@ -188,31 +189,29 @@ export default function ImageGenerator() {
       setUploadingImage(true);
       showToast("⬆️ Uploading reference image...");
       try {
-        // Read file as base64 data URL
-        const base64Data = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(refImageFile);
-        });
+        const formData = new FormData();
+        formData.append("file", refImageFile);
 
-        const res = await fetch(`${API_BASE_URL}/api/upload`, {
+        const res = await fetch("https://tmpfiles.org/api/v1/upload", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64Data })
+          body: formData
         });
 
         const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || "Upload failed");
+        if (!res.ok || data.status !== "success" || !data.data || !data.data.url) {
+          throw new Error(data?.message || "Upload to tmpfiles failed");
         }
 
-        setRefImageUrl(data.url);
-        activeImageUrl = data.url;
+        // Convert tmpfiles link to direct download link:
+        // https://tmpfiles.org/12345/image.png -> https://tmpfiles.org/dl/12345/image.png
+        const directUrl = data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+
+        setRefImageUrl(directUrl);
+        activeImageUrl = directUrl;
         showToast("Reference image ready! 🖼️");
       } catch (err) {
         console.error("❌ Image upload failed:", err);
-        showToast("Image upload failed. Check your internet connection.", "error");
+        showToast("Image upload failed. Try again with another image.", "error");
         setLoading(false);
         setUploadingImage(false);
         return;
@@ -608,92 +607,136 @@ export default function ImageGenerator() {
             </div>
           )}
 
-          {/* Model Selector */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <label style={{
-              fontSize: "12px", fontWeight: "800", color: "#22d3ee",
-              textTransform: "uppercase", letterSpacing: "0.8px"
-            }}>
-              🤖 AI Model
-            </label>
-            <div className="img-gen-model-grid">
-              {MODELS.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => setModel(m.id)}
-                  style={{
-                    padding: "12px 14px", borderRadius: "14px",
-                    cursor: "pointer", transition: "all 0.2s", textAlign: "left",
-                    background: model === m.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)",
-                    border: model === m.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)",
-                    boxShadow: model === m.id ? "0 4px 15px rgba(6, 182, 212, 0.2)" : "none"
-                  }}
-                >
-                  <div style={{ fontSize: "13px", fontWeight: "700", color: model === m.id ? "#22d3ee" : "#d1d5db" }}>
-                    {m.label}
-                  </div>
-                  <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "3px", lineHeight: "1.3" }}>
-                    {m.desc}
-                  </div>
-                </button>
-              ))}
+          {/* Toggle Advanced Options */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "14px",
+              padding: "12px 16px",
+              color: "#e5e7eb",
+              fontSize: "13px",
+              fontWeight: "700",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              marginTop: "6px",
+              outline: "none"
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)"}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Settings size={16} style={{ color: "#22d3ee" }} />
+              <span>Advanced Settings (Model, Ratio)</span>
             </div>
-          </div>
+            {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
 
-          {/* Aspect Ratio Selector */}
-          <div className="img-gen-ratio-wrapper" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <label style={{
-              fontSize: "12px", fontWeight: "800", color: "#22d3ee",
-              textTransform: "uppercase", letterSpacing: "0.8px"
+          {showAdvanced && (
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "18px",
+              padding: "16px",
+              background: "rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "16px",
+              animation: "fadeIn 0.2s ease-out"
             }}>
-              📐 Aspect Ratio
-            </label>
-            <div className="img-gen-ratio-grid">
-              {ASPECT_RATIOS.map(ratio => (
-                <button
-                  key={ratio.id}
-                  onClick={() => setAspectRatio(ratio.id)}
-                  style={{
-                    padding: "10px 8px", borderRadius: "12px", cursor: "pointer",
-                    transition: "all 0.2s", textAlign: "center",
-                    background: aspectRatio === ratio.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)",
-                    border: aspectRatio === ratio.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)"
-                  }}
-                >
-                  <div style={{ fontSize: "20px", marginBottom: "4px" }}>{ratio.icon}</div>
-                  <div style={{ fontSize: "11px", fontWeight: "700", color: "#e5e7eb" }}>{ratio.label}</div>
-                  <div style={{ fontSize: "9px", color: "#9ca3af", marginTop: "2px" }}>{ratio.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* Model Selector */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <label style={{
+                  fontSize: "11px", fontWeight: "800", color: "#22d3ee",
+                  textTransform: "uppercase", letterSpacing: "0.8px"
+                }}>
+                  🤖 AI Model
+                </label>
+                <div className="img-gen-model-grid">
+                  {MODELS.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setModel(m.id)}
+                      style={{
+                        padding: "10px 12px", borderRadius: "12px",
+                        cursor: "pointer", transition: "all 0.2s", textAlign: "left",
+                        background: model === m.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)",
+                        border: model === m.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)",
+                        boxShadow: model === m.id ? "0 4px 15px rgba(6, 182, 212, 0.2)" : "none"
+                      }}
+                    >
+                      <div style={{ fontSize: "12px", fontWeight: "700", color: model === m.id ? "#22d3ee" : "#d1d5db" }}>
+                        {m.label}
+                      </div>
+                      <div style={{ fontSize: "9px", color: "#9ca3af", marginTop: "2px", lineHeight: "1.3" }}>
+                        {m.desc}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* Advanced Switches */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0" }}>
-            <div>
-              <span style={{ fontSize: "14px", fontWeight: "600", color: "#e5e7eb", display: "block" }}>Enhance Prompt</span>
-              <span style={{ fontSize: "11px", color: "#9ca3af" }}>Automatically add details to the prompt</span>
+              {/* Aspect Ratio Selector */}
+              <div className="img-gen-ratio-wrapper" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <label style={{
+                  fontSize: "11px", fontWeight: "800", color: "#22d3ee",
+                  textTransform: "uppercase", letterSpacing: "0.8px"
+                }}>
+                  📐 Aspect Ratio
+                </label>
+                <div className="img-gen-ratio-grid">
+                  {ASPECT_RATIOS.map(ratio => (
+                    <button
+                      key={ratio.id}
+                      onClick={() => setAspectRatio(ratio.id)}
+                      style={{
+                        padding: "8px 6px", borderRadius: "10px", cursor: "pointer",
+                        transition: "all 0.2s", textAlign: "center",
+                        background: aspectRatio === ratio.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)",
+                        border: aspectRatio === ratio.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)"
+                      }}
+                    >
+                      <div style={{ fontSize: "16px", marginBottom: "2px" }}>{ratio.icon}</div>
+                      <div style={{ fontSize: "10px", fontWeight: "700", color: "#e5e7eb" }}>{ratio.label}</div>
+                      <div style={{ fontSize: "8px", color: "#9ca3af", marginTop: "1px" }}>{ratio.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advanced Switches */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "4px" }}>
+                <div>
+                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#e5e7eb", display: "block" }}>Enhance Prompt</span>
+                  <span style={{ fontSize: "10px", color: "#9ca3af" }}>Automatically add details to prompt</span>
+                </div>
+                <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
+                  <input
+                    type="checkbox"
+                    checked={enhance}
+                    onChange={e => setEnhance(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: enhance ? "#06b6d4" : "rgba(255,255,255,0.1)",
+                    transition: "0.3s", borderRadius: "24px"
+                  }}>
+                    <span style={{
+                      position: "absolute", content: '""', height: "18px", width: "18px", left: "3px", bottom: "3px",
+                      backgroundColor: "white", transition: "0.3s", borderRadius: "50%",
+                      transform: enhance ? "translateX(20px)" : "translateX(0)"
+                    }} />
+                  </span>
+                </label>
+              </div>
             </div>
-            <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
-              <input
-                type="checkbox"
-                checked={enhance}
-                onChange={e => setEnhance(e.target.checked)}
-                style={{ opacity: 0, width: 0, height: 0 }}
-              />
-              <span style={{
-                position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: enhance ? "#06b6d4" : "rgba(255,255,255,0.1)",
-                transition: "0.3s", borderRadius: "24px"
-              }}>
-                <span style={{
-                  position: "absolute", content: '""', height: "18px", width: "18px", left: "3px", bottom: "3px",
-                  backgroundColor: "white", transition: "0.3s", borderRadius: "50%",
-                  transform: enhance ? "translateX(20px)" : "translateX(0)"
-                }} />
-              </span>
-            </label>
-          </div>
+          )}
 
           {/* Generate Button */}
           <button
