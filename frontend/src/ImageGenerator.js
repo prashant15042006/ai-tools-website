@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import { Download, ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle, Copy, Trash2, Upload, X, Settings, ChevronDown, ChevronUp } from "lucide-react";
-import API_BASE_URL from "./apiConfig";
 
 // ── Pollinations.ai URL builder ──
 function buildImageUrl(prompt, options = {}) {
