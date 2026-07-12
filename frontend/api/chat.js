@@ -1,7 +1,7 @@
 // ================================================================
 // Vercel Serverless Function: /api/chat
 // Handles AI chat with full provider fallback chain:
-//   Gemini → Cerebras → OpenRouter (ZAI) → static fallback
+//   Cerebras (text-only) → OpenRouter (vision-capable) → Gemini (vision-capable) → static fallback
 // ================================================================
 
 const SYSTEM_PROMPT = (userName = "User") =>
@@ -16,6 +16,7 @@ const SYSTEM_PROMPT = (userName = "User") =>
   ✅ **Content Writing** – Blogs, essays, captions, emails, scripts, stories, and more.
   ✅ **Prompt Engineering** – Help craft and optimize AI prompts for any use case.
   ✅ **Image Generation** – Generate AI images from text prompts using the Image Generator section. You can specify ratios like 16:9, 9:16, 4:3, or 1:1 in your prompt.
+  ✅ **Vision** – Upload an image and ask questions about it in Chat, Code, or Content sections.
   (All these features are available inside the Nexuss AI platform!)`;
 
 
@@ -32,9 +33,9 @@ const ZAI_KEY = process.env.ZAI_API_KEY || "";
 const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "";
 
 // ──────────────────────────────────────────────
-// 1. Google Gemini (direct)
+// 1. Google Gemini (direct) — supports vision
 // ──────────────────────────────────────────────
-async function callGemini(message, userName, history = []) {
+async function callGemini(message, userName, history = [], image = null) {
   const key = GEMINI_KEY;
   if (!isValidKey(key)) throw new Error("Gemini key not configured");
 
@@ -47,7 +48,17 @@ async function callGemini(message, userName, history = []) {
       });
     }
   }
-  contents.push({ role: "user", parts: [{ text: message }] });
+
+  // Build user parts — prepend image if provided (Gemini inlineData format)
+  const userParts = [];
+  if (image) {
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      userParts.push({ inlineData: { mimeType: matches[1], data: matches[2] } });
+    }
+  }
+  userParts.push({ text: message });
+  contents.push({ role: "user", parts: userParts });
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -76,13 +87,81 @@ async function callGemini(message, userName, history = []) {
 }
 
 // ──────────────────────────────────────────────
-// 2. Cerebras — fast inference with active models
+// 2. OpenRouter (ZAI) — supports vision via multimodal content
+// ──────────────────────────────────────────────
+const OPENROUTER_MODELS = [
+  "openai/gpt-4o-mini",
+  "google/gemini-2.5-flash",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "liquid/lfm-2.5-1.2b-instruct:free",
+  "poolside/laguna-xs-2.1:free",
+  "cohere/north-mini-code:free",
+  "openai/gpt-oss-120b:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "google/gemma-4-31b-it:free",
+  "qwen/qwen3-coder:free"
+];
+
+async function callOpenRouter(message, userName, history = [], image = null) {
+  const key = ZAI_KEY;
+  if (!isValidKey(key)) throw new Error("OpenRouter key not configured");
+
+  // Build user content — multimodal if image provided
+  const userContent = image
+    ? [
+        { type: "text", text: message },
+        { type: "image_url", image_url: { url: image } }
+      ]
+    : message;
+
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT(userName) },
+    ...(Array.isArray(history) ? history : []),
+    { role: "user", content: userContent },
+  ];
+
+  let lastErr = "Unknown error";
+  for (const model of OPENROUTER_MODELS) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss Workspace",
+        },
+        body: JSON.stringify({ model, messages, max_tokens: 1024 }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const data = await res.json();
+      if (!res.ok) {
+        lastErr = data.error?.message || `${res.status}`;
+        continue;
+      }
+      const text =
+        data.choices?.[0]?.message?.content ||
+        data.choices?.[0]?.text;
+      if (!text) { lastErr = "Empty response"; continue; }
+      return text;
+    } catch (e) {
+      lastErr = e.message;
+    }
+  }
+  throw new Error(`OpenRouter all models failed: ${lastErr}`);
+}
+
+// ──────────────────────────────────────────────
+// 3. Cerebras (text-only, no vision support)
 // ──────────────────────────────────────────────
 async function callCerebras(message, userName) {
   const key = CEREBRAS_KEY;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
-  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  const models = ["llama3.1-8b", "llama-3.3-70b"];
   let lastErr = "Unknown error";
 
   for (const model of models) {
@@ -122,66 +201,6 @@ async function callCerebras(message, userName) {
 }
 
 // ──────────────────────────────────────────────
-// 3. OpenRouter (ZAI) — tries multiple free/paid models
-// ──────────────────────────────────────────────
-const OPENROUTER_MODELS = [
-  "openai/gpt-4o-mini",
-  "google/gemini-2.5-flash",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "liquid/lfm-2.5-1.2b-instruct:free",
-  "poolside/laguna-xs-2.1:free",
-  "cohere/north-mini-code:free",
-  "openai/gpt-oss-120b:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "google/gemma-4-31b-it:free",
-  "qwen/qwen3-coder:free",
-];
-
-async function callOpenRouter(message, userName, history = []) {
-  const key = ZAI_KEY;
-  if (!isValidKey(key)) throw new Error("OpenRouter key not configured");
-
-  const messages = [
-    { role: "system", content: SYSTEM_PROMPT(userName) },
-    ...(Array.isArray(history) ? history : []),
-    { role: "user", content: message },
-  ];
-
-  let lastErr = "Unknown error";
-  for (const model of OPENROUTER_MODELS) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://nexuss-ai.io",
-          "X-Title": "Nexuss Workspace",
-        },
-        body: JSON.stringify({ model, messages, max_tokens: 1024 }),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      const data = await res.json();
-      if (!res.ok) {
-        lastErr = data.error?.message || `${res.status}`;
-        continue;
-      }
-      const text =
-        data.choices?.[0]?.message?.content ||
-        data.choices?.[0]?.text;
-      if (!text) { lastErr = "Empty response"; continue; }
-      return text;
-    } catch (e) {
-      lastErr = e.message;
-    }
-  }
-  throw new Error(`OpenRouter all models failed: ${lastErr}`);
-}
-
-// ──────────────────────────────────────────────
 // Static fallback (last resort)
 // ──────────────────────────────────────────────
 function fallbackReply(message) {
@@ -206,7 +225,7 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { message, userName = "User", history = [] } = req.body || {};
+  const { message, userName = "User", history = [], image } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
 
   // Set SSE headers
@@ -217,8 +236,8 @@ module.exports = async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try Cerebras first (fast, reliable free inference)
-  if (!reply) {
+  // 1. Try Cerebras first — but SKIP if image is attached (Cerebras has no vision support)
+  if (!image) {
     try {
       reply = await callCerebras(message, userName);
       usedProvider = "Cerebras";
@@ -227,27 +246,25 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 2. Try OpenRouter second
+  // 2. Try OpenRouter (ZAI) — supports vision via multimodal content
   if (!reply) {
     try {
-      reply = await callOpenRouter(message, userName, history);
+      reply = await callOpenRouter(message, userName, history, image);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
     }
   }
 
-  // 3. Try Gemini as last resort (commented out or skipped for now as key is expired)
-  /*
+  // 3. Try Gemini — supports vision natively
   if (!reply) {
     try {
-      reply = await callGemini(message, userName, history);
+      reply = await callGemini(message, userName, history, image);
       usedProvider = "Gemini";
     } catch (e) {
       console.warn("Gemini failed:", e.message);
     }
   }
-  */
 
   // 4. Static fallback — always respond
   if (!reply) {
