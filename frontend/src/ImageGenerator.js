@@ -10,12 +10,13 @@ function buildImageUrl(prompt, options = {}) {
     seed   = Math.floor(Math.random() * 999999),
     enhance = true,
     image   = null,
+    strength = 0.6
   } = options;
 
   const encoded = encodeURIComponent(prompt.trim());
   let url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=${enhance}`;
   if (image) {
-    url += `&image=${encodeURIComponent(image)}`;
+    url += `&image=${encodeURIComponent(image)}&strength=${strength}`;
   }
   return url;
 }
@@ -99,6 +100,7 @@ export default function ImageGenerator() {
   const [refImageUrl, setRefImageUrl]     = useState(null); // Backend public hosted URL
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showAdvanced, setShowAdvanced]   = useState(false); // Collapsed by default
+  const [strength, setStrength]           = useState(0.65); // Default strength (0.1 to 1.0)
 
   const fileInputRef                      = useRef(null);
 
@@ -141,6 +143,7 @@ export default function ImageGenerator() {
     }
     setRefImageFile(file);
     setRefImageUrl(null);
+    setShowAdvanced(true); // Open options panel to reveal similarity slider
 
     // Create a local data URL preview immediately
     const reader = new FileReader();
@@ -236,7 +239,8 @@ export default function ImageGenerator() {
       model,
       seed,
       enhance,
-      image: activeImageUrl
+      image: activeImageUrl,
+      strength
     });
 
     const loadWithUrl = (genUrl, isRetry = false) => {
@@ -265,7 +269,8 @@ export default function ImageGenerator() {
             model,
             seed: retrySeed,
             enhance,
-            image: activeImageUrl
+            image: activeImageUrl,
+            strength
           });
           loadWithUrl(retryUrl, true);
         } else {
@@ -702,8 +707,43 @@ export default function ImageGenerator() {
                 </div>
               </div>
 
+              {/* Image Strength Slider (Only show when reference image is active) */}
+              {refImage && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{
+                      fontSize: "11px", fontWeight: "800", color: "#22d3ee",
+                      textTransform: "uppercase", letterSpacing: "0.8px"
+                    }}>
+                      🎨 Image Similarity
+                    </label>
+                    <span style={{ fontSize: "12px", color: "#38bdf8", fontWeight: "700" }}>
+                      {Math.round((1 - strength) * 100)}% Match
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="0.95"
+                    step="0.05"
+                    value={strength}
+                    onChange={e => setStrength(parseFloat(e.target.value))}
+                    style={{
+                      width: "100%",
+                      accentColor: "#06b6d4",
+                      cursor: "pointer",
+                      outline: "none"
+                    }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#9ca3af" }}>
+                    <span>Creative (Change more)</span>
+                    <span>Exact (Keep structure)</span>
+                  </div>
+                </div>
+              )}
+
               {/* Advanced Switches */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "14px" }}>
                 <div>
                   <span style={{ fontSize: "13px", fontWeight: "600", color: "#e5e7eb", display: "block" }}>Enhance Prompt</span>
                   <span style={{ fontSize: "10px", color: "#9ca3af" }}>Automatically add details to prompt</span>
