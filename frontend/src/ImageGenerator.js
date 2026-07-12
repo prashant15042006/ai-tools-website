@@ -38,11 +38,11 @@ function detectRatioFromPrompt(promptText) {
 
 // ── Models Data ──
 const MODELS = [
-  { id: "flux",          label: "⚡ Flux.1 (Premium)",    desc: "Best quality text-to-image" },
-  { id: "kontext",       label: "✏️ Kontext (Edit Mode)",   desc: "Best for modifying reference images" },
+  { id: "flux",          label: "⚡ Flux.1 (Premium)",    desc: "Best overall details, realism and quality" },
   { id: "turbo",         label: "🚀 Turbo (Fastest)",      desc: "Generates high quality art in seconds" },
   { id: "flux-realism",  label: "📷 Flux Realism",         desc: "Optimized for photographic styles" },
-  { id: "dreamshaper",   label: "🎨 DreamShaper",          desc: "Perfect for illustrations and fantasy" },
+  { id: "flux-anime",    label: "🌸 Flux Anime",           desc: "Gorgeous anime and manga style art" },
+  { id: "flux-3d",       label: "🎮 Flux 3D",              desc: "3D render, game assets and toy style" },
 ];
 
 // ── Aspect Ratio options ──
@@ -221,12 +221,6 @@ export default function ImageGenerator() {
       activeImageUrl = refImageUrl;
     }
 
-    // ── Auto-switch to kontext model when editing a reference image ─────────
-    const effectiveModel = activeImageUrl && model === "flux" ? "kontext" : model;
-    if (activeImageUrl && model === "flux") {
-      setModel("kontext");
-    }
-
     // Auto-detect ratio from prompt text; user can override via UI buttons
     const detectedRatioId = detectRatioFromPrompt(prompt);
     const finalRatioId = detectedRatioId || aspectRatio;
@@ -239,9 +233,9 @@ export default function ImageGenerator() {
     const url = buildImageUrl(prompt, {
       width: ratio.width,
       height: ratio.height,
-      model: effectiveModel,
+      model,
       seed,
-      enhance: activeImageUrl ? false : enhance, // kontext works better without enhance
+      enhance,
       image: activeImageUrl
     });
 
@@ -254,7 +248,7 @@ export default function ImageGenerator() {
         setImageUrl(genUrl);
         setLoading(false);
         const newHistory = [
-          { url: genUrl, prompt: prompt.trim(), model: effectiveModel, ratio: finalRatioId, seed, id: Date.now() },
+          { url: genUrl, prompt: prompt.trim(), model, ratio: finalRatioId, seed, id: Date.now() },
           ...history
         ].slice(0, 30);
         saveHistory(newHistory);
@@ -268,9 +262,9 @@ export default function ImageGenerator() {
           const retryUrl = buildImageUrl(prompt, {
             width: ratio.width,
             height: ratio.height,
-            model: effectiveModel,
+            model,
             seed: retrySeed,
-            enhance: activeImageUrl ? false : enhance,
+            enhance,
             image: activeImageUrl
           });
           loadWithUrl(retryUrl, true);
@@ -591,18 +585,18 @@ export default function ImageGenerator() {
           </div>
           {refImage && (
             <div style={{
-              background: "rgba(16, 185, 129, 0.08)",
-              border: "1px solid rgba(16, 185, 129, 0.25)",
+              background: "rgba(6, 182, 212, 0.08)",
+              border: "1px solid rgba(6, 182, 212, 0.25)",
               borderRadius: "10px",
               padding: "8px 12px",
               fontSize: "11px",
-              color: "#6ee7b7",
+              color: "#22d3ee",
               display: "flex",
               alignItems: "center",
               gap: "6px"
             }}>
-              <span>✏️</span>
-              <span><strong>Tip:</strong> Select <strong>Kontext (Edit Mode)</strong> model below for best image editing results</span>
+              <span>💡</span>
+              <span><strong>Tip:</strong> Write details in your prompt describing how you want to modify this reference image!</span>
             </div>
           )}
 
