@@ -108,40 +108,58 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use("/uploads", express.static(uploadsDir));
 
-// POST upload endpoint for base64 image data
-app.post("/api/upload", (req, res) => {
+// POST upload endpoint — uploads image to Pollinations media storage
+// Returns a permanent media.pollinations.ai URL usable as the `image` parameter
+app.post("/api/upload", async (req, res) => {
   try {
-    const { image } = req.body; // base64 string
+    const { image } = req.body; // base64 data URL string
     if (!image) {
       return res.status(400).json({ success: false, error: "No image data provided" });
     }
 
-    // Split base64 header (e.g. data:image/png;base64,...)
+    // Parse the data URL: data:image/png;base64,...
     const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ success: false, error: "Invalid base64 image format. Must be a valid data URL." });
     }
 
-    const imageBuffer = Buffer.from(matches[2], 'base64');
     const mimeType = matches[1];
-    const extension = mimeType.split('/')[1] || 'png';
-    const filename = `upload_${Date.now()}_${Math.floor(Math.random() * 100000)}.${extension}`;
-    const filepath = path.join(uploadsDir, filename);
+    const base64Data = matches[2];
+    const imageBuffer = Buffer.from(base64Data, "base64");
+    const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "png";
+    const filename = `nexuss_upload_${Date.now()}.${extension}`;
 
-    fs.writeFileSync(filepath, imageBuffer);
+    // ── Upload to Pollinations media storage (no API key needed) ──────────
+    // Returns a permanent https://media.pollinations.ai/<hash> URL
+    const formData = new FormData();
+    const blob = new Blob([imageBuffer], { type: mimeType });
+    formData.append("file", blob, filename);
 
-    // Return the URL
-    // Use the host from request headers so it automatically handles localhost and Render production URL!
-    const host = req.get("host");
-    const protocol = req.protocol; // usually http or https (in Render proxy it is http or https)
-    // Render usually sets x-forwarded-proto, let's check it to ensure we return https when appropriate
-    const finalProtocol = req.headers["x-forwarded-proto"] || protocol;
-    const url = `${finalProtocol}://${host}/uploads/${filename}`;
+    const uploadRes = await fetch("https://gen.pollinations.ai/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-    console.log(`📤 Image uploaded successfully. Saved locally: ${filename}. Public URL: ${url}`);
-    return res.json({ success: true, url });
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      console.error("❌ Pollinations upload failed:", uploadRes.status, errText);
+      throw new Error(`Pollinations upload failed: ${uploadRes.status}`);
+    }
+
+    const uploadData = await uploadRes.json();
+    // Pollinations returns { url: "https://media.pollinations.ai/<hash>" }
+    const publicUrl = uploadData.url || uploadData.media_url || uploadData.link;
+
+    if (!publicUrl) {
+      console.error("❌ Pollinations upload response had no URL:", JSON.stringify(uploadData));
+      throw new Error("Could not get URL from Pollinations upload response");
+    }
+
+    console.log(`📤 Image uploaded to Pollinations media store. URL: ${publicUrl}`);
+    return res.json({ success: true, url: publicUrl });
+
   } catch (err) {
-    console.error("❌ Upload error:", err);
+    console.error("❌ Upload error:", err.message);
     return res.status(500).json({ success: false, error: err.message || "Internal upload error" });
   }
 });

@@ -39,10 +39,11 @@ function detectRatioFromPrompt(promptText) {
 
 // ── Models Data ──
 const MODELS = [
-  { id: "flux",          label: "⚡ Flux.1 (Premium)",    desc: "Best details, realism, and text accuracy" },
-  { id: "turbo",         label: "🚀 Turbo (Fastest)",     desc: "Generates high quality art in seconds" },
-  { id: "flux-realism",  label: "📷 Flux Realism",        desc: "Optimized for photographic styles" },
-  { id: "dreamshaper",   label: "🎨 DreamShaper",         desc: "Perfect for illustrations and fantasy art" },
+  { id: "flux",          label: "⚡ Flux.1 (Premium)",    desc: "Best quality text-to-image" },
+  { id: "kontext",       label: "✏️ Kontext (Edit Mode)",   desc: "Best for modifying reference images" },
+  { id: "turbo",         label: "🚀 Turbo (Fastest)",      desc: "Generates high quality art in seconds" },
+  { id: "flux-realism",  label: "📷 Flux Realism",         desc: "Optimized for photographic styles" },
+  { id: "dreamshaper",   label: "🎨 DreamShaper",          desc: "Perfect for illustrations and fantasy" },
 ];
 
 // ── Aspect Ratio options ──
@@ -182,9 +183,10 @@ export default function ImageGenerator() {
 
     let activeImageUrl = null;
 
-    // 1. If we have a reference image file, upload it to the backend first
+    // ── If reference image provided, upload it to get a public URL ──────────
     if (refImageFile && !refImageUrl) {
       setUploadingImage(true);
+      showToast("⬆️ Uploading reference image...");
       try {
         // Read file as base64 data URL
         const base64Data = await new Promise((resolve, reject) => {
@@ -194,25 +196,23 @@ export default function ImageGenerator() {
           reader.readAsDataURL(refImageFile);
         });
 
-        // Post to backend
         const res = await fetch(`${API_BASE_URL}/api/upload`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: base64Data })
         });
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || "Failed to upload image to server");
+          throw new Error(data.error || "Upload failed");
         }
 
         setRefImageUrl(data.url);
         activeImageUrl = data.url;
+        showToast("Reference image ready! 🖼️");
       } catch (err) {
         console.error("❌ Image upload failed:", err);
-        showToast("Image upload failed. Please try again.", "error");
+        showToast("Image upload failed. Check your internet connection.", "error");
         setLoading(false);
         setUploadingImage(false);
         return;
@@ -223,72 +223,73 @@ export default function ImageGenerator() {
       activeImageUrl = refImageUrl;
     }
 
+    // ── Auto-switch to kontext model when editing a reference image ─────────
+    const effectiveModel = activeImageUrl && model === "flux" ? "kontext" : model;
+    if (activeImageUrl && model === "flux") {
+      setModel("kontext");
+    }
+
     // Auto-detect ratio from prompt text; user can override via UI buttons
     const detectedRatioId = detectRatioFromPrompt(prompt);
     const finalRatioId = detectedRatioId || aspectRatio;
     if (detectedRatioId && detectedRatioId !== aspectRatio) {
       setAspectRatio(detectedRatioId);
-      showToast(`📐 Ratio auto-detected: ${detectedRatioId}`);
     }
     const ratio = ASPECT_RATIOS.find(r => r.id === finalRatioId) || ASPECT_RATIOS[0];
     const seed = Math.floor(Math.random() * 999999);
+
     const url = buildImageUrl(prompt, {
       width: ratio.width,
       height: ratio.height,
-      model,
+      model: effectiveModel,
       seed,
-      enhance,
+      enhance: activeImageUrl ? false : enhance, // kontext works better without enhance
       image: activeImageUrl
     });
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = url;
+    const loadWithUrl = (genUrl, isRetry = false) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = genUrl;
 
-    img.onload = () => {
-      setImageUrl(url);
-      setLoading(false);
-      const newHistory = [
-        { url, prompt: prompt.trim(), model, ratio: finalRatioId, seed, id: Date.now() },
-        ...history
-      ].slice(0, 30);
-      saveHistory(newHistory);
-      showToast("Image generated successfully! ✨");
-    };
-
-    img.onerror = () => {
-      // Auto-retry once with a new seed
-      const retrySeed = Math.floor(Math.random() * 999999);
-      const retryUrl = buildImageUrl(prompt, {
-        width: ratio.width,
-        height: ratio.height,
-        model,
-        seed: retrySeed,
-        enhance,
-        image: activeImageUrl
-      });
-
-      const retryImg = new Image();
-      retryImg.crossOrigin = "anonymous";
-      retryImg.src = retryUrl;
-
-      retryImg.onload = () => {
-        setImageUrl(retryUrl);
+      img.onload = () => {
+        setImageUrl(genUrl);
         setLoading(false);
         const newHistory = [
-          { url: retryUrl, prompt: prompt.trim(), model, ratio: finalRatioId, seed: retrySeed, id: Date.now() },
+          { url: genUrl, prompt: prompt.trim(), model: effectiveModel, ratio: finalRatioId, seed, id: Date.now() },
           ...history
         ].slice(0, 30);
         saveHistory(newHistory);
-        showToast("Image generated! ✨");
+        showToast("Image generated successfully! ✨");
       };
 
-      retryImg.onerror = () => {
-        setLoading(false);
-        setLoadFailed(true);
-        showToast("Generation failed. Check your network connection.", "error");
+      img.onerror = () => {
+        if (!isRetry) {
+          // Auto-retry once with a new seed
+          const retrySeed = Math.floor(Math.random() * 999999);
+          const retryUrl = buildImageUrl(prompt, {
+            width: ratio.width,
+            height: ratio.height,
+            model: effectiveModel,
+            seed: retrySeed,
+            enhance: activeImageUrl ? false : enhance,
+            image: activeImageUrl
+          });
+          loadWithUrl(retryUrl, true);
+        } else {
+          setLoading(false);
+          setLoadFailed(true);
+          showToast(
+            activeImageUrl
+              ? "Image editing failed. Try a different prompt or model."
+              : "Generation failed. Check your network connection.",
+            "error"
+          );
+        }
       };
     };
+
+    loadWithUrl(url);
   };
 
   const handleDownload = async (url) => {
@@ -590,6 +591,22 @@ export default function ImageGenerator() {
               </div>
             )}
           </div>
+          {refImage && (
+            <div style={{
+              background: "rgba(16, 185, 129, 0.08)",
+              border: "1px solid rgba(16, 185, 129, 0.25)",
+              borderRadius: "10px",
+              padding: "8px 12px",
+              fontSize: "11px",
+              color: "#6ee7b7",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}>
+              <span>✏️</span>
+              <span><strong>Tip:</strong> Select <strong>Kontext (Edit Mode)</strong> model below for best image editing results</span>
+            </div>
+          )}
 
           {/* Model Selector */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
