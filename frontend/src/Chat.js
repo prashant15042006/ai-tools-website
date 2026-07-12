@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, Camera, X } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -37,6 +37,8 @@ function Chat() {
   }, [location.state]);
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
+  const imageInputRef = useRef(null);
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
@@ -96,6 +98,8 @@ function Chat() {
     addRecentChat(text);
     setLoading(true);
     setInput("");
+    const imageToBeSent = imagePreview;
+    setImagePreview(null); // clear preview after capturing
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
@@ -111,7 +115,8 @@ function Chat() {
       message: text,
       userName: displayName,
       userEmail: user?.email || localStorage.getItem("nexus_mock_user") || "Anonymous",
-      history: history
+      history: history,
+      ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
 
     // ── Dual-endpoint fallback ──
@@ -210,6 +215,19 @@ function Chat() {
       alert("Clipboard access denied. Please allow clipboard permissions.");
     }
   };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { alert("Please select an image file."); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target.result);
+    reader.readAsDataURL(file);
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const removeImage = () => setImagePreview(null);
 
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
@@ -325,7 +343,26 @@ function Chat() {
       {/* Prompt editing moved to the Prompts page in the sidebar */}
 
       <div className="input-container">
+        {/* Image preview strip */}
+        {imagePreview && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 16px 0", flexWrap: "wrap" }}>
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <img src={imagePreview} alt="Attached" style={{ height: "64px", borderRadius: "10px", border: "2px solid #6366f1", objectFit: "cover" }} />
+              <button
+                onClick={removeImage}
+                style={{ position: "absolute", top: "-8px", right: "-8px", background: "#ef4444", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "white", padding: 0 }}
+                title="Remove image"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Image attached — ask anything about it</span>
+          </div>
+        )}
         <div className="input-box-wrapper">
+          {/* Hidden file input */}
+          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSelect} />
+
           {/* LEFT: Paste button */}
           <button className="action-btn" title="Paste" onClick={handlePaste}>
             <ClipboardPaste size={20} />
@@ -336,7 +373,7 @@ function Chat() {
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Send a message..."
+            placeholder={imagePreview ? "Ask about the image..." : "Send a message..."}
             rows="1"
             disabled={loading}
             onKeyDown={(e) => {
@@ -347,8 +384,16 @@ function Chat() {
             }}
           />
 
-          {/* RIGHT: Mic + Send */}
+          {/* RIGHT: Camera + Mic + Send */}
           <div className="input-actions-right">
+            <button
+              className="action-btn"
+              title="Upload Image"
+              onClick={() => imageInputRef.current?.click()}
+              style={imagePreview ? { color: "#6366f1" } : {}}
+            >
+              <Camera size={20} color={imagePreview ? "#6366f1" : "var(--text-secondary)"} />
+            </button>
             <button 
               className={`action-btn ${isListening ? "listening" : ""}`} 
               title="Voice Input" 
@@ -359,7 +404,7 @@ function Chat() {
             <button 
               className="send-btn" 
               onClick={() => sendMessage()} 
-              disabled={loading || !input.trim()}
+              disabled={loading || (!input.trim() && !imagePreview)}
             >
               <Send size={18} />
             </button>

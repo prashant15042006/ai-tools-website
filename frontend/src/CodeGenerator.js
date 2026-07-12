@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
-import { Send, ClipboardPaste, Mic, ExternalLink, Code, Sparkles } from "lucide-react";
+import { Send, ClipboardPaste, Mic, ExternalLink, Code, Sparkles, Camera, X } from "lucide-react";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
@@ -30,6 +30,8 @@ function CodeGenerator() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const imageInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -49,12 +51,18 @@ function CodeGenerator() {
     addRecentChat("Code: " + text);
     setInput("");
     setLoading(true);
+    const imageToBeSent = imagePreview;
+    setImagePreview(null);
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
 
-    const payload = { message: "Generate code: " + text, userName: displayName };
+    const payload = {
+      message: "Generate code: " + text,
+      userName: displayName,
+      ...(imageToBeSent ? { image: imageToBeSent } : {})
+    };
     const endpoints = [];
     if (API_BASE_URL && !API_BASE_URL.includes("localhost")) endpoints.push(`${API_BASE_URL}/api/chat`);
     endpoints.push("/api/chat");
@@ -130,6 +138,18 @@ function CodeGenerator() {
       alert("Clipboard access denied. Please allow clipboard permissions.");
     }
   };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { alert("Please select an image file."); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const removeImage = () => setImagePreview(null);
 
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
@@ -247,7 +267,19 @@ function CodeGenerator() {
       </div>
 
       <div className="input-container">
+        {imagePreview && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 16px 0", flexWrap: "wrap" }}>
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <img src={imagePreview} alt="Attached" style={{ height: "64px", borderRadius: "10px", border: "2px solid #10b981", objectFit: "cover" }} />
+              <button onClick={removeImage} style={{ position: "absolute", top: "-8px", right: "-8px", background: "#ef4444", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "white", padding: 0 }} title="Remove image">
+                <X size={12} />
+              </button>
+            </div>
+            <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Image attached — ask about the code/UI</span>
+          </div>
+        )}
         <div className="input-box-wrapper">
+          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSelect} />
           {/* LEFT: Paste button */}
           <button className="action-btn" title="Paste from Clipboard" onClick={handlePaste}>
             <ClipboardPaste size={20} />
@@ -257,7 +289,7 @@ function CodeGenerator() {
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isListening ? "Listening..." : "send a message..."}
+            placeholder={imagePreview ? "Describe the code or ask about the image..." : (isListening ? "Listening..." : "send a message...")}
             rows="1"
             disabled={loading}
             onKeyDown={(e) => {
@@ -267,8 +299,11 @@ function CodeGenerator() {
               }
             }}
           />
-          {/* RIGHT: Mic + Send */}
+          {/* RIGHT: Camera + Mic + Send */}
           <div className="input-actions-right">
+            <button className="action-btn" title="Upload Image" onClick={() => imageInputRef.current?.click()}>
+              <Camera size={20} color={imagePreview ? "#10b981" : "var(--text-secondary)"} />
+            </button>
             <button
               className={`action-btn ${isListening ? "listening" : ""}`}
               title={isListening ? "Listening..." : "Voice Input"}
@@ -276,7 +311,7 @@ function CodeGenerator() {
             >
               <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
             </button>
-            <button className="send-btn" onClick={() => sendMessage()} disabled={loading || !input.trim()}>
+            <button className="send-btn" onClick={() => sendMessage()} disabled={loading || (!input.trim() && !imagePreview)}>
               <Send size={18} />
             </button>
           </div>

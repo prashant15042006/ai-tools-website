@@ -29,7 +29,7 @@ const isValidKey = (val) =>
 // ──────────────────────────────────────────────
 // 1. Google Gemini (direct)
 // ──────────────────────────────────────────────
-async function callGemini(message, userName, history = []) {
+async function callGemini(message, userName, history = [], image = null) {
   const key = process.env.GEMINI_API_KEY;
   if (!isValidKey(key)) throw new Error("Gemini key not configured");
 
@@ -42,7 +42,17 @@ async function callGemini(message, userName, history = []) {
       });
     }
   }
-  contents.push({ role: "user", parts: [{ text: message }] });
+
+  // Build user parts — prepend image if provided
+  const userParts = [];
+  if (image) {
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      userParts.push({ inlineData: { mimeType: matches[1], data: matches[2] } });
+    }
+  }
+  userParts.push({ text: message });
+  contents.push({ role: "user", parts: userParts });
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -86,14 +96,22 @@ const OPENROUTER_MODELS = [
   "qwen/qwen3-coder:free"
 ];
 
-async function callOpenRouter(message, userName, history = []) {
+async function callOpenRouter(message, userName, history = [], image = null) {
   const key = process.env.ZAI_API_KEY;
   if (!isValidKey(key)) throw new Error("OpenRouter key not configured");
+
+  // Build user content — multimodal if image provided
+  const userContent = image
+    ? [
+        { type: "text", text: message },
+        { type: "image_url", image_url: { url: image } }
+      ]
+    : message;
 
   const messages = [
     { role: "system", content: SYSTEM_PROMPT(userName) },
     ...(Array.isArray(history) ? history : []),
-    { role: "user", content: message },
+    { role: "user", content: userContent },
   ];
 
   let lastErr = "Unknown error";
@@ -201,7 +219,7 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { message, userName = "User", history = [] } = req.body || {};
+  const { message, userName = "User", history = [], image } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
 
   // Set SSE headers
@@ -212,35 +230,35 @@ module.exports = async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try Cerebras first
-  try {
-    reply = await callCerebras(message, userName);
-    usedProvider = "Cerebras";
-  } catch (e) {
-    console.warn("Cerebras failed:", e.message);
+  // 1. Try Cerebras first — but SKIP if image is attached (Cerebras has no vision support)
+  if (!image) {
+    try {
+      reply = await callCerebras(message, userName);
+      usedProvider = "Cerebras";
+    } catch (e) {
+      console.warn("Cerebras failed:", e.message);
+    }
   }
 
-  // 2. Try OpenRouter (ZAI) second
+  // 2. Try OpenRouter (ZAI) second — supports vision via multimodal content
   if (!reply) {
     try {
-      reply = await callOpenRouter(message, userName, history);
+      reply = await callOpenRouter(message, userName, history, image);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
     }
   }
 
-  // 3. Try Gemini as last resort (commented out or skipped for now as key is expired)
-  /*
+  // 3. Try Gemini — supports vision natively
   if (!reply) {
     try {
-      reply = await callGemini(message, userName, history);
+      reply = await callGemini(message, userName, history, image);
       usedProvider = "Gemini";
     } catch (e) {
       console.warn("Gemini failed:", e.message);
     }
   }
-  */
 
   // 4. Static fallback — always respond
   if (!reply) {

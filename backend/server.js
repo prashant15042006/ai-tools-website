@@ -223,7 +223,7 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
 
 
 
-const callZAI = async (message, userName = "User") => {
+const callZAI = async (message, userName = "User", image = null) => {
   const models = [
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
@@ -238,6 +238,14 @@ const callZAI = async (message, userName = "User") => {
   ];
   let lastError = null;
 
+  // If there's an image, construct the multimodal content format supported by vision models
+  const userContent = image
+    ? [
+        { type: "text", text: message },
+        { type: "image_url", image_url: { url: image } }
+      ]
+    : message;
+
   for (const model of models) {
     try {
       console.log(`🚀 Requesting model: ${model}`);
@@ -251,7 +259,7 @@ const callZAI = async (message, userName = "User") => {
           model: model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT(userName) },
-            { role: "user", content: message }
+            { role: "user", content: userContent }
           ],
           max_tokens: 1024,
         }),
@@ -318,11 +326,21 @@ const saveChatMetadata = async ({ question, userName, userEmail, model, provider
   }
 };
 
-const callGeminiDirect = async (message, userName = "User") => {
+const callGeminiDirect = async (message, userName = "User", image = null) => {
   console.log(`🚀 [DIRECT GEMINI] Requesting gemini-2.0-flash`);
   
   // Use enhanced prompt for table requests
   const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
+
+  // Build parts array — prepend image if provided (Gemini inlineData format)
+  const parts = [];
+  if (image) {
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      parts.push({ inlineData: { mimeType: matches[1], data: matches[2] } });
+    }
+  }
+  parts.push({ text: message });
   
   const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
     method: "POST",
@@ -330,7 +348,7 @@ const callGeminiDirect = async (message, userName = "User") => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: message }] }],
+      contents: [{ role: "user", parts }],
       systemInstruction: {
         parts: [{ text: systemPrompt }]
       }
@@ -347,11 +365,28 @@ const callGeminiDirect = async (message, userName = "User") => {
   return reply;
 };
 
-const callGeminiDirectStream = async (message, res, userName = "User", userEmail = "", history = []) => {
+const callGeminiDirectStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
   console.log(`🚀 [DIRECT GEMINI STREAM] Requesting gemini-2.0-flash`);
   
   // Use enhanced prompt for table requests
   const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
+
+  // Format conversation history for Gemini
+  const geminiContents = formatHistoryForGemini(history, message);
+
+  // If image provided, override last user message parts with multimodal content
+  if (image) {
+    const lastMsg = geminiContents[geminiContents.length - 1];
+    if (lastMsg && lastMsg.role === "user") {
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        lastMsg.parts = [
+          { inlineData: { mimeType: matches[1], data: matches[2] } },
+          { text: message }
+        ];
+      }
+    }
+  }
   
   const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
     method: "POST",
@@ -359,7 +394,7 @@ const callGeminiDirectStream = async (message, res, userName = "User", userEmail
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      contents: formatHistoryForGemini(history, message),
+      contents: geminiContents,
       systemInstruction: {
         parts: [{ text: systemPrompt }]
       }
@@ -632,7 +667,7 @@ const callCerebrasStream = async (message, res, userName = "User", userEmail = "
   throw new Error(`Cerebras stream failed all models: ${lastErr}`);
 };
 
-const callZAIStream = async (message, res, userName = "User", userEmail = "", history = []) => {
+const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
   const models = [
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
@@ -646,11 +681,19 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
     "qwen/qwen3-coder:free"
   ];
 
+  // If there's an image, construct the multimodal content format supported by vision models
+  const userContent = image
+    ? [
+        { type: "text", text: message },
+        { type: "image_url", image_url: { url: image } }
+      ]
+    : message;
+
   // Format messages for OpenRouter
   const apiMessages = [
     { role: "system", content: SYSTEM_PROMPT(userName) },
     ...history,
-    { role: "user", content: message }
+    { role: "user", content: userContent }
   ];
 
   for (const model of models) {
@@ -753,7 +796,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
 // ===============================
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, userName, userEmail, history } = req.body;
+    const { message, userName, userEmail, history, image } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
     // Set headers for SSE (Server-Sent Events)
@@ -773,8 +816,8 @@ app.post("/api/chat", async (req, res) => {
       }
     };
 
-    // 1. Try Cerebras first (using our streaming helper)
-    if (isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
+    if (!image && isValidKey(process.env.CEREBRAS_API_KEY)) {
       const reply = await tryStreamProvider("Cerebras", async () => {
         await callCerebrasStream(message, res, userName, userEmail, history);
         return true;
@@ -785,7 +828,7 @@ app.post("/api/chat", async (req, res) => {
     // 2. Try OpenRouter / ZAI second
     if (isValidKey(process.env.ZAI_API_KEY)) {
       const reply = await tryStreamProvider("OpenRouter", async () => {
-        await callZAIStream(message, res, userName, userEmail, history);
+        await callZAIStream(message, res, userName, userEmail, history, image);
         return true;
       });
       if (reply) return;
@@ -855,11 +898,11 @@ app.post("/api/chat", async (req, res) => {
 // ===============================
 app.post("/api/chat/complete", async (req, res) => {
   try {
-    const { message, userName, userEmail, history } = req.body;
+    const { message, userName, userEmail, history, image } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
-    // 1. Prefer Cerebras if configured
-    if (isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 1. Prefer Cerebras if configured (only if no image, since Cerebras doesn't support vision)
+    if (!image && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(message, userName, userEmail);
         await saveChatMetadata({
@@ -878,7 +921,7 @@ app.post("/api/chat/complete", async (req, res) => {
     // 2. Prefer OpenRouter / ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
       try {
-        const reply = await callZAI(message, userName);
+        const reply = await callZAI(message, userName, image);
         await saveChatMetadata({
           question: message,
           userName,
@@ -943,14 +986,14 @@ app.post("/api/chat/complete", async (req, res) => {
 // ===============================
 app.post("/api/code", async (req, res) => {
   try {
-    const { prompt, userName } = req.body;
+    const { prompt, userName, image } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled
-    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
+    if (!image && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Generate clean code for: ${prompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
@@ -962,15 +1005,15 @@ app.post("/api/code", async (req, res) => {
     // 1. Prefer Direct Google Gemini if configured
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
-        const result = await callGeminiDirect(`Generate clean code for: ${prompt}`, userName);
+        const result = await callGeminiDirect(`Generate clean code for: ${prompt}`, userName, image);
         return res.json({ success: true, provider: 'gemini-direct', result });
       } catch (err) {
         console.warn('Direct Gemini code generation failed, falling back:', err.message);
       }
     }
 
-    // 2. Prefer Cerebras if configured (and not tried yet)
-    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
+    if (!image && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Generate clean code for: ${prompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
@@ -979,8 +1022,8 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 3. Prefer Nemotron if configured
-    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
+    // 3. Prefer Nemotron if configured (only if no image, since Nemotron doesn't support vision)
+    if (!image && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Generate clean code for: ${prompt}`, userName);
         return res.json({ success: true, provider: 'nemotron', result: reply });
@@ -991,7 +1034,7 @@ app.post("/api/code", async (req, res) => {
 
     // 4. Fallback to ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
-      const result = await callZAI(`Generate clean code for: ${prompt}`, userName);
+      const result = await callZAI(`Generate clean code for: ${prompt}`, userName, image);
       return res.json({ success: true, provider: 'zai', result });
     }
 
@@ -1009,14 +1052,14 @@ app.post("/api/code", async (req, res) => {
 // ===============================
 app.post("/api/content", async (req, res) => {
   try {
-    const { prompt, userName } = req.body;
+    const { prompt, userName, image } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled
-    if (USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, Cerebras doesn't support vision)
+    if (!image && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Write detailed content about: ${prompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
@@ -1028,15 +1071,15 @@ app.post("/api/content", async (req, res) => {
     // 1. Prefer Direct Google Gemini if configured
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
-        const result = await callGeminiDirect(`Write detailed content about: ${prompt}`, userName);
+        const result = await callGeminiDirect(`Write detailed content about: ${prompt}`, userName, image);
         return res.json({ success: true, provider: 'gemini-direct', result });
       } catch (err) {
         console.warn('Direct Gemini content generation failed, falling back:', err.message);
       }
     }
 
-    // 2. Prefer Cerebras if configured (and not tried yet)
-    if (!USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
+    if (!image && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Write detailed content about: ${prompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
@@ -1045,8 +1088,8 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 3. Prefer Nemotron if configured
-    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
+    // 3. Prefer Nemotron if configured (only if no image, Nemotron doesn't support vision)
+    if (!image && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Write detailed content about: ${prompt}`, userName);
         return res.json({ success: true, provider: 'nemotron', result: reply });
@@ -1057,7 +1100,7 @@ app.post("/api/content", async (req, res) => {
 
     // 4. Fallback to ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
-      const result = await callZAI(`Write detailed content about: ${prompt}`, userName);
+      const result = await callZAI(`Write detailed content about: ${prompt}`, userName, image);
       return res.json({ success: true, provider: 'zai', result });
     }
 
@@ -1065,6 +1108,74 @@ app.post("/api/content", async (req, res) => {
 
   } catch (error) {
     console.error("Content Error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// ===============================
+// 🧬 EMBEDDING API
+// Generates text embeddings via Google Gemini text-embedding-004
+// Body: { text: string } — returns { embedding: number[] }
+// ===============================
+app.post("/api/embed", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "text field required" });
+
+    // 1. Prefer Google Gemini embedding model (free & fast)
+    if (isValidKey(process.env.GEMINI_API_KEY)) {
+      try {
+        const response = await fetchWithTimeout(
+          `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: { parts: [{ text }] } }),
+          },
+          10000
+        );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || `Status ${response.status}`);
+        const embedding = data.embedding?.values;
+        if (!embedding) throw new Error("Empty embedding from Gemini");
+        return res.json({ success: true, provider: "gemini", embedding });
+      } catch (err) {
+        console.warn("Gemini embedding failed, falling back:", err.message);
+      }
+    }
+
+    // 2. Fallback: OpenRouter embeddings via EMBEDDING_API_KEY
+    const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
+    if (isValidKey(embeddingKey)) {
+      try {
+        const response = await fetchWithTimeout("https://openrouter.ai/api/v1/embeddings", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${embeddingKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://nexuss-ai.io",
+            "X-Title": "Nexuss Workspace",
+          },
+          body: JSON.stringify({
+            model: "openai/text-embedding-ada-002",
+            input: text,
+          }),
+        }, 10000);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || `Status ${response.status}`);
+        const embedding = data.data?.[0]?.embedding;
+        if (!embedding) throw new Error("Empty embedding from OpenRouter");
+        return res.json({ success: true, provider: "openrouter", embedding });
+      } catch (err) {
+        console.error("OpenRouter embedding failed:", err.message);
+      }
+    }
+
+    return res.status(503).json({ success: false, error: "No embedding provider configured." });
+
+  } catch (error) {
+    console.error("Embed Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
