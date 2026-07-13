@@ -86,10 +86,17 @@ async function callGemini(message, userName, history = [], image = null) {
   }
 }
 
-// ──────────────────────────────────────────────
-// 2. OpenRouter (ZAI) — supports vision via multimodal content
-// ──────────────────────────────────────────────
-const OPENROUTER_MODELS = [
+const OPENROUTER_VISION_MODELS = [
+  "openrouter/free",
+  "openai/gpt-4o-mini",
+  "google/gemini-2.5-flash",
+  "meta-llama/llama-3.2-11b-vision-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "mistralai/mistral-small-3.2-24b-instruct:free",
+];
+
+const OPENROUTER_TEXT_MODELS = [
+  "openrouter/free",
   "openai/gpt-4o-mini",
   "google/gemini-2.5-flash",
   "meta-llama/llama-3.3-70b-instruct:free",
@@ -106,6 +113,8 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   const key = ZAI_KEY;
   if (!isValidKey(key)) throw new Error("OpenRouter key not configured");
 
+  const models = image ? OPENROUTER_VISION_MODELS : OPENROUTER_TEXT_MODELS;
+
   // Build user content — multimodal if image provided
   const userContent = image
     ? [
@@ -121,7 +130,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   ];
 
   let lastErr = "Unknown error";
-  for (const model of OPENROUTER_MODELS) {
+  for (const model of models) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);

@@ -224,7 +224,16 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
 
 
 const callZAI = async (message, userName = "User", image = null) => {
-  const models = [
+  const visionModels = [
+    "openrouter/free",
+    "openai/gpt-4o-mini",
+    "google/gemini-2.5-flash",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
+    "google/gemma-3-27b-it:free",
+    "mistralai/mistral-small-3.2-24b-instruct:free",
+  ];
+  const textModels = [
+    "openrouter/free",
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
     "meta-llama/llama-3.3-70b-instruct:free",
@@ -236,6 +245,7 @@ const callZAI = async (message, userName = "User", image = null) => {
     "google/gemma-4-31b-it:free",
     "qwen/qwen3-coder:free"
   ];
+  const models = image ? visionModels : textModels;
   let lastError = null;
 
   // If there's an image, construct the multimodal content format supported by vision models
@@ -668,7 +678,18 @@ const callCerebrasStream = async (message, res, userName = "User", userEmail = "
 };
 
 const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
-  const models = [
+  // When an image is attached, only use vision-capable models.
+  // Most free models do NOT support vision and will error out.
+  const visionModels = [
+    "openrouter/free",
+    "openai/gpt-4o-mini",
+    "google/gemini-2.5-flash",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
+    "google/gemma-3-27b-it:free",
+    "mistralai/mistral-small-3.2-24b-instruct:free",
+  ];
+  const textModels = [
+    "openrouter/free",
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
     "meta-llama/llama-3.3-70b-instruct:free",
@@ -680,6 +701,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
     "google/gemma-4-31b-it:free",
     "qwen/qwen3-coder:free"
   ];
+  const models = image ? visionModels : textModels;
 
   // If there's an image, construct the multimodal content format supported by vision models
   const userContent = image
@@ -834,16 +856,14 @@ app.post("/api/chat", async (req, res) => {
       if (reply) return;
     }
 
-    // 3. Try Direct Google Gemini as last resort (commented out for now due to expired key)
-    /*
+    // 3. Try Direct Google Gemini — supports vision natively via inlineData
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       const reply = await tryStreamProvider("Direct Gemini", async () => {
-        await callGeminiDirectStream(message, res, userName, userEmail, history);
+        await callGeminiDirectStream(message, res, userName, userEmail, history, image);
         return true;
       });
       if (reply) return;
     }
-    */
 
     // 4. If Nemotron is configured (fast provider), use it for a single non-streaming reply
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
@@ -870,22 +890,30 @@ app.post("/api/chat", async (req, res) => {
     }
 
     // 5. No valid providers completed successfully
-    const fallback = fallbackResponse(message);
-    res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
-    res.write(`data: [DONE]\n\n`);
-    res.end();
+    if (!res.headersSent) {
+      res.statusCode = 503;
+      res.setHeader("Content-Type", "application/json");
+      return res.json({ success: false, error: "No AI providers succeeded" });
+    } else {
+      const fallback = fallbackResponse(message);
+      res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
+      res.end();
+    }
 
   } catch (error) {
     console.error("Chat Error:", error.message);
-    if (!res.writableEnded) {
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.json({ success: false, error: error.message });
+    } else if (!res.writableEnded) {
       if (error?.streamStarted) {
         res.write("data: [DONE]\n\n");
         res.end();
       } else {
         writeFallbackSSE(res, req.body?.message || "your request");
       }
-    } else if (!res.headersSent) {
-      res.status(500).json({ success: false, error: error.message });
     }
   }
 });

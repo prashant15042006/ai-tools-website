@@ -25,7 +25,7 @@ const ZAI_KEY = process.env.ZAI_API_KEY || "";
 const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "";
 
 // 1. Google Gemini (direct)
-async function callGemini(message, userName, history = []) {
+async function callGemini(message, userName, history = [], image = null) {
   const key = GEMINI_KEY;
   if (!isValidKey(key)) throw new Error("Gemini key not configured");
 
@@ -38,7 +38,17 @@ async function callGemini(message, userName, history = []) {
       });
     }
   }
-  contents.push({ role: "user", parts: [{ text: message }] });
+  
+  // Build user parts — prepend image if provided (Gemini inlineData format)
+  const userParts = [];
+  if (image) {
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      userParts.push({ inlineData: { mimeType: matches[1], data: matches[2] } });
+    }
+  }
+  userParts.push({ text: message });
+  contents.push({ role: "user", parts: userParts });
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -110,8 +120,17 @@ async function callCerebras(message, userName) {
   throw new Error(`Cerebras all models failed: ${lastErr}`);
 }
 
-// 3. OpenRouter
-const OPENROUTER_MODELS = [
+const OPENROUTER_VISION_MODELS = [
+  "openrouter/free",
+  "openai/gpt-4o-mini",
+  "google/gemini-2.5-flash",
+  "meta-llama/llama-3.2-11b-vision-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "mistralai/mistral-small-3.2-24b-instruct:free",
+];
+
+const OPENROUTER_TEXT_MODELS = [
+  "openrouter/free",
   "openai/gpt-4o-mini",
   "google/gemini-2.5-flash",
   "meta-llama/llama-3.3-70b-instruct:free",
@@ -121,21 +140,31 @@ const OPENROUTER_MODELS = [
   "openai/gpt-oss-120b:free",
   "meta-llama/llama-3.2-3b-instruct:free",
   "google/gemma-4-31b-it:free",
-  "qwen/qwen3-coder:free",
+  "qwen/qwen3-coder:free"
 ];
 
-async function callOpenRouter(message, userName, history = []) {
+async function callOpenRouter(message, userName, history = [], image = null) {
   const key = ZAI_KEY;
   if (!isValidKey(key)) throw new Error("OpenRouter key not configured");
+
+  const models = image ? OPENROUTER_VISION_MODELS : OPENROUTER_TEXT_MODELS;
+
+  // Build user content — multimodal if image provided
+  const userContent = image
+    ? [
+        { type: "text", text: message },
+        { type: "image_url", image_url: { url: image } }
+      ]
+    : message;
 
   const messages = [
     { role: "system", content: SYSTEM_PROMPT(userName) },
     ...(Array.isArray(history) ? history : []),
-    { role: "user", content: message },
+    { role: "user", content: userContent },
   ];
 
   let lastErr = "Unknown error";
-  for (const model of OPENROUTER_MODELS) {
+  for (const model of models) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);
@@ -180,41 +209,41 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { message, userName = "User", history = [] } = req.body || {};
+  const { message, userName = "User", history = [], image } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
 
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try Cerebras first
-  try {
-    reply = await callCerebras(message, userName);
-    usedProvider = "Cerebras";
-  } catch (e) {
-    console.warn("Cerebras failed:", e.message);
+  // 1. Try Cerebras first (skip if image is present)
+  if (!image) {
+    try {
+      reply = await callCerebras(message, userName);
+      usedProvider = "Cerebras";
+    } catch (e) {
+      console.warn("Cerebras failed:", e.message);
+    }
   }
 
   // 2. Try OpenRouter (ZAI) second
   if (!reply) {
     try {
-      reply = await callOpenRouter(message, userName, history);
+      reply = await callOpenRouter(message, userName, history, image);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
     }
   }
 
-  // 3. Try Gemini as last resort (commented out or skipped for now as key is expired)
-  /*
+  // 3. Try Gemini
   if (!reply) {
     try {
-      reply = await callGemini(message, userName, history);
+      reply = await callGemini(message, userName, history, image);
       usedProvider = "Gemini";
     } catch (e) {
       console.warn("Gemini failed:", e.message);
     }
   }
-  */
 
   // 4. Static fallback — always respond
   if (!reply) {
