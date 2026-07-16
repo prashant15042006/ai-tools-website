@@ -26,6 +26,120 @@ const isValidKey = (val) =>
   !val.includes("example.com") &&
   !val.includes("example");
 
+// Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
+async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this image and describe what is visible in detail.") {
+  const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
+  if (!isValidKey(embeddingKey)) {
+    console.warn("No EMBEDDING_API_KEY or ZAI_API_KEY found, cannot describe image.");
+    return "";
+  }
+
+  // Vision models to try in sequence
+  const visionModels = [
+    "nvidia/llama-nemotron-embed-vl-1b-v2:free", // Primary requested model
+    "google/gemini-2.5-flash:free",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
+    "google/gemma-3-27b-it:free",
+    "google/gemini-2.5-flash",
+    "openai/gpt-4o-mini",
+  ];
+
+  let lastError = null;
+
+  for (const model of visionModels) {
+    try {
+      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting description using model: ${model}`);
+      
+      const payload = {
+        model: model,
+        messages: [
+          {
+            role: "system",
+            content: "You are a vision-language assistant. Analyze the image carefully. Provide a highly detailed description of what is in the image, including any text, tables, charts, or visual elements. Keep the description clear, structured, and informative."
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userPrompt || "Describe this image in detail." },
+              { type: "image_url", image_url: { url: image } }
+            ]
+          }
+        ],
+        max_tokens: 1024,
+      };
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${embeddingKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss Workspace",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`❌ [IMAGE PRE-PROCESS VERCEL] Model ${model} failed:`, errText);
+        lastError = errText;
+        continue;
+      }
+
+      const data = await response.json();
+      const description = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+      if (description) {
+        console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Image described successfully using model ${model}. Length: ${description.length}`);
+        return description;
+      }
+    } catch (err) {
+      console.error(`❌ [IMAGE PRE-PROCESS VERCEL] Exception with ${model}:`, err.message);
+      lastError = err.message;
+    }
+  }
+
+  // Fallback: Direct Gemini if available
+  if (isValidKey(process.env.GEMINI_API_KEY)) {
+    try {
+      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting fallback to direct Gemini API`);
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: userPrompt || "Describe this image in detail." },
+                  { inlineData: { mimeType: mimeType, data: base64Data } }
+                ]
+              }]
+            })
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (description) {
+            console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Direct Gemini described image successfully. Length: ${description.length}`);
+            return description;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("❌ [IMAGE PRE-PROCESS VERCEL] Direct Gemini fallback failed:", err.message);
+    }
+  }
+
+  throw new Error(`All vision models failed to describe image: ${lastError || "Unknown error"}`);
+}
+
 // ──────────────────────────────────────────────
 // 1. Google Gemini (direct)
 // ──────────────────────────────────────────────
@@ -231,6 +345,23 @@ module.exports = async function handler(req, res) {
   const { message, userName = "User", history = [], image } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
 
+  let dynamicMessage = message;
+  let dynamicImage = image;
+
+  if (image) {
+    try {
+      console.log("📸 Image attached to Vercel chat. Pre-processing with vision model...");
+      const description = await describeImageWithEmbeddingKey(image, message);
+      if (description) {
+        dynamicMessage = `[IMAGE ANALYSIS: The user has uploaded an image. Below is a highly detailed description and analysis of the image content:\n${description}]\n\nUser Message: ${message}`;
+        dynamicImage = null; // Clear image so text-only models can answer
+        console.log("📸 Image pre-processing complete. Appended description to message text.");
+      }
+    } catch (err) {
+      console.error("⚠️ Image pre-processing failed, falling back to original image payload:", err.message);
+    }
+  }
+
   // Set SSE headers
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -240,9 +371,9 @@ module.exports = async function handler(req, res) {
   let usedProvider = "";
 
   // 1. Try Cerebras first — but SKIP if image is attached (Cerebras has no vision support)
-  if (!image) {
+  if (!dynamicImage) {
     try {
-      reply = await callCerebras(message, userName);
+      reply = await callCerebras(dynamicMessage, userName);
       usedProvider = "Cerebras";
     } catch (e) {
       console.warn("Cerebras failed:", e.message);
@@ -252,7 +383,7 @@ module.exports = async function handler(req, res) {
   // 2. Try OpenRouter (ZAI) second — supports vision via multimodal content
   if (!reply) {
     try {
-      reply = await callOpenRouter(message, userName, history, image);
+      reply = await callOpenRouter(dynamicMessage, userName, history, dynamicImage);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
@@ -262,7 +393,7 @@ module.exports = async function handler(req, res) {
   // 3. Try Gemini — supports vision natively
   if (!reply) {
     try {
-      reply = await callGemini(message, userName, history, image);
+      reply = await callGemini(dynamicMessage, userName, history, dynamicImage);
       usedProvider = "Gemini";
     } catch (e) {
       console.warn("Gemini failed:", e.message);
@@ -271,7 +402,7 @@ module.exports = async function handler(req, res) {
 
   // 4. Static fallback — always respond
   if (!reply) {
-    reply = fallbackReply(message);
+    reply = fallbackReply(dynamicMessage);
     usedProvider = "fallback";
   }
 

@@ -191,25 +191,49 @@ export default function ImageGenerator() {
       setUploadingImage(true);
       showToast("⬆️ Uploading reference image...");
       try {
-        const formData = new FormData();
-        formData.append("file", refImageFile);
+        // Prefer uploading via local backend first (expects JSON { image: dataUrl })
+        let uploadedUrl = null;
 
-        const res = await fetch("https://tmpfiles.org/api/v1/upload", {
-          method: "POST",
-          body: formData
-        });
-
-        const data = await res.json();
-        if (!res.ok || data.status !== "success" || !data.data || !data.data.url) {
-          throw new Error(data?.message || "Upload to tmpfiles failed");
+        if (refImage) {
+          try {
+            const backendRes = await fetch("/api/upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image: refImage })
+            });
+            const backendData = await backendRes.json();
+            if (backendRes.ok && backendData?.success && backendData.url) {
+              uploadedUrl = backendData.url;
+            } else {
+              console.warn("Backend upload failed or returned unexpected response:", backendData);
+            }
+          } catch (be) {
+            console.warn("Backend upload attempt failed:", be.message || be);
+          }
         }
 
-        // Convert tmpfiles link to direct download link:
-        // https://tmpfiles.org/12345/image.png -> https://tmpfiles.org/dl/12345/image.png
-        const directUrl = data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+        // Fallback to tmpfiles.org if backend didn't return a usable URL
+        if (!uploadedUrl) {
+          const formData = new FormData();
+          formData.append("file", refImageFile);
 
-        setRefImageUrl(directUrl);
-        activeImageUrl = directUrl;
+          const res = await fetch("https://tmpfiles.org/api/v1/upload", {
+            method: "POST",
+            body: formData
+          });
+
+          const data = await res.json();
+          if (!res.ok || data.status !== "success" || !data.data || !data.data.url) {
+            throw new Error(data?.message || "Upload to tmpfiles failed");
+          }
+
+          // Convert tmpfiles link to direct download link:
+          // https://tmpfiles.org/12345/image.png -> https://tmpfiles.org/dl/12345/image.png
+          uploadedUrl = data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+        }
+
+        setRefImageUrl(uploadedUrl);
+        activeImageUrl = uploadedUrl;
         showToast("Reference image ready! 🖼️");
       } catch (err) {
         console.error("❌ Image upload failed:", err);

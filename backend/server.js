@@ -76,6 +76,120 @@ if (!isValidKey(process.env.CEREBRAS_API_KEY)) {
 
 const USE_CEREBRAS_MODE = process.env.MODE?.toUpperCase() === "CEREBRAS";
 
+// Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
+const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this image and describe what is visible in detail.") => {
+  const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
+  if (!isValidKey(embeddingKey)) {
+    console.warn("No EMBEDDING_API_KEY or ZAI_API_KEY found, cannot describe image.");
+    return "";
+  }
+
+  // Vision models to try in sequence
+  const visionModels = [
+    "nvidia/llama-nemotron-embed-vl-1b-v2:free", // Primary requested model
+    "google/gemini-2.5-flash:free",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
+    "google/gemma-3-27b-it:free",
+    "google/gemini-2.5-flash",
+    "openai/gpt-4o-mini",
+  ];
+
+  let lastError = null;
+
+  for (const model of visionModels) {
+    try {
+      console.log(`🖼️ [IMAGE PRE-PROCESS] Attempting description using model: ${model}`);
+      
+      const payload = {
+        model: model,
+        messages: [
+          {
+            role: "system",
+            content: "You are a vision-language assistant. Analyze the image carefully. Provide a highly detailed description of what is in the image, including any text, tables, charts, or visual elements. Keep the description clear, structured, and informative."
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userPrompt || "Describe this image in detail." },
+              { type: "image_url", image_url: { url: image } }
+            ]
+          }
+        ],
+        max_tokens: 1024,
+      };
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${embeddingKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss Workspace",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`❌ [IMAGE PRE-PROCESS] Model ${model} failed:`, errText);
+        lastError = errText;
+        continue;
+      }
+
+      const data = await response.json();
+      const description = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+      if (description) {
+        console.log(`✅ [IMAGE PRE-PROCESS] Image described successfully using model ${model}. Length: ${description.length}`);
+        return description;
+      }
+    } catch (err) {
+      console.error(`❌ [IMAGE PRE-PROCESS] Exception with ${model}:`, err.message);
+      lastError = err.message;
+    }
+  }
+
+  // Fallback: Direct Gemini if available
+  if (isValidKey(process.env.GEMINI_API_KEY)) {
+    try {
+      console.log(`🖼️ [IMAGE PRE-PROCESS] Attempting fallback to direct Gemini API`);
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: userPrompt || "Describe this image in detail." },
+                  { inlineData: { mimeType: mimeType, data: base64Data } }
+                ]
+              }]
+            })
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (description) {
+            console.log(`✅ [IMAGE PRE-PROCESS] Direct Gemini described image successfully. Length: ${description.length}`);
+            return description;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("❌ [IMAGE PRE-PROCESS] Direct Gemini fallback failed:", err.message);
+    }
+  }
+
+  throw new Error(`All vision models failed to describe image: ${lastError || "Unknown error"}`);
+};
+
 
 // ===============================
 // 🚀 EXPRESS INIT
@@ -821,6 +935,23 @@ app.post("/api/chat", async (req, res) => {
     const { message, userName, userEmail, history, image } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
+    let dynamicMessage = message;
+    let dynamicImage = image;
+
+    if (image) {
+      try {
+        console.log("📸 Image attached to streaming chat. Pre-processing with vision model...");
+        const description = await describeImageWithEmbeddingKey(image, message);
+        if (description) {
+          dynamicMessage = `[IMAGE ANALYSIS: The user has uploaded an image. Below is a highly detailed description and analysis of the image content:\n${description}]\n\nUser Message: ${message}`;
+          dynamicImage = null; // Clear image so text-only models can answer
+          console.log("📸 Image pre-processing complete. Appended description to message text.");
+        }
+      } catch (err) {
+        console.error("⚠️ Image pre-processing failed, falling back to original image payload:", err.message);
+      }
+    }
+
     // Set headers for SSE (Server-Sent Events)
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -839,9 +970,9 @@ app.post("/api/chat", async (req, res) => {
     };
 
     // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
-    if (!image && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
       const reply = await tryStreamProvider("Cerebras", async () => {
-        await callCerebrasStream(message, res, userName, userEmail, history);
+        await callCerebrasStream(dynamicMessage, res, userName, userEmail, history);
         return true;
       });
       if (reply) return;
@@ -850,7 +981,7 @@ app.post("/api/chat", async (req, res) => {
     // 2. Try OpenRouter / ZAI second
     if (isValidKey(process.env.ZAI_API_KEY)) {
       const reply = await tryStreamProvider("OpenRouter", async () => {
-        await callZAIStream(message, res, userName, userEmail, history, image);
+        await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
         return true;
       });
       if (reply) return;
@@ -859,7 +990,7 @@ app.post("/api/chat", async (req, res) => {
     // 3. Try Direct Google Gemini — supports vision natively via inlineData
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       const reply = await tryStreamProvider("Direct Gemini", async () => {
-        await callGeminiDirectStream(message, res, userName, userEmail, history, image);
+        await callGeminiDirectStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
         return true;
       });
       if (reply) return;
@@ -868,7 +999,7 @@ app.post("/api/chat", async (req, res) => {
     // 4. If Nemotron is configured (fast provider), use it for a single non-streaming reply
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       const reply = await tryStreamProvider("Nemotron", async () => {
-        const replyText = await callNemotron(message, userName, userEmail);
+        const replyText = await callNemotron(dynamicMessage, userName, userEmail);
 
         // Send as a single SSE message and mark done
         res.write(`data: ${JSON.stringify({ content: replyText })}\n\n`);
@@ -895,7 +1026,7 @@ app.post("/api/chat", async (req, res) => {
       res.setHeader("Content-Type", "application/json");
       return res.json({ success: false, error: "No AI providers succeeded" });
     } else {
-      const fallback = fallbackResponse(message);
+      const fallback = fallbackResponse(dynamicMessage);
       res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
       res.write(`data: [DONE]\n\n`);
       res.end();
@@ -929,10 +1060,27 @@ app.post("/api/chat/complete", async (req, res) => {
     const { message, userName, userEmail, history, image } = req.body;
     if (!message) return res.status(400).json({ error: "Message required" });
 
-    // 1. Prefer Cerebras if configured (only if no image, since Cerebras doesn't support vision)
-    if (!image && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    let dynamicMessage = message;
+    let dynamicImage = image;
+
+    if (image) {
       try {
-        const reply = await callCerebras(message, userName, userEmail);
+        console.log("📸 Image attached to chat/complete. Pre-processing with vision model...");
+        const description = await describeImageWithEmbeddingKey(image, message);
+        if (description) {
+          dynamicMessage = `[IMAGE ANALYSIS: The user has uploaded an image. Below is a highly detailed description and analysis of the image content:\n${description}]\n\nUser Message: ${message}`;
+          dynamicImage = null; // Clear image so text-only models can answer
+          console.log("📸 Image pre-processing complete. Appended description to message text.");
+        }
+      } catch (err) {
+        console.error("⚠️ Image pre-processing failed, falling back to original image payload:", err.message);
+      }
+    }
+
+    // 1. Prefer Cerebras if configured (only if no image, since Cerebras doesn't support vision)
+    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(dynamicMessage, userName, userEmail);
         await saveChatMetadata({
           question: message,
           userName,
@@ -949,7 +1097,7 @@ app.post("/api/chat/complete", async (req, res) => {
     // 2. Prefer OpenRouter / ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
       try {
-        const reply = await callZAI(message, userName, image);
+        const reply = await callZAI(dynamicMessage, userName, dynamicImage);
         await saveChatMetadata({
           question: message,
           userName,
@@ -967,7 +1115,7 @@ app.post("/api/chat/complete", async (req, res) => {
     /*
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
-        const reply = await callGeminiDirect(message, userName);
+        const reply = await callGeminiDirect(dynamicMessage, userName);
         await saveChatMetadata({
           question: message,
           userName,
@@ -985,7 +1133,7 @@ app.post("/api/chat/complete", async (req, res) => {
     // 4. Prefer Nemotron when available
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
-        const reply = await callNemotron(message, userName, userEmail);
+        const reply = await callNemotron(dynamicMessage, userName, userEmail);
         await saveChatMetadata({
           question: message,
           userName,
@@ -999,7 +1147,7 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    const fallback = fallbackResponse(message);
+    const fallback = fallbackResponse(dynamicMessage);
     return res.json({ success: true, model: "fallback", reply: fallback });
 
   } catch (error) {
@@ -1020,10 +1168,27 @@ app.post("/api/code", async (req, res) => {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
-    if (!image && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    let dynamicPrompt = prompt;
+    let dynamicImage = image;
+
+    if (image) {
       try {
-        const reply = await callCerebras(`Generate clean code for: ${prompt}`, userName);
+        console.log("📸 Image attached to /api/code. Pre-processing with vision model...");
+        const description = await describeImageWithEmbeddingKey(image, prompt);
+        if (description) {
+          dynamicPrompt = `[IMAGE ANALYSIS: The user has uploaded an image. Below is a highly detailed description and analysis of the image content:\n${description}]\n\nUser Prompt: ${prompt}`;
+          dynamicImage = null; // Clear image so text-only models can answer
+          console.log("📸 Image pre-processing complete. Appended description to prompt text.");
+        }
+      } catch (err) {
+        console.error("⚠️ Image pre-processing failed, falling back to original image payload:", err.message);
+      }
+    }
+
+    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
+    if (!dynamicImage && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
       } catch (err) {
         console.warn('Cerebras code generation failed, falling back:', err.message);
@@ -1033,7 +1198,7 @@ app.post("/api/code", async (req, res) => {
     // 1. Prefer Direct Google Gemini if configured
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
-        const result = await callGeminiDirect(`Generate clean code for: ${prompt}`, userName, image);
+        const result = await callGeminiDirect(`Generate clean code for: ${dynamicPrompt}`, userName, dynamicImage);
         return res.json({ success: true, provider: 'gemini-direct', result });
       } catch (err) {
         console.warn('Direct Gemini code generation failed, falling back:', err.message);
@@ -1041,9 +1206,9 @@ app.post("/api/code", async (req, res) => {
     }
 
     // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
-    if (!image && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
-        const reply = await callCerebras(`Generate clean code for: ${prompt}`, userName);
+        const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
       } catch (err) {
         console.warn('Cerebras code generation failed, falling back:', err.message);
@@ -1051,9 +1216,9 @@ app.post("/api/code", async (req, res) => {
     }
 
     // 3. Prefer Nemotron if configured (only if no image, since Nemotron doesn't support vision)
-    if (!image && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
+    if (!dynamicImage && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
-        const reply = await callNemotron(`Generate clean code for: ${prompt}`, userName);
+        const reply = await callNemotron(`Generate clean code for: ${dynamicPrompt}`, userName);
         return res.json({ success: true, provider: 'nemotron', result: reply });
       } catch (err) {
         console.warn('Nemotron code generation failed, falling back:', err.message);
@@ -1062,7 +1227,7 @@ app.post("/api/code", async (req, res) => {
 
     // 4. Fallback to ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
-      const result = await callZAI(`Generate clean code for: ${prompt}`, userName, image);
+      const result = await callZAI(`Generate clean code for: ${dynamicPrompt}`, userName, dynamicImage);
       return res.json({ success: true, provider: 'zai', result });
     }
 
@@ -1086,10 +1251,27 @@ app.post("/api/content", async (req, res) => {
       return res.status(400).json({ error: "Prompt required" });
     }
 
-    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, Cerebras doesn't support vision)
-    if (!image && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    let dynamicPrompt = prompt;
+    let dynamicImage = image;
+
+    if (image) {
       try {
-        const reply = await callCerebras(`Write detailed content about: ${prompt}`, userName);
+        console.log("📸 Image attached to /api/content. Pre-processing with vision model...");
+        const description = await describeImageWithEmbeddingKey(image, prompt);
+        if (description) {
+          dynamicPrompt = `[IMAGE ANALYSIS: The user has uploaded an image. Below is a highly detailed description and analysis of the image content:\n${description}]\n\nUser Prompt: ${prompt}`;
+          dynamicImage = null; // Clear image so text-only models can answer
+          console.log("📸 Image pre-processing complete. Appended description to prompt text.");
+        }
+      } catch (err) {
+        console.error("⚠️ Image pre-processing failed, falling back to original image payload:", err.message);
+      }
+    }
+
+    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, Cerebras doesn't support vision)
+    if (!dynamicImage && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
       } catch (err) {
         console.warn('Cerebras content generation failed, falling back:', err.message);
@@ -1099,7 +1281,7 @@ app.post("/api/content", async (req, res) => {
     // 1. Prefer Direct Google Gemini if configured
     if (isValidKey(process.env.GEMINI_API_KEY)) {
       try {
-        const result = await callGeminiDirect(`Write detailed content about: ${prompt}`, userName, image);
+        const result = await callGeminiDirect(`Write detailed content about: ${dynamicPrompt}`, userName, dynamicImage);
         return res.json({ success: true, provider: 'gemini-direct', result });
       } catch (err) {
         console.warn('Direct Gemini content generation failed, falling back:', err.message);
@@ -1107,9 +1289,9 @@ app.post("/api/content", async (req, res) => {
     }
 
     // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
-    if (!image && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
-        const reply = await callCerebras(`Write detailed content about: ${prompt}`, userName);
+        const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
         return res.json({ success: true, provider: 'cerebras', result: reply });
       } catch (err) {
         console.warn('Cerebras content generation failed, falling back:', err.message);
@@ -1117,9 +1299,9 @@ app.post("/api/content", async (req, res) => {
     }
 
     // 3. Prefer Nemotron if configured (only if no image, Nemotron doesn't support vision)
-    if (!image && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
+    if (!dynamicImage && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
-        const reply = await callNemotron(`Write detailed content about: ${prompt}`, userName);
+        const reply = await callNemotron(`Write detailed content about: ${dynamicPrompt}`, userName);
         return res.json({ success: true, provider: 'nemotron', result: reply });
       } catch (err) {
         console.warn('Nemotron content generation failed, falling back:', err.message);
@@ -1128,7 +1310,7 @@ app.post("/api/content", async (req, res) => {
 
     // 4. Fallback to ZAI
     if (isValidKey(process.env.ZAI_API_KEY)) {
-      const result = await callZAI(`Write detailed content about: ${prompt}`, userName, image);
+      const result = await callZAI(`Write detailed content about: ${dynamicPrompt}`, userName, dynamicImage);
       return res.json({ success: true, provider: 'zai', result });
     }
 
