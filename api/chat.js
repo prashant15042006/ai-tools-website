@@ -28,27 +28,67 @@ const isValidKey = (val) =>
 
 // Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
 async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this image and describe what is visible in detail.") {
+  // 1. Try Direct Gemini first if available (extremely fast & free)
+  if (isValidKey(process.env.GEMINI_API_KEY)) {
+    try {
+      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting description via direct Gemini API (first priority)`);
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: userPrompt || "Describe this image in detail." },
+                  { inlineData: { mimeType: mimeType, data: base64Data } }
+                ]
+              }]
+            })
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (description) {
+            console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Direct Gemini described image successfully. Length: ${description.length}`);
+            return description;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("❌ [IMAGE PRE-PROCESS VERCEL] Direct Gemini attempt failed:", err.message);
+    }
+  }
+
+  // 2. OpenRouter vision models using EMBEDDING_API_KEY or ZAI_API_KEY
   const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
   if (!isValidKey(embeddingKey)) {
     console.warn("No EMBEDDING_API_KEY or ZAI_API_KEY found, cannot describe image.");
     return "";
   }
 
-  // Vision models to try in sequence
+  // Vision models to try in sequence - putting fastest and free chat-vision models first
   const visionModels = [
-    "nvidia/llama-nemotron-embed-vl-1b-v2:free", // Primary requested model
     "google/gemini-2.5-flash:free",
     "meta-llama/llama-3.2-11b-vision-instruct:free",
     "google/gemma-3-27b-it:free",
     "google/gemini-2.5-flash",
     "openai/gpt-4o-mini",
+    "nvidia/llama-nemotron-embed-vl-1b-v2:free", // Last fallback as it is an embedding model
   ];
 
   let lastError = null;
 
   for (const model of visionModels) {
     try {
-      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting description using model: ${model}`);
+      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting description using OpenRouter model: ${model}`);
       
       const payload = {
         model: model,
@@ -81,7 +121,7 @@ async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this i
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`❌ [IMAGE PRE-PROCESS VERCEL] Model ${model} failed:`, errText);
+        console.error(`❌ [IMAGE PRE-PROCESS VERCEL] OpenRouter Model ${model} failed:`, errText);
         lastError = errText;
         continue;
       }
@@ -89,51 +129,12 @@ async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this i
       const data = await response.json();
       const description = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
       if (description) {
-        console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Image described successfully using model ${model}. Length: ${description.length}`);
+        console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Image described successfully using OpenRouter model ${model}. Length: ${description.length}`);
         return description;
       }
     } catch (err) {
-      console.error(`❌ [IMAGE PRE-PROCESS VERCEL] Exception with ${model}:`, err.message);
+      console.error(`❌ [IMAGE PRE-PROCESS VERCEL] Exception with OpenRouter ${model}:`, err.message);
       lastError = err.message;
-    }
-  }
-
-  // Fallback: Direct Gemini if available
-  if (isValidKey(process.env.GEMINI_API_KEY)) {
-    try {
-      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting fallback to direct Gemini API`);
-      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const mimeType = matches[1];
-        const base64Data = matches[2];
-        
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  { text: userPrompt || "Describe this image in detail." },
-                  { inlineData: { mimeType: mimeType, data: base64Data } }
-                ]
-              }]
-            })
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (description) {
-            console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Direct Gemini described image successfully. Length: ${description.length}`);
-            return description;
-          }
-        }
-      }
-    } catch (err) {
-      console.error("❌ [IMAGE PRE-PROCESS VERCEL] Direct Gemini fallback failed:", err.message);
     }
   }
 
