@@ -56,7 +56,8 @@ function CodeGenerator() {
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
-    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
+    // Store image in user message so it renders in the chat bubble
+    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }]);
 
     const payload = {
       message: "Generate code: " + text,
@@ -73,7 +74,9 @@ function CodeGenerator() {
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 12000);
+        // Increase timeout to 90s when image is attached (image pre-processing takes extra time)
+        const timeoutMs = imageToBeSent ? 90000 : 25000;
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
         clearTimeout(timer);
         if (r.ok) { response = r; break; }
@@ -234,7 +237,18 @@ function CodeGenerator() {
                 </div>
                 <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
                   {msg.sender === "user" ? (
-                    msg.text
+                    <>
+                      {msg.image && (
+                        <div style={{ marginBottom: "8px" }}>
+                          <img
+                            src={msg.image}
+                            alt="Uploaded"
+                            style={{ maxWidth: "220px", maxHeight: "180px", borderRadius: "10px", border: "2px solid #10b981", objectFit: "cover", display: "block" }}
+                          />
+                        </div>
+                      )}
+                      {msg.text}
+                    </>
                   ) : (
                     <ReactMarkdown components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   )}}

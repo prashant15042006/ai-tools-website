@@ -103,7 +103,8 @@ function Chat() {
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
-    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user" }, { id: aiMsgId, text: "", sender: "ai" }]);
+    // Store image in user message so it renders in the chat bubble
+    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }]);
 
     // Prepare history (last 10 messages for context)
     const history = messages.slice(-10).map(msg => ({
@@ -139,7 +140,9 @@ function Chat() {
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 12000); // 12s timeout
+        // Increase timeout to 90s when image is attached (image pre-processing takes extra time)
+        const timeoutMs = imageToBeSent ? 90000 : 25000;
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -320,7 +323,18 @@ function Chat() {
                 </div>
                 <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
                   {msg.sender === "user" ? (
-                    msg.text
+                    <>
+                      {msg.image && (
+                        <div style={{ marginBottom: "8px" }}>
+                          <img
+                            src={msg.image}
+                            alt="Uploaded"
+                            style={{ maxWidth: "220px", maxHeight: "180px", borderRadius: "10px", border: "2px solid #6366f1", objectFit: "cover", display: "block" }}
+                          />
+                        </div>
+                      )}
+                      {msg.text}
+                    </>
                   ) : msg.text ? (
                     <ReactMarkdown components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   ) : (
