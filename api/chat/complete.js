@@ -20,61 +20,9 @@ const isValidKey = (val) =>
   !val.includes("example");
 
 // Keys
-const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 const ZAI_KEY = process.env.ZAI_API_KEY || "";
 const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "";
-
-// 1. Google Gemini (direct)
-async function callGemini(message, userName, history = [], image = null) {
-  const key = GEMINI_KEY;
-  if (!isValidKey(key)) throw new Error("Gemini key not configured");
-
-  const contents = [];
-  if (Array.isArray(history)) {
-    for (const h of history) {
-      contents.push({
-        role: h.role === "assistant" ? "model" : "user",
-        parts: [{ text: h.content }],
-      });
-    }
-  }
-  
-  // Build user parts — prepend image if provided (Gemini inlineData format)
-  const userParts = [];
-  if (image) {
-    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      userParts.push({ inlineData: { mimeType: matches[1], data: matches[2] } });
-    }
-  }
-  userParts.push({ text: message });
-  contents.push({ role: "user", parts: userParts });
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT(userName) }] },
-        }),
-        signal: controller.signal,
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `Gemini ${res.status}`);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error("Empty Gemini response");
-    return text;
-  } finally {
-    clearTimeout(timer);
-  }
-}
+// Google Gemini API disabled by user
 
 // 2. Cerebras
 async function callCerebras(message, userName) {
@@ -235,15 +183,8 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 3. Try Gemini
-  if (!reply) {
-    try {
-      reply = await callGemini(message, userName, history, image);
-      usedProvider = "Gemini";
-    } catch (e) {
-      console.warn("Gemini failed:", e.message);
-    }
-  }
+  // Gemini disabled by user
+
 
   // 4. Static fallback — always respond
   if (!reply) {

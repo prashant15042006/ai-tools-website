@@ -50,11 +50,8 @@ const isValidKey = (val) => {
   return val && val.trim() !== "" && !val.startsWith("REPLACE_WITH_") && !val.includes("example.com") && !val.includes("example");
 };
 
-if (!isValidKey(process.env.GEMINI_API_KEY)) {
-  console.warn("💡 INFO: GEMINI_API_KEY is not set or has placeholder value.");
-} else {
-  console.log("✅ Direct Google Gemini API Key detected (ends with ...", process.env.GEMINI_API_KEY.slice(-5), ")");
-}
+// Google Gemini API key disabled by user
+
 
 if (!isValidKey(process.env.ZAI_API_KEY)) {
   console.warn("⚠️ WARNING: ZAI_API_KEY (OpenRouter Key) is not set or has placeholder value.");
@@ -78,44 +75,8 @@ const USE_CEREBRAS_MODE = process.env.MODE?.toUpperCase() === "CEREBRAS";
 
 // Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
 const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this image and describe what is visible in detail.") => {
-  // 1. Try Direct Gemini first if available (extremely fast & free)
-  if (isValidKey(process.env.GEMINI_API_KEY)) {
-    try {
-      console.log(`🖼️ [IMAGE PRE-PROCESS] Attempting description via direct Gemini API (first priority)`);
-      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const mimeType = matches[1];
-        const base64Data = matches[2];
-        
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  { text: userPrompt || "Describe this image in detail." },
-                  { inlineData: { mimeType: mimeType, data: base64Data } }
-                ]
-              }]
-            })
-          }
-        );
+  // Gemini API disabled by user
 
-        if (response.ok) {
-          const data = await response.json();
-          const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (description) {
-            console.log(`✅ [IMAGE PRE-PROCESS] Direct Gemini described image successfully. Length: ${description.length}`);
-            return description;
-          }
-        }
-      }
-    } catch (err) {
-      console.error("❌ [IMAGE PRE-PROCESS] Direct Gemini attempt failed:", err.message);
-    }
-  }
 
   // 2. OpenRouter vision models using EMBEDDING_API_KEY or ZAI_API_KEY
   const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
@@ -451,136 +412,8 @@ const saveChatMetadata = async ({ question, userName, userEmail, model, provider
   }
 };
 
-const callGeminiDirect = async (message, userName = "User", image = null) => {
-  console.log(`🚀 [DIRECT GEMINI] Requesting gemini-2.0-flash`);
-  
-  // Use enhanced prompt for table requests
-  const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
+// callGeminiDirect and callGeminiDirectStream removed — Gemini API disabled by user
 
-  // Build parts array — prepend image if provided (Gemini inlineData format)
-  const parts = [];
-  if (image) {
-    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      parts.push({ inlineData: { mimeType: matches[1], data: matches[2] } });
-    }
-  }
-  parts.push({ text: message });
-  
-  const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts }],
-      systemInstruction: {
-        parts: [{ text: systemPrompt }]
-      }
-    }),
-  }, 10000);
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error?.message || `Status ${response.status}`);
-  }
-
-  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!reply) throw new Error("Empty response from direct Gemini API");
-  return reply;
-};
-
-const callGeminiDirectStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
-  console.log(`🚀 [DIRECT GEMINI STREAM] Requesting gemini-2.0-flash`);
-  
-  // Use enhanced prompt for table requests
-  const systemPrompt = ENHANCED_TABLE_SYSTEM_PROMPT(userName, message);
-
-  // Format conversation history for Gemini
-  const geminiContents = formatHistoryForGemini(history, message);
-
-  // If image provided, override last user message parts with multimodal content
-  if (image) {
-    const lastMsg = geminiContents[geminiContents.length - 1];
-    if (lastMsg && lastMsg.role === "user") {
-      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        lastMsg.parts = [
-          { inlineData: { mimeType: matches[1], data: matches[2] } },
-          { text: message }
-        ];
-      }
-    }
-  }
-  
-  const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: geminiContents,
-      systemInstruction: {
-        parts: [{ text: systemPrompt }]
-      }
-    }),
-  }, 10000);
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(errText || `Status ${response.status}`);
-  }
-
-  let buffer = "";
-  let fullReply = "";
-
-  return new Promise((resolve, reject) => {
-    response.body.on("data", (chunk) => {
-      buffer += chunk.toString();
-      let lines = buffer.split("\n");
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith("data: ")) continue;
-
-        const dataStr = trimmed.slice(6);
-        try {
-          const data = JSON.parse(dataStr);
-          const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          if (content) {
-            fullReply += content;
-            res.write(`data: ${JSON.stringify({ content })}\n\n`);
-          }
-        } catch (e) {
-          // Fragmented JSON
-        }
-      }
-    });
-
-    response.body.on("end", async () => {
-      console.log(`✅ [DIRECT GEMINI STREAM] Finished. Reply length: ${fullReply.length}`);
-      res.write("data: [DONE]\n\n");
-
-      // Save to database if available (metadata only, no AI reply text)
-      await saveChatMetadata({
-        question: message,
-        userName,
-        userEmail,
-        model: "gemini-2.0-flash-direct",
-        provider: "Google Gemini"
-      });
-
-      res.end();
-      resolve();
-    });
-
-    response.body.on("error", (err) => {
-      console.error("❌ [DIRECT GEMINI STREAM] Body error:", err.message);
-      reject(err);
-    });
-  });
-};
 
 // ===============================
 // Nemotron caller (generic, tolerant to multiple response shapes)
@@ -988,14 +821,7 @@ app.post("/api/chat", async (req, res) => {
       if (reply) return;
     }
 
-    // 3. Try Direct Google Gemini — supports vision natively via inlineData
-    if (isValidKey(process.env.GEMINI_API_KEY)) {
-      const reply = await tryStreamProvider("Direct Gemini", async () => {
-        await callGeminiDirectStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
-        return true;
-      });
-      if (reply) return;
-    }
+    // Gemini streaming disabled by user
 
     // 4. If Nemotron is configured (fast provider), use it for a single non-streaming reply
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
@@ -1112,24 +938,7 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // 3. Try Direct Google Gemini as last resort (commented out for now due to expired key)
-    /*
-    if (isValidKey(process.env.GEMINI_API_KEY)) {
-      try {
-        const reply = await callGeminiDirect(dynamicMessage, userName);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "gemini-2.0-flash-direct",
-          provider: "Google Gemini"
-        });
-        return res.json({ success: true, model: 'gemini-2.0-flash-direct', reply });
-      } catch (err) {
-        console.error('Direct Gemini call failed, falling back:', err.message);
-      }
-    }
-    */
+    // Gemini fallback removed — Gemini API disabled by user
 
     // 4. Prefer Nemotron when available
     if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
@@ -1196,15 +1005,7 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 1. Prefer Direct Google Gemini if configured
-    if (isValidKey(process.env.GEMINI_API_KEY)) {
-      try {
-        const result = await callGeminiDirect(`Generate clean code for: ${dynamicPrompt}`, userName, dynamicImage);
-        return res.json({ success: true, provider: 'gemini-direct', result });
-      } catch (err) {
-        console.warn('Direct Gemini code generation failed, falling back:', err.message);
-      }
-    }
+    // Gemini code generation removed — Gemini API disabled by user
 
     // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
     if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
@@ -1279,15 +1080,7 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 1. Prefer Direct Google Gemini if configured
-    if (isValidKey(process.env.GEMINI_API_KEY)) {
-      try {
-        const result = await callGeminiDirect(`Write detailed content about: ${dynamicPrompt}`, userName, dynamicImage);
-        return res.json({ success: true, provider: 'gemini-direct', result });
-      } catch (err) {
-        console.warn('Direct Gemini content generation failed, falling back:', err.message);
-      }
-    }
+    // Gemini content generation removed — Gemini API disabled by user
 
     // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
     if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
@@ -1334,27 +1127,7 @@ app.post("/api/embed", async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "text field required" });
 
-    // 1. Prefer Google Gemini embedding model (free & fast)
-    if (isValidKey(process.env.GEMINI_API_KEY)) {
-      try {
-        const response = await fetchWithTimeout(
-          `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: { parts: [{ text }] } }),
-          },
-          10000
-        );
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || `Status ${response.status}`);
-        const embedding = data.embedding?.values;
-        if (!embedding) throw new Error("Empty embedding from Gemini");
-        return res.json({ success: true, provider: "gemini", embedding });
-      } catch (err) {
-        console.warn("Gemini embedding failed, falling back:", err.message);
-      }
-    }
+    // Gemini embedding removed — Gemini API disabled by user
 
     // 2. Fallback: OpenRouter embeddings via EMBEDDING_API_KEY
     const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;

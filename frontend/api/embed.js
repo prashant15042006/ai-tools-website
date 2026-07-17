@@ -25,31 +25,8 @@ module.exports = async function handler(req, res) {
   const { text } = req.body || {};
   if (!text) return res.status(400).json({ error: "text field is required" });
 
-  // 1. Google Gemini text-embedding-004 (preferred — free & fast)
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (isValidKey(geminiKey)) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: { parts: [{ text }] } }),
-          signal: controller.signal,
-        }
-      );
-      clearTimeout(timer);
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error?.message || `Gemini ${r.status}`);
-      const embedding = data.embedding?.values;
-      if (!embedding) throw new Error("Empty embedding from Gemini");
-      return res.status(200).json({ success: true, provider: "gemini", embedding });
-    } catch (e) {
-      console.warn("Gemini embedding failed:", e.message);
-    }
-  }
+  // Direct Gemini embedding disabled by user
+
 
   // 2. OpenRouter embeddings (fallback)
   const openrouterKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;

@@ -28,44 +28,8 @@ const isValidKey = (val) =>
 
 // Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
 async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this image and describe what is visible in detail.") {
-  // 1. Try Direct Gemini first if available (extremely fast & free)
-  if (isValidKey(process.env.GEMINI_API_KEY)) {
-    try {
-      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting description via direct Gemini API (first priority)`);
-      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const mimeType = matches[1];
-        const base64Data = matches[2];
-        
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  { text: userPrompt || "Describe this image in detail." },
-                  { inlineData: { mimeType: mimeType, data: base64Data } }
-                ]
-              }]
-            })
-          }
-        );
+  // Gemini API disabled by user
 
-        if (response.ok) {
-          const data = await response.json();
-          const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (description) {
-            console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Direct Gemini described image successfully. Length: ${description.length}`);
-            return description;
-          }
-        }
-      }
-    } catch (err) {
-      console.error("❌ [IMAGE PRE-PROCESS VERCEL] Direct Gemini attempt failed:", err.message);
-    }
-  }
 
   // 2. OpenRouter vision models using EMBEDDING_API_KEY or ZAI_API_KEY
   const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
@@ -141,59 +105,8 @@ async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this i
   throw new Error(`All vision models failed to describe image: ${lastError || "Unknown error"}`);
 }
 
-// ──────────────────────────────────────────────
-// 1. Google Gemini (direct)
-// ──────────────────────────────────────────────
-async function callGemini(message, userName, history = [], image = null) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!isValidKey(key)) throw new Error("Gemini key not configured");
+// callGemini removed — Gemini API disabled by user
 
-  const contents = [];
-  if (Array.isArray(history)) {
-    for (const h of history) {
-      contents.push({
-        role: h.role === "assistant" ? "model" : "user",
-        parts: [{ text: h.content }],
-      });
-    }
-  }
-
-  // Build user parts — prepend image if provided
-  const userParts = [];
-  if (image) {
-    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      userParts.push({ inlineData: { mimeType: matches[1], data: matches[2] } });
-    }
-  }
-  userParts.push({ text: message });
-  contents.push({ role: "user", parts: userParts });
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT(userName) }] },
-        }),
-        signal: controller.signal,
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `Gemini ${res.status}`);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error("Empty Gemini response");
-    return text;
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 const OPENROUTER_VISION_MODELS = [
   "openrouter/free",
