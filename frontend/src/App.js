@@ -7,7 +7,7 @@ import CodeGenerator from "./CodeGenerator";
 import ContentGenerator from "./ContentGenerator";
 import Dashboard from "./Dashboard";
 import PromptManager from "./PromptManager";
-import ImageGenerator from "./ImageGenerator";
+import ImageGenerator from "./ImageGeneratorPro";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Login from "./Login";

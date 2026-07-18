@@ -1,5 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { Download, ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle, Copy, Trash2, Upload, X, Settings, ChevronDown, ChevronUp } from "lucide-react";
+export { default } from "./ImageGeneratorPro";
 
 // ── Pollinations.ai URL builder ──
 function buildImageUrl(prompt, options = {}) {
@@ -24,184 +25,162 @@ function buildImageUrl(prompt, options = {}) {
 // ── Detect aspect ratio from prompt text ──
 // Returns matching ASPECT_RATIOS id (e.g. "16:9") or null
 function detectRatioFromPrompt(promptText) {
+    
   const p = promptText.toLowerCase();
   // Explicit ratio keywords
   if (/\b16[:\sx]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
   if (/\b9[:\sx]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
-  if (/\b4[:\sx]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
-  if (/\b1[:\sx]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
-  // Also detect dimension keywords without "ratio" word
-  if (/\b(16x9|16[/]9)\b/.test(p)) return "16:9";
-  if (/\b(9x16|9[/]16)\b/.test(p)) return "9:16";
-  if (/\b(4x3|4[/]3)\b/.test(p)) return "4:3";
-  return null;
-}
+          {/* Prompt Section */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+              <label style={{
+                fontSize: "12px", fontWeight: "800", color: "#22d3ee",
+                textTransform: "uppercase", letterSpacing: "0.8px"
+              }}>
+                🖊️ Image Prompt
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "11px", color: "#9ca3af", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "999px", padding: "4px 10px" }}>
+                  {promptWordCount} words
+                </span>
+                <span style={{ fontSize: "11px", color: "#9ca3af", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "999px", padding: "4px 10px" }}>
+                  {promptCharCount} chars
+                </span>
+                {prompt.trim() && (
+                  <button
+                    type="button"
+                    onClick={clearPrompt}
+                    style={{
+                      background: "rgba(239, 68, 68, 0.1)",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      color: "#f87171",
+                      borderRadius: "10px",
+                      padding: "6px 10px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
 
-// ── Models Data ──
-const MODELS = [
-  { id: "flux",          label: "⚡ Flux.1 (Premium)",    desc: "Best overall details, realism and quality" },
-  { id: "turbo",         label: "🚀 Turbo (Fastest)",      desc: "Generates high quality art in seconds" },
-  { id: "flux-realism",  label: "📷 Flux Realism",         desc: "Optimized for photographic styles" },
-  { id: "flux-anime",    label: "🌸 Flux Anime",           desc: "Gorgeous anime and manga style art" },
-  { id: "flux-3d",       label: "🎮 Flux 3D",              desc: "3D render, game assets and toy style" },
-];
+            <textarea
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe what you want to see... e.g. A majestic white owl in a magical fantasy library, oil painting style..."
+              rows={4}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                background: "rgba(0, 0, 0, 0.3)",
+                border: "1px solid rgba(6, 182, 212, 0.25)",
+                borderRadius: "16px",
+                padding: "14px 16px",
+                color: "#f3f4f6",
+                fontSize: "15px",
+                lineHeight: "1.6",
+                resize: "vertical",
+                outline: "none",
+                fontFamily: "Outfit, Inter, sans-serif",
+                transition: "all 0.2s"
+              }}
+              onFocus={e => (e.target.style.borderColor = "rgba(6, 182, 212, 0.7)")}
+              onBlur={e => (e.target.style.borderColor = "rgba(6, 182, 212, 0.25)")}
+            />
 
-// ── Aspect Ratio options ──
-const ASPECT_RATIOS = [
-  { id: "1:1",  label: "Square",      width: 1024, height: 1024, icon: "⏹️", desc: "1024 × 1024" },
-  { id: "16:9", label: "Landscape",   width: 1024, height: 576,  icon: "🌅", desc: "1024 × 576" },
-  { id: "9:16", label: "Portrait",    width: 576,  height: 1024, icon: "📱", desc: "576 × 1024" },
-  { id: "4:3",  label: "Classic",     width: 1024, height: 768,  icon: "📺", desc: "1024 × 768" },
-];
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {promptFragments.map(fragment => (
+                <button
+                  key={fragment}
+                  type="button"
+                  onClick={() => appendPromptFragment(fragment)}
+                  style={{
+                    background: "rgba(6, 182, 212, 0.06)",
+                    border: "1px solid rgba(6, 182, 212, 0.18)",
+                    borderRadius: "999px",
+                    padding: "6px 10px",
+                    fontSize: "11px",
+                    color: "#22d3ee",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    fontWeight: "600"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.14)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.06)"; }}
+                >
+                  + {fragment}
+                </button>
+              ))}
+            </div>
 
-// ── Quick suggestions ──
-const SUGGESTIONS = [
-  "Cyberpunk cat, neon details, 3D style",
-  "Astronaut walking on Mars, cinematic",
-  "Lofi study room, rain outside, cozy",
-  "Floating fantasy castle, detailed art",
-];
+            {prompt.trim() && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                flexWrap: "wrap",
+                padding: "10px 12px",
+                borderRadius: "12px",
+                background: "rgba(6, 182, 212, 0.06)",
+                border: "1px solid rgba(6, 182, 212, 0.14)"
+              }}>
+                <div style={{ fontSize: "11px", color: "#9ca3af", lineHeight: "1.4" }}>
+                  <strong style={{ color: "#e5e7eb" }}>Tip:</strong> Add subject + style + lighting + mood for stronger results.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(prompt).then(() => showToast("Prompt copied! 📋")).catch(() => showToast("Failed to copy.", "error"))}
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(6, 182, 212, 0.18)",
+                    color: "#d1d5db",
+                    borderRadius: "10px",
+                    padding: "7px 12px",
+                    fontSize: "11px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <Copy size={12} /> Copy Prompt
+                </button>
+              </div>
+            )}
 
-// ── Toast component ──
-function Toast({ message, type }) {
-  return (
-    <div style={{
-      position: "fixed", bottom: "80px", right: "20px",
-      background: type === "error"
-        ? "rgba(239,68,68,0.2)"
-        : "rgba(6, 182, 212, 0.15)",
-      border: `1px solid ${type === "error" ? "rgba(239,68,68,0.4)" : "rgba(6, 182, 212, 0.4)"}`,
-      color: type === "error" ? "#f87171" : "#e0f7fa",
-      padding: "14px 20px", borderRadius: "14px",
-      fontSize: "14px", fontWeight: "600",
-      backdropFilter: "blur(12px)", zIndex: 9999,
-      animation: "slideUp 0.3s ease-out",
-      boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-      maxWidth: "320px", lineHeight: "1.5"
-    }}>
-      {message}
-    </div>
-  );
-}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+              {SUGGESTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setPrompt(s)}
+                  style={{
+                    background: "rgba(6, 182, 212, 0.05)",
+                    border: "1px solid rgba(6, 182, 212, 0.2)",
+                    borderRadius: "20px",
+                    padding: "5px 12px",
+                    fontSize: "11px",
+                    color: "#22d3ee",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    fontWeight: "500"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.15)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.05)"; }}
+                >
+                  {s.length > 32 ? s.slice(0, 30) + "…" : s}
+                </button>
+              ))}
+            </div>
+          </div>
 
-export default function ImageGenerator() {
-  const [prompt, setPrompt]               = useState("");
-  const [model, setModel]                 = useState("flux");
-  const [aspectRatio, setAspectRatio]     = useState("1:1");
-  const [enhance, setEnhance]             = useState(true);
-  const [imageUrl, setImageUrl]           = useState(null);
-  const [loading, setLoading]             = useState(false);
-  const [loadFailed, setLoadFailed]       = useState(false);
-  const [toast, setToast]                 = useState(null);
-  
-  // ── New Reference Image States ──
-  const [refImage, setRefImage]           = useState(null); // Preview data URL
-  const [refImageFile, setRefImageFile]   = useState(null); // Raw file
-  const [refImageUrl, setRefImageUrl]     = useState(null); // Backend public hosted URL
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [showAdvanced, setShowAdvanced]   = useState(false); // Collapsed by default
-  const [strength, setStrength]           = useState(0.65); // Default strength (0.1 to 1.0)
-
-  const fileInputRef                      = useRef(null);
-
-  // Load history from localStorage
-  const [history, setHistory]             = useState(() => {
-    try {
-      const saved = localStorage.getItem("nexus_image_history");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const saveHistory = (newHistory) => {
-    setHistory(newHistory);
-    try {
-      localStorage.setItem("nexus_image_history", JSON.stringify(newHistory));
-    } catch (e) {
-      console.warn("Could not save history to localStorage", e);
-    }
-  };
-
-  // ── File Upload / Drag & Drop Handlers ──
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  const processFile = (file) => {
-    if (!file.type.startsWith("image/")) {
-      showToast("Please upload an image file only!", "error");
-      return;
-    }
-    setRefImageFile(file);
-    setRefImageUrl(null);
-    setShowAdvanced(true); // Open options panel to reveal similarity slider
-
-    // Create a local data URL preview immediately
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setRefImage(e.target.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  const clearRefImage = () => {
-    setRefImage(null);
-    setRefImageFile(null);
-    setRefImageUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const generateImage = async () => {
-    if (!prompt.trim()) {
-      showToast("Please enter a prompt first!", "error");
-      return;
-    }
-
-    setImageUrl(null);
-    setLoadFailed(false);
-    setLoading(true);
-
-    let activeImageUrl = null;
-
-    // ── If reference image provided, upload it to get a public URL ──────────
-    if (refImageFile && !refImageUrl) {
-      setUploadingImage(true);
-      showToast("⬆️ Uploading reference image...");
-      try {
-        // Prefer uploading via local backend first (expects JSON { image: dataUrl })
-        let uploadedUrl = null;
-
-        if (refImage) {
-          try {
-            const backendRes = await fetch("/api/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ image: refImage })
-            });
-            const backendData = await backendRes.json();
+          {/* Reference Image Section */}
             if (backendRes.ok && backendData?.success && backendData.url) {
               uploadedUrl = backendData.url;
             } else {
@@ -273,10 +252,12 @@ export default function ImageGenerator() {
       img.src = genUrl;
 
       img.onload = () => {
+        const result = { url: genUrl, prompt: prompt.trim(), model, ratio: finalRatioId, seed, id: Date.now() };
         setImageUrl(genUrl);
+        setActiveResult(result);
         setLoading(false);
         const newHistory = [
-          { url: genUrl, prompt: prompt.trim(), model, ratio: finalRatioId, seed, id: Date.now() },
+          result,
           ...history
         ].slice(0, 30);
         saveHistory(newHistory);
@@ -348,6 +329,7 @@ export default function ImageGenerator() {
     const deletedItem = history.find(item => item.id === id);
     if (deletedItem && imageUrl === deletedItem.url) {
       setImageUrl(null);
+      setActiveResult(null);
     }
   };
 
@@ -355,8 +337,39 @@ export default function ImageGenerator() {
     if (window.confirm("Are you sure you want to clear your generation history?")) {
       saveHistory([]);
       setImageUrl(null);
+      setActiveResult(null);
       showToast("History cleared.");
     }
+  };
+
+  const filteredHistory = useMemo(() => {
+    const query = historyQuery.trim().toLowerCase();
+    if (!query) return history;
+
+    return history.filter(item => {
+      const prompt = (item.prompt || "").toLowerCase();
+      const modelLabel = MODELS.find(modelItem => modelItem.id === item.model)?.label.toLowerCase() || "";
+      const ratio = (item.ratio || "").toLowerCase();
+      return prompt.includes(query) || modelLabel.includes(query) || ratio.includes(query);
+    });
+  }, [history, historyQuery]);
+
+  const reuseHistoryItem = (item, e) => {
+    e.stopPropagation();
+    setPrompt(item.prompt || "");
+    setModel(item.model || "flux");
+    setAspectRatio(item.ratio || "1:1");
+    setImageUrl(item.url);
+    setActiveResult(item);
+    setLoadFailed(false);
+    setShowAdvanced(true);
+    showToast("Loaded history item into the generator.");
+  };
+
+  const openHistoryItem = (item) => {
+    setImageUrl(item.url);
+    setActiveResult(item);
+    setLoadFailed(false);
   };
 
   const handleKeyDown = (e) => {
@@ -364,6 +377,17 @@ export default function ImageGenerator() {
       generateImage();
     }
   };
+
+  const promptFragments = [
+    "cinematic lighting",
+    "ultra detailed",
+    "soft shadows",
+    "volumetric glow",
+    "high contrast"
+  ];
+
+  const promptWordCount = prompt.trim() ? prompt.trim().split(/\s+/).length : 0;
+  const promptCharCount = prompt.length;
 
   return (
     <div className="page-view img-gen-page" style={{ maxWidth: "1280px", margin: "0 auto" }}>
@@ -391,12 +415,40 @@ export default function ImageGenerator() {
           
           {/* Prompt Section */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <label style={{
-              fontSize: "12px", fontWeight: "800", color: "#22d3ee",
-              textTransform: "uppercase", letterSpacing: "0.8px"
-            }}>
-              🖊️ Image Prompt
-            </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+              <label style={{
+                fontSize: "12px", fontWeight: "800", color: "#22d3ee",
+                textTransform: "uppercase", letterSpacing: "0.8px"
+              }}>
+                🖊️ Image Prompt
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "11px", color: "#9ca3af", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "999px", padding: "4px 10px" }}>
+                  {promptWordCount} words
+                </span>
+                <span style={{ fontSize: "11px", color: "#9ca3af", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "999px", padding: "4px 10px" }}>
+                  {promptCharCount} chars
+                </span>
+                {prompt.trim() && (
+                  <button
+                    type="button"
+                    onClick={clearPrompt}
+                    style={{
+                      background: "rgba(239, 68, 68, 0.1)",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      color: "#f87171",
+                      borderRadius: "10px",
+                      padding: "6px 10px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
             <textarea
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
@@ -413,6 +465,66 @@ export default function ImageGenerator() {
               onFocus={e => (e.target.style.borderColor = "rgba(6, 182, 212, 0.7)")}
               onBlur={e  => (e.target.style.borderColor = "rgba(6, 182, 212, 0.25)")}
             />
+            {prompt.trim() && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                flexWrap: "wrap",
+                padding: "10px 12px",
+                borderRadius: "12px",
+                background: "rgba(6, 182, 212, 0.06)",
+                border: "1px solid rgba(6, 182, 212, 0.14)"
+              }}>
+                <div style={{ fontSize: "11px", color: "#9ca3af", lineHeight: "1.4" }}>
+                  <strong style={{ color: "#e5e7eb" }}>Tip:</strong> Add subject + style + lighting + mood for stronger results.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(prompt).then(() => showToast("Prompt copied! 📋")).catch(() => showToast("Failed to copy.", "error"))}
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(6, 182, 212, 0.18)",
+                    color: "#d1d5db",
+                    borderRadius: "10px",
+                    padding: "7px 12px",
+                    fontSize: "11px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <Copy size={12} /> Copy Prompt
+                </button>
+              </div>
+            )}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "2px" }}>
+              {promptFragments.map(fragment => (
+                <button
+                  key={fragment}
+                  type="button"
+                  onClick={() => appendPromptFragment(fragment)}
+                  style={{
+                    background: "rgba(6, 182, 212, 0.06)",
+                    border: "1px solid rgba(6, 182, 212, 0.18)",
+                    borderRadius: "999px",
+                    padding: "6px 10px",
+                    fontSize: "11px",
+                    color: "#22d3ee",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    fontWeight: "600"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.14)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(6, 182, 212, 0.06)"; }}
+                >
+                  + {fragment}
+                </button>
+              ))}
+            </div>
             {/* AI Image Generate Badge */}
             <div style={{
               display: "flex", alignItems: "center", gap: "8px",
@@ -803,11 +915,17 @@ export default function ImageGenerator() {
               background: loading
                 ? "rgba(6,182,212,0.25)"
                 : "linear-gradient(135deg, #6366f1, #06b6d4)",
-              color: "white", border: "none",
-              padding: "16px 20px", borderRadius: "16px",
-              fontWeight: "800", fontSize: "16px",
+              color: "white",
+              border: "none",
+              padding: "16px 20px",
+              borderRadius: "16px",
+              fontWeight: "800",
+              fontSize: "16px",
               cursor: loading ? "not-allowed" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
               transition: "all 0.2s",
               boxShadow: loading ? "none" : "0 6px 28px rgba(6,182,212,0.4)",
               marginTop: "8px"
@@ -912,7 +1030,7 @@ export default function ImageGenerator() {
               <div style={{
                 width: "100%",
                 maxWidth: "100%",
-                aspectRatio: ASPECT_RATIOS.find(r => r.id === (history[0]?.ratio || aspectRatio))?.width / ASPECT_RATIOS.find(r => r.id === (history[0]?.ratio || aspectRatio))?.height,
+                aspectRatio: ASPECT_RATIOS.find(r => r.id === (activeResult?.ratio || aspectRatio))?.width / ASPECT_RATIOS.find(r => r.id === (activeResult?.ratio || aspectRatio))?.height,
                 borderRadius: "18px",
                 overflow: "hidden",
                 boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
@@ -967,11 +1085,11 @@ export default function ImageGenerator() {
                   fontSize: "12px", color: "#9ca3af", borderTop: "1px solid rgba(255,255,255,0.05)",
                   paddingTop: "10px", lineHeight: "1.5"
                 }}>
-                  <strong style={{ color: "#d1d5db" }}>Prompt:</strong> "<em>{history[0]?.prompt}</em>"
+                  <strong style={{ color: "#d1d5db" }}>Prompt:</strong> "<em>{activeResult?.prompt || history[0]?.prompt}</em>"
                   <div className="img-gen-meta-row">
-                    <span>Model: {MODELS.find(m => m.id === history[0]?.model)?.label.split(" (")[0] || "Flux"}</span>
-                    <span>Ratio: {history[0]?.ratio || "1:1"}</span>
-                    <span>Seed: {history[0]?.seed}</span>
+                    <span>Model: {MODELS.find(m => m.id === (activeResult?.model || history[0]?.model))?.label.split(" (")[0] || "Flux"}</span>
+                    <span>Ratio: {activeResult?.ratio || history[0]?.ratio || "1:1"}</span>
+                    <span>Seed: {activeResult?.seed || history[0]?.seed}</span>
                   </div>
                 </div>
               </div>
@@ -993,6 +1111,30 @@ export default function ImageGenerator() {
               <span className="img-gen-swipe-hint" style={{ fontSize: "11px", color: "#06b6d4", background: "rgba(6, 182, 212, 0.08)", padding: "4px 8px", borderRadius: "8px", fontWeight: "600" }}>
                 ← Swipe to browse →
               </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <Sparkles size={13} color="#22d3ee" />
+                <span style={{ fontSize: "12px", color: "#e5e7eb", fontWeight: "600" }}>
+                  {new Set(history.map(item => item.model).filter(Boolean)).size} models used
+                </span>
+              </div>
+              <input
+                value={historyQuery}
+                onChange={e => setHistoryQuery(e.target.value)}
+                placeholder="Search history by prompt, model, ratio"
+                aria-label="Search generation history"
+                style={{
+                  minWidth: "240px",
+                  background: "rgba(0, 0, 0, 0.28)",
+                  border: "1px solid rgba(6, 182, 212, 0.16)",
+                  borderRadius: "10px",
+                  padding: "9px 12px",
+                  color: "#f3f4f6",
+                  fontSize: "12px",
+                  outline: "none"
+                }}
+              />
             </div>
             <button
               onClick={clearHistory}
@@ -1017,15 +1159,21 @@ export default function ImageGenerator() {
             </button>
           </div>
 
+          {historyQuery.trim() && (
+            <div style={{ marginBottom: "14px", fontSize: "12px", color: "#9ca3af" }}>
+              Showing {filteredHistory.length} of {history.length} items for “{historyQuery.trim()}”.
+            </div>
+          )}
+
           <div className="img-gen-history-grid">
-            {history.map(item => (
+            {filteredHistory.map(item => (
               <div
                 key={item.id}
-                onClick={() => setImageUrl(item.url)}
+                onClick={() => openHistoryItem(item)}
                 style={{
                   borderRadius: "16px", overflow: "hidden",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
-                  background: "rgba(0, 0, 0, 0.2)",
+                  border: imageUrl === item.url ? "1px solid rgba(6, 182, 212, 0.9)" : "1px solid rgba(255, 255, 255, 0.05)",
+                  background: imageUrl === item.url ? "rgba(6, 182, 212, 0.08)" : "rgba(0, 0, 0, 0.2)",
                   cursor: "pointer", transition: "transform 0.2s, box-shadow 0.2s",
                   position: "relative", aspectRatio: "1/1", flexShrink: 0
                 }}
@@ -1055,14 +1203,23 @@ export default function ImageGenerator() {
                 {/* Quick actions overlay */}
                 <div className="img-gen-history-actions">
                   <button
+                    onClick={e => reuseHistoryItem(item, e)}
+                    className="img-gen-history-action-btn"
+                    title="Reuse this prompt"
+                  >
+                    <RefreshCw className="img-gen-history-icon" />
+                  </button>
+                  <button
                     onClick={e => { e.stopPropagation(); handleDownload(item.url); }}
                     className="img-gen-history-action-btn"
+                    title="Download image"
                   >
                     <Download className="img-gen-history-icon" />
                   </button>
                   <button
                     onClick={e => deleteItem(item.id, e)}
                     className="img-gen-history-action-btn delete"
+                    title="Delete from history"
                   >
                     <Trash2 className="img-gen-history-icon" />
                   </button>
@@ -1070,6 +1227,12 @@ export default function ImageGenerator() {
               </div>
             ))}
           </div>
+
+          {filteredHistory.length === 0 && (
+            <div style={{ marginTop: "18px", padding: "18px", borderRadius: "14px", border: "1px dashed rgba(6, 182, 212, 0.2)", color: "#9ca3af", fontSize: "13px", textAlign: "center" }}>
+              No history items match your search.
+            </div>
+          )}
         </div>
       )}
 

@@ -55,9 +55,27 @@ const OPENROUTER_TEXT_MODELS = [
   "qwen/qwen3-coder:free"
 ];
 
+// ===============================
+// 🔑 OpenRouter Key Pool (Load Distribution)
+// Returns all available OpenRouter API keys for round-robin load balancing.
+// ===============================
+const getOpenRouterKeyPool = () => {
+  const keys = [];
+  if (isValidKey(process.env.ZAI_API_KEY))
+    keys.push({ name: "ZAI", key: process.env.ZAI_API_KEY });
+  if (isValidKey(process.env.EMBEDDING_API_KEY))
+    keys.push({ name: "EMBEDDING", key: process.env.EMBEDDING_API_KEY });
+  if (isValidKey(process.env['LLAMA-NEMOTRON_API_KEY']))
+    keys.push({ name: "LLAMA-NEMOTRON", key: process.env['LLAMA-NEMOTRON_API_KEY'] });
+  // Use NEMOTRON_API_KEY as OpenRouter key only if NEMOTRON_API_URL is not a valid endpoint
+  if (isValidKey(process.env.NEMOTRON_API_KEY) && !isValidKey(process.env.NEMOTRON_API_URL))
+    keys.push({ name: "NEMOTRON_OR", key: process.env.NEMOTRON_API_KEY });
+  return keys;
+};
+
 async function callOpenRouter(message, userName, history = [], image = null) {
-  const key = ZAI_KEY;
-  if (!isValidKey(key)) throw new Error("OpenRouter key not configured");
+  const keyPool = getOpenRouterKeyPool();
+  if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
   const models = image ? OPENROUTER_VISION_MODELS : OPENROUTER_TEXT_MODELS;
 
@@ -76,37 +94,46 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   ];
 
   let lastErr = "Unknown error";
-  for (const model of models) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://nexuss-ai.io",
-          "X-Title": "Nexuss Workspace",
-        },
-        body: JSON.stringify({ model, messages, max_tokens: 1024 }),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      const data = await res.json();
-      if (!res.ok) {
-        lastErr = data.error?.message || `${res.status}`;
-        continue;
+
+  for (const { name, key } of keyPool) {
+    for (const model of models) {
+      try {
+        console.log(`🚀 [${name}] Attempting model: ${model}`);
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://nexuss-ai.io",
+            "X-Title": "Nexuss Workspace",
+          },
+          body: JSON.stringify({ model, messages, max_tokens: 1024 }),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        const data = await res.json();
+        if (!res.ok) {
+          lastErr = data.error?.message || `${res.status}`;
+          // Switch keys if rate-limited or credits exhausted
+          if (res.status === 429 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
+            console.warn(`⚠️ [${name}] Key rate-limited/exhausted, switching key...`);
+            break; // break inner model loop -> next key
+          }
+          continue;
+        }
+        const text =
+          data.choices?.[0]?.message?.content ||
+          data.choices?.[0]?.text;
+        if (!text) { lastErr = "Empty response"; continue; }
+        return text;
+      } catch (e) {
+        lastErr = e.message;
       }
-      const text =
-        data.choices?.[0]?.message?.content ||
-        data.choices?.[0]?.text;
-      if (!text) { lastErr = "Empty response"; continue; }
-      return text;
-    } catch (e) {
-      lastErr = e.message;
     }
   }
-  throw new Error(`OpenRouter all models failed: ${lastErr}`);
+  throw new Error(`OpenRouter all models/keys failed. Last error: ${lastErr}`);
 }
 
 // ──────────────────────────────────────────────
@@ -191,23 +218,23 @@ module.exports = async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try Cerebras first — but SKIP if image is attached (Cerebras has no vision support)
-  if (!image) {
-    try {
-      reply = await callCerebras(message, userName);
-      usedProvider = "Cerebras";
-    } catch (e) {
-      console.warn("Cerebras failed:", e.message);
-    }
-  }
-
-  // 2. Try OpenRouter (ZAI) — supports vision via multimodal content
-  if (!reply) {
+  // 1. Try OpenRouter (ZAI) first — supports vision via multimodal content & load balanced pool
+  if (getOpenRouterKeyPool().length > 0) {
     try {
       reply = await callOpenRouter(message, userName, history, image);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
+    }
+  }
+
+  // 2. Try Cerebras second as a fallback — but SKIP if image is attached (Cerebras has no vision support)
+  if (!reply && !image && isValidKey(process.env.CEREBRAS_API_KEY)) {
+    try {
+      reply = await callCerebras(message, userName);
+      usedProvider = "Cerebras";
+    } catch (e) {
+      console.warn("Cerebras failed:", e.message);
     }
   }
 

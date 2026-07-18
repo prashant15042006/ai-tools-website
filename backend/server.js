@@ -299,7 +299,28 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
 
 
 
+// ===============================
+// 🔑 OpenRouter Key Pool (Load Distribution)
+// Returns all available OpenRouter API keys for round-robin load balancing.
+// ===============================
+const getOpenRouterKeyPool = () => {
+  const keys = [];
+  if (isValidKey(process.env.ZAI_API_KEY))
+    keys.push({ name: "ZAI", key: process.env.ZAI_API_KEY });
+  if (isValidKey(process.env.EMBEDDING_API_KEY))
+    keys.push({ name: "EMBEDDING", key: process.env.EMBEDDING_API_KEY });
+  if (isValidKey(process.env['LLAMA-NEMOTRON_API_KEY']))
+    keys.push({ name: "LLAMA-NEMOTRON", key: process.env['LLAMA-NEMOTRON_API_KEY'] });
+  // Use NEMOTRON_API_KEY as OpenRouter key only if NEMOTRON_API_URL is not a valid endpoint
+  if (isValidKey(process.env.NEMOTRON_API_KEY) && !isValidKey(process.env.NEMOTRON_API_URL))
+    keys.push({ name: "NEMOTRON_OR", key: process.env.NEMOTRON_API_KEY });
+  return keys;
+};
+
 const callZAI = async (message, userName = "User", image = null) => {
+  const keyPool = getOpenRouterKeyPool();
+  if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
+
   const visionModels = [
     "openrouter/free",
     "openai/gpt-4o-mini",
@@ -322,9 +343,7 @@ const callZAI = async (message, userName = "User", image = null) => {
     "qwen/qwen3-coder:free"
   ];
   const models = image ? visionModels : textModels;
-  let lastError = null;
 
-  // If there's an image, construct the multimodal content format supported by vision models
   const userContent = image
     ? [
         { type: "text", text: message },
@@ -332,46 +351,59 @@ const callZAI = async (message, userName = "User", image = null) => {
       ]
     : message;
 
-  for (const model of models) {
-    try {
-      console.log(`🚀 Requesting model: ${model}`);
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.ZAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT(userName) },
-            { role: "user", content: userContent }
-          ],
-          max_tokens: 1024,
-        }),
-      });
+  let lastError = null;
 
-      const data = await response.json();
+  // Try each key × each model for maximum availability
+  for (const { name, key } of keyPool) {
+    for (const model of models) {
+      try {
+        console.log(`🚀 [${name}] Requesting model: ${model}`);
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://nexuss-ai.io",
+            "X-Title": "Nexuss Workspace",
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT(userName) },
+              { role: "user", content: userContent }
+            ],
+            max_tokens: 1024,
+          }),
+        });
 
-      if (!response.ok) {
-        let errorMsg = data.error?.message || `Status ${response.status}`;
-        console.error(`❌ ${model} failed:`, errorMsg);
-        lastError = errorMsg;
+        const data = await response.json();
+
+        if (!response.ok) {
+          let errorMsg = data.error?.message || `Status ${response.status}`;
+          // If rate-limited (429) or credits exhausted, try next key immediately
+          if (response.status === 429 || (errorMsg && errorMsg.toLowerCase().includes("credit"))) {
+            console.warn(`⚠️ [${name}] Key rate-limited/exhausted, switching key...`);
+            break; // break inner loop → try next key
+          }
+          console.error(`❌ [${name}] ${model} failed:`, errorMsg);
+          lastError = errorMsg;
+          continue;
+        }
+
+        if (data.choices?.[0]?.message?.content) {
+          return data.choices[0].message.content;
+        }
+
         continue;
+      } catch (err) {
+        lastError = err.message;
       }
-
-      if (data.choices?.[0]?.message?.content) {
-        return data.choices[0].message.content;
-      }
-      
-      continue;
-    } catch (err) {
-      lastError = err.message;
     }
   }
 
-  throw new Error(lastError || "All models failed. Please verify your API key and credits at openrouter.ai");
+  throw new Error(lastError || "All OpenRouter keys and models failed.");
 };
+
 
 // ===============================
 // 🌟 DIRECT GOOGLE GEMINI CALLERS (LIGHTNING FAST)
@@ -626,6 +658,9 @@ const callCerebrasStream = async (message, res, userName = "User", userEmail = "
 };
 
 const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
+  const keyPool = getOpenRouterKeyPool();
+  if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
+
   // When an image is attached, only use vision-capable models.
   // Most free models do NOT support vision and will error out.
   const visionModels = [
@@ -666,97 +701,109 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
     { role: "user", content: userContent }
   ];
 
-  for (const model of models) {
-    try {
-      console.log(`🚀 [STREAM] Attempting model: ${model}`);
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.ZAI_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://nexuss-ai.io",
-          "X-Title": "Nexuss Workspace",
-        },
-        body: JSON.stringify({
-          model: model,
-          stream: true,
-          messages: apiMessages,
-          max_tokens: 1024,
-        }),
-      });
+  let lastError = null;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error(`❌ [STREAM] ${model} failed:`, errText);
-        continue;
-      }
-
-      let buffer = "";
-      let fullReply = "";
-      let streamStarted = false;
-
-      return new Promise((resolve, reject) => {
-        response.body.on("data", (chunk) => {
-          buffer += chunk.toString();
-          let lines = buffer.split("\n");
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-            
-            const dataStr = trimmed.slice(6);
-            if (dataStr === "[DONE]") {
-              res.write("data: [DONE]\n\n");
-              continue;
-            }
-            
-            try {
-              const data = JSON.parse(dataStr);
-              const content = data.choices?.[0]?.delta?.content || "";
-              if (content) {
-                streamStarted = true;
-                fullReply += content;
-                res.write(`data: ${JSON.stringify({ content })}\n\n`);
-              }
-            } catch (e) {
-              // Fragmented JSON
-            }
-          }
-        });
-
-        response.body.on("end", async () => {
-          console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
-          
-          // Save metadata only, without AI reply text
-          await saveChatMetadata({
-            question: message,
-            userName,
-            userEmail,
+  for (const { name, key } of keyPool) {
+    for (const model of models) {
+      try {
+        console.log(`🚀 [STREAM] [${name}] Attempting model: ${model}`);
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://nexuss-ai.io",
+            "X-Title": "Nexuss Workspace",
+          },
+          body: JSON.stringify({
             model: model,
-            provider: "OpenRouter"
-          });
+            stream: true,
+            messages: apiMessages,
+            max_tokens: 1024,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error(`❌ [STREAM] [${name}] ${model} failed:`, errText);
           
-          res.end();
-          resolve();
+          // Switch keys if rate-limited or credits exhausted
+          if (response.status === 429 || errText.toLowerCase().includes("credit") || errText.toLowerCase().includes("rate limit")) {
+            console.warn(`⚠️ [STREAM] [${name}] Key rate-limited/exhausted, switching key...`);
+            break; // break inner model loop -> next key
+          }
+          lastError = errText;
+          continue;
+        }
+
+        let buffer = "";
+        let fullReply = "";
+        let streamStarted = false;
+
+        return new Promise((resolve, reject) => {
+          response.body.on("data", (chunk) => {
+            buffer += chunk.toString();
+            let lines = buffer.split("\n");
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith("data: ")) continue;
+              
+              const dataStr = trimmed.slice(6);
+              if (dataStr === "[DONE]") {
+                res.write("data: [DONE]\n\n");
+                continue;
+              }
+              
+              try {
+                const data = JSON.parse(dataStr);
+                const content = data.choices?.[0]?.delta?.content || "";
+                if (content) {
+                  streamStarted = true;
+                  fullReply += content;
+                  res.write(`data: ${JSON.stringify({ content })}\n\n`);
+                }
+              } catch (e) {
+                // Fragmented JSON
+              }
+            }
+          });
+
+          response.body.on("end", async () => {
+            console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
+            
+            // Save metadata only, without AI reply text
+            await saveChatMetadata({
+              question: message,
+              userName,
+              userEmail,
+              model: model,
+              provider: "OpenRouter"
+            });
+            
+            res.end();
+            resolve();
+          });
+
+          response.body.on("error", (err) => {
+            console.error("❌ [STREAM] Body error:", err.message);
+            err.streamStarted = streamStarted;
+            reject(err);
+          });
         });
 
-        response.body.on("error", (err) => {
-          console.error("❌ [STREAM] Body error:", err.message);
-          err.streamStarted = streamStarted;
-          reject(err);
-        });
-      });
-
-    } catch (err) {
-      console.error(`❌ [STREAM] Exception with ${model}:`, err.message);
-      if (err?.streamStarted) {
-        throw err;
+      } catch (err) {
+        console.error(`❌ [STREAM] [${name}] Exception with ${model}:`, err.message);
+        if (err?.streamStarted) {
+          throw err;
+        }
+        lastError = err.message;
       }
     }
   }
 
-  throw new Error("OpenRouter stream exhausted all models");
+  throw new Error(`OpenRouter stream exhausted all keys/models. Last error: ${lastError}`);
 };
 
 
@@ -803,19 +850,19 @@ app.post("/api/chat", async (req, res) => {
       }
     };
 
-    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      const reply = await tryStreamProvider("Cerebras", async () => {
-        await callCerebrasStream(dynamicMessage, res, userName, userEmail, history);
+    // 1. Try OpenRouter / ZAI first (uses balanced multi-key pool)
+    if (getOpenRouterKeyPool().length > 0) {
+      const reply = await tryStreamProvider("OpenRouter", async () => {
+        await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
         return true;
       });
       if (reply) return;
     }
 
-    // 2. Try OpenRouter / ZAI second
-    if (isValidKey(process.env.ZAI_API_KEY)) {
-      const reply = await tryStreamProvider("OpenRouter", async () => {
-        await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
+    // 2. Try Cerebras second as a fallback (only if no image, since Cerebras doesn't support vision)
+    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      const reply = await tryStreamProvider("Cerebras", async () => {
+        await callCerebrasStream(dynamicMessage, res, userName, userEmail, history);
         return true;
       });
       if (reply) return;
@@ -904,7 +951,24 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // 1. Prefer Cerebras if configured (only if no image, since Cerebras doesn't support vision)
+    // 1. Prefer OpenRouter / ZAI first (uses balanced multi-key pool)
+    if (getOpenRouterKeyPool().length > 0) {
+      try {
+        const reply = await callZAI(dynamicMessage, userName, dynamicImage);
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "zai",
+          provider: "OpenRouter"
+        });
+        return res.json({ success: true, model: 'zai', reply });
+      } catch (err) {
+        console.error('ZAI call failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Try Cerebras second as a fallback (only if no image, since Cerebras doesn't support vision)
     if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(dynamicMessage, userName, userEmail);
@@ -918,23 +982,6 @@ app.post("/api/chat/complete", async (req, res) => {
         return res.json({ success: true, model: 'cerebras', reply });
       } catch (err) {
         console.error('Cerebras call failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Prefer OpenRouter / ZAI
-    if (isValidKey(process.env.ZAI_API_KEY)) {
-      try {
-        const reply = await callZAI(dynamicMessage, userName, dynamicImage);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "zai",
-          provider: "OpenRouter"
-        });
-        return res.json({ success: true, model: 'zai', reply });
-      } catch (err) {
-        console.error('ZAI call failed, falling back:', err.message);
       }
     }
 
@@ -995,7 +1042,17 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
+    // 1. Prefer OpenRouter / ZAI first (uses balanced multi-key pool)
+    if (getOpenRouterKeyPool().length > 0) {
+      try {
+        const result = await callZAI(`Generate clean code for: ${dynamicPrompt}`, userName, dynamicImage);
+        return res.json({ success: true, provider: 'zai', result });
+      } catch (err) {
+        console.warn('OpenRouter code generation failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Try Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
     if (!dynamicImage && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
@@ -1007,7 +1064,7 @@ app.post("/api/code", async (req, res) => {
 
     // Gemini code generation removed — Gemini API disabled by user
 
-    // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
+    // 3. Prefer Cerebras if configured (and not tried yet, only if no image)
     if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
@@ -1017,7 +1074,7 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 3. Prefer Nemotron if configured (only if no image, since Nemotron doesn't support vision)
+    // 4. Prefer Nemotron if configured (only if no image, since Nemotron doesn't support vision)
     if (!dynamicImage && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Generate clean code for: ${dynamicPrompt}`, userName);
@@ -1025,12 +1082,6 @@ app.post("/api/code", async (req, res) => {
       } catch (err) {
         console.warn('Nemotron code generation failed, falling back:', err.message);
       }
-    }
-
-    // 4. Fallback to ZAI
-    if (isValidKey(process.env.ZAI_API_KEY)) {
-      const result = await callZAI(`Generate clean code for: ${dynamicPrompt}`, userName, dynamicImage);
-      return res.json({ success: true, provider: 'zai', result });
     }
 
     return res.status(503).json({ success: false, error: "No API Key configured." });
@@ -1070,7 +1121,17 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 0. Prefer Cerebras when MODE=CEREBRAS is enabled (only if no image, Cerebras doesn't support vision)
+    // 1. Prefer OpenRouter / ZAI first (uses balanced multi-key pool)
+    if (getOpenRouterKeyPool().length > 0) {
+      try {
+        const result = await callZAI(`Write detailed content about: ${dynamicPrompt}`, userName, dynamicImage);
+        return res.json({ success: true, provider: 'zai', result });
+      } catch (err) {
+        console.warn('OpenRouter content generation failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Try Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
     if (!dynamicImage && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
@@ -1082,7 +1143,7 @@ app.post("/api/content", async (req, res) => {
 
     // Gemini content generation removed — Gemini API disabled by user
 
-    // 2. Prefer Cerebras if configured (and not tried yet, only if no image)
+    // 3. Prefer Cerebras if configured (and not tried yet, only if no image)
     if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
@@ -1092,7 +1153,7 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 3. Prefer Nemotron if configured (only if no image, Nemotron doesn't support vision)
+    // 4. Prefer Nemotron if configured (only if no image, since Nemotron doesn't support vision)
     if (!dynamicImage && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
       try {
         const reply = await callNemotron(`Write detailed content about: ${dynamicPrompt}`, userName);
@@ -1100,12 +1161,6 @@ app.post("/api/content", async (req, res) => {
       } catch (err) {
         console.warn('Nemotron content generation failed, falling back:', err.message);
       }
-    }
-
-    // 4. Fallback to ZAI
-    if (isValidKey(process.env.ZAI_API_KEY)) {
-      const result = await callZAI(`Write detailed content about: ${dynamicPrompt}`, userName, dynamicImage);
-      return res.json({ success: true, provider: 'zai', result });
     }
 
     return res.status(503).json({ success: false, error: "No API Key configured." });
