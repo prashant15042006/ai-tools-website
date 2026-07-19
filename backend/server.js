@@ -562,7 +562,7 @@ const callCerebrasStream = async (message, res, userName = "User", userEmail = "
   }
 
   const apiMessages = [
-    { role: "system", content: SYSTEM_PROMPT(userName) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
     ...history,
     { role: "user", content: message }
   ];
@@ -696,7 +696,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
 
   // Format messages for OpenRouter
   const apiMessages = [
-    { role: "system", content: SYSTEM_PROMPT(userName) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
     ...history,
     { role: "user", content: userContent }
   ];

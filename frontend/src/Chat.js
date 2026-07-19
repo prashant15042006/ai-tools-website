@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, Camera, X } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
@@ -336,7 +337,7 @@ function Chat() {
                       {msg.text}
                     </>
                   ) : msg.text ? (
-                    <ReactMarkdown components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   ) : (
                     <div className="typing-indicator">
                       <div className="typing-dot"></div>

@@ -18,6 +18,15 @@ const SYSTEM_PROMPT = (userName = "User") =>
   ✅ **Image Generation** – Generate AI images from text prompts using the Image Generator section. You can specify ratios like 16:9, 9:16, 4:3, or 1:1 in your prompt.
   (All these features are available inside the Nexuss AI platform!)`;
 
+const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
+  let prompt = SYSTEM_PROMPT(userName);
+  const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine|time.?table|timetable/i.test(userMessage);
+  if (isTableRequest) {
+    prompt += `\n- **IMPORTANT**: The user is asking for table/list/schedule format. ALWAYS respond with a properly formatted markdown table using pipes (|) and dashes. Make sure every item is in table rows. Example: | Time | Activity |\n|---|---|\n| 6:00 AM | Wake up |`;
+  }
+  return prompt;
+};
+
 
 const isValidKey = (val) =>
   val &&
@@ -164,7 +173,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
     : message;
 
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT(userName) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
     ...(Array.isArray(history) ? history : []),
     { role: "user", content: userContent },
   ];
@@ -235,7 +244,7 @@ async function callCerebras(message, userName) {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT(userName) },
+            { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
             { role: "user", content: message },
           ],
           max_tokens: 1024,

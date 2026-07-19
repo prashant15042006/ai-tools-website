@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Send, ClipboardPaste, Mic, ExternalLink, PenTool, Sparkles, Camera, X } from "lucide-react";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -59,9 +60,16 @@ function ContentGenerator() {
     // Store image in user message so it renders in the chat bubble
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }]);
 
+    // Prepare conversation history (last 10 messages) so AI remembers context
+    const history = messages.slice(-10).map(msg => ({
+      role: msg.sender === "user" ? "user" : "assistant",
+      content: msg.text
+    })).filter(msg => msg.content);
+
     const payload = {
       message: "Write: " + text,
       userName: displayName,
+      history: history,
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
     const endpoints = [];
@@ -250,7 +258,7 @@ function ContentGenerator() {
                       {msg.text}
                     </>
                   ) : (
-                    <ReactMarkdown components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   )}
                 </div>
               </div>
