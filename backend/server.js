@@ -297,6 +297,22 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
   return prompt;
 };
 
+// ===============================
+// 🧹 Strip unwanted safety labels injected by some AI models
+// e.g. "User Safety: safe\nResponse Safety: safe"
+// ===============================
+const cleanAIResponse = (text) => {
+  if (!text) return text;
+  return text
+    // Remove full lines like "User Safety: safe", "Response Safety: safe"
+    .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
+    // Remove JSON-style safety objects e.g. {"safety":"safe"}
+    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
+    // Remove lines that are ONLY whitespace after removal
+    .replace(/^\s*[\r\n]/gm, "")
+    // Clean leading/trailing blank lines
+    .trim();
+};
 
 
 // ===============================
@@ -627,6 +643,11 @@ const callCerebrasStream = async (message, res, userName = "User", userEmail = "
         });
 
         response.body.on("end", async () => {
+          // If the full reply contains safety labels, send a correction to the client
+          const cleanedReply = cleanAIResponse(fullReply);
+          if (cleanedReply !== fullReply && cleanedReply.length > 0) {
+            res.write(`data: ${JSON.stringify({ replace: cleanedReply })}\n\n`);
+          }
           console.log(`✅ [CEREBRAS STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
           await saveChatMetadata({
             question: message,
@@ -771,6 +792,12 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
           });
 
           response.body.on("end", async () => {
+            // If the full reply contains safety labels, send a correction to the client
+            const cleanedReply = cleanAIResponse(fullReply);
+            if (cleanedReply !== fullReply && cleanedReply.length > 0) {
+              // Send a special replace signal so the client can swap the full reply
+              res.write(`data: ${JSON.stringify({ replace: cleanedReply })}\n\n`);
+            }
             console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
             
             // Save metadata only, without AI reply text

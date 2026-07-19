@@ -185,7 +185,13 @@ function Chat() {
           try {
             const data = JSON.parse(dataStr);
             if (data.error) throw new Error(data.error);
-              if (data.content) {
+            if (data.replace) {
+              // Backend sent a cleaned replacement (safety labels stripped)
+              aiReply = data.replace;
+              setMessages((prev) =>
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: data.replace } : msg)
+              );
+            } else if (data.content) {
                 const content = data.content;
                 aiReply += content;
                 

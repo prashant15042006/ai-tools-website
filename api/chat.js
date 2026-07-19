@@ -35,6 +35,16 @@ const isValidKey = (val) =>
   !val.includes("example.com") &&
   !val.includes("example");
 
+// Strip unwanted safety labels injected by some AI models
+const cleanAIResponse = (text) => {
+  if (!text) return text;
+  return text
+    .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
+    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
+    .replace(/^\s*[\r\n]/gm, "")
+    .trim();
+};
+
 // Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
 async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this image and describe what is visible in detail.") {
   // Gemini API disabled by user
@@ -349,7 +359,7 @@ module.exports = async function handler(req, res) {
   }
 
   console.log(`✅ /api/chat responded via ${usedProvider}`);
-  sseWrite(res, { content: reply });
+  sseWrite(res, { content: cleanAIResponse(reply) });
   res.write("data: [DONE]\n\n");
   res.end();
 }
