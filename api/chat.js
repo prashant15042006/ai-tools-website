@@ -39,8 +39,11 @@ const isValidKey = (val) =>
 const cleanAIResponse = (text) => {
   if (!text) return text;
   return text
-    .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
-    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
+    // Remove full lines that are just safety labels
+    .replace(/^\s*(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety|Safe|Safety)\s*:\s*\S+.*$/gim, "")
+    // Remove JSON-style safety fields
+    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating|safe)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
+    // Remove trailing/leading whitespace lines
     .replace(/^\s*[\r\n]/gm, "")
     .trim();
 };
@@ -137,17 +140,14 @@ const OPENROUTER_VISION_MODELS = [
 ];
 
 const OPENROUTER_TEXT_MODELS = [
-  "openrouter/free",
+  "google/gemini-2.5-flash:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-4-31b-it:free",
+  "qwen/qwen3-coder:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "liquid/lfm-2.5-1.2b-instruct:free",
   "openai/gpt-4o-mini",
   "google/gemini-2.5-flash",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "liquid/lfm-2.5-1.2b-instruct:free",
-  "poolside/laguna-xs-2.1:free",
-  "cohere/north-mini-code:free",
-  "openai/gpt-oss-120b:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "google/gemma-4-31b-it:free",
-  "qwen/qwen3-coder:free"
 ];
 
 // ===============================

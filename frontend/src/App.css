@@ -2127,6 +2127,7 @@ body {
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(10px);
   max-width: 440px;
+  width: 100%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
@@ -2134,7 +2135,7 @@ body {
   width: 100%;
   height: auto;
   max-height: 440px;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -2195,3 +2196,19 @@ body {
 @keyframes chat-spin {
   to { transform: rotate(360deg); }
 }
+
+/* Mobile fixes for image cards */
+@media (max-width: 768px) {
+  .chat-image-result-card {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  .chat-image-result-img {
+    max-height: 320px;
+  }
+  .chat-img-btn, .chat-img-btn-link {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+

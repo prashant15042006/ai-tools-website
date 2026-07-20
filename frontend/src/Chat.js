@@ -27,6 +27,16 @@ function detectRatioFromPrompt(promptText) {
   return null;
 }
 
+// Strip safety rating labels that some AI models inject into responses
+function cleanFrontendResponse(text) {
+  if (!text) return text;
+  return text
+    .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
+    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
+    .replace(/^\s*[\r\n]/gm, "")
+    .trim();
+}
+
 function Chat() {
   const location = useLocation();
   const [messages, setMessages] = useState([]);
@@ -167,56 +177,56 @@ function Chat() {
       const generate = async (retryCount = 0) => {
         try {
           const ratioStr = detectRatioFromPrompt(cleanedPrompt) || "1:1";
-          let width = 1024;
-          let height = 1024;
-          if (ratioStr === "16:9") { width = 1344; height = 768; }
-          else if (ratioStr === "9:16") { width = 768; height = 1344; }
-          else if (ratioStr === "4:3") { width = 1024; height = 768; }
+          // Use smaller dimensions on mobile for faster generation
+          const isMobile = window.innerWidth <= 768;
+          let width = isMobile ? 768 : 1024;
+          let height = isMobile ? 768 : 1024;
+          if (ratioStr === "16:9") { width = isMobile ? 960 : 1344; height = isMobile ? 540 : 768; }
+          else if (ratioStr === "9:16") { width = isMobile ? 540 : 768; height = isMobile ? 960 : 1344; }
+          else if (ratioStr === "4:3") { width = isMobile ? 800 : 1024; height = isMobile ? 600 : 768; }
 
           const seed = Math.floor(Math.random() * 999999);
           const genUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanedPrompt)}?width=${width}&height=${height}&model=flux&seed=${seed}&nologo=true&enhance=true`;
 
-          const img = new window.Image();
-          img.crossOrigin = "anonymous";
-          img.src = genUrl;
+          // Use fetch instead of window.Image - much more reliable on mobile browsers
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 90000); // 90s timeout for image gen
+          const response = await fetch(genUrl, { signal: controller.signal });
+          clearTimeout(timer);
 
-          img.onload = () => {
+          if (response.ok) {
+            // Convert blob to object URL for display - works perfectly on mobile
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
             setMessages((prev) =>
               prev.map(msg => msg.id === aiMsgId ? {
                 ...msg,
                 text: "",
-                imageUrl: genUrl,
+                imageUrl: objectUrl,
+                imageDownloadUrl: genUrl, // keep original URL for download
                 imageLoading: false,
                 seed,
                 ratio: ratioStr
               } : msg)
             );
             setLoading(false);
-          };
-
-          img.onerror = () => {
-            if (retryCount === 0) {
-              generate(1);
-            } else {
-              setMessages((prev) =>
-                prev.map(msg => msg.id === aiMsgId ? {
-                  ...msg,
-                  text: "⚠️ Image generation failed. Please try a different prompt or check your connection.",
-                  imageLoading: false
-                } : msg)
-              );
-              setLoading(false);
-            }
-          };
+          } else {
+            throw new Error(`Image service returned ${response.status}`);
+          }
         } catch (err) {
-          setMessages((prev) =>
-            prev.map(msg => msg.id === aiMsgId ? {
-              ...msg,
-              text: `⚠️ Error: ${err.message}`,
-              imageLoading: false
-            } : msg)
-          );
-          setLoading(false);
+          if (retryCount === 0 && err.name !== 'AbortError') {
+            // Retry once with a different seed
+            generate(1);
+          } else {
+            setMessages((prev) =>
+              prev.map(msg => msg.id === aiMsgId ? {
+                ...msg,
+                text: "⚠️ Image generation failed. Please try again or use a simpler prompt.",
+                imageLoading: false
+              } : msg)
+            );
+            setLoading(false);
+          }
         }
       };
 
@@ -260,8 +270,8 @@ function Chat() {
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        // Increase timeout to 90s when image is attached (image pre-processing takes extra time)
-        const timeoutMs = imageToBeSent ? 90000 : 25000;
+        // Mobile gets 40s timeout, desktop 30s, image sends get 90s
+        const timeoutMs = imageToBeSent ? 90000 : 40000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, {
           method: "POST",
@@ -272,6 +282,8 @@ function Chat() {
         clearTimeout(timer);
         if (r.ok) { response = r; break; }
         lastErr = `${endpoint} failed (${r.status})`;
+        // Don't try more endpoints for server errors (4xx)
+        if (r.status >= 400 && r.status < 500) break;
       } catch (e) {
         lastErr = e.message;
         console.warn(`⚠️ Endpoint failed: ${endpoint} —`, e.message);
@@ -306,20 +318,20 @@ function Chat() {
             if (data.error) throw new Error(data.error);
             if (data.replace) {
               // Backend sent a cleaned replacement (safety labels stripped)
-              aiReply = data.replace;
+              const cleaned = cleanFrontendResponse(data.replace);
+              aiReply = cleaned;
               setMessages((prev) =>
-                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: data.replace } : msg)
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleaned } : msg)
               );
             } else if (data.content) {
                 const content = data.content;
                 aiReply += content;
-                
+                // Clean safety labels from the accumulated reply before displaying
+                const displayText = cleanFrontendResponse(aiReply);
                 setMessages((prev) => 
-                  prev.map(msg => msg.id === aiMsgId ? { ...msg, text: msg.text + content } : msg)
+                  prev.map(msg => msg.id === aiMsgId ? { ...msg, text: displayText } : msg)
                 );
               }
-
-
           } catch (e) { }
         }
       }
@@ -474,7 +486,7 @@ function Chat() {
                           <button onClick={() => window.open(msg.imageUrl, '_blank')} className="chat-img-btn">
                             <ExternalLink size={14} /> Open
                           </button>
-                          <a href={msg.imageUrl} download={`pollinations-${msg.seed}.png`} target="_blank" rel="noopener noreferrer" className="chat-img-btn-link">
+                          <a href={msg.imageDownloadUrl || msg.imageUrl} download={`nexuss-image-${msg.seed}.png`} target="_blank" rel="noopener noreferrer" className="chat-img-btn-link">
                             <Download size={14} style={{ marginRight: '4px' }} /> Download
                           </a>
                         </div>
@@ -537,7 +549,7 @@ function Chat() {
             placeholder={
               imagePreview 
                 ? "Ask about the image..." 
-                : "Ask anything (e.g. write quicksort in python, generate image of a space station...)"
+                : "Ask anything..."
             }
             rows="1"
             disabled={loading}
