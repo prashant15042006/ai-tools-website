@@ -23,12 +23,12 @@
   ],
   "routes": [
     {
-      "src": "/api/chat",
-      "dest": "/api/chat.js"
-    },
-    {
       "src": "/api/chat/complete",
       "dest": "/api/chat/complete.js"
+    },
+    {
+      "src": "/api/chat",
+      "dest": "/api/chat.js"
     },
     {
       "src": "/api/embed",

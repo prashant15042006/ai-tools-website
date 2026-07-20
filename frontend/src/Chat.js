@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, Camera, X, MessageSquare, Code, PenTool, Image, Download, RefreshCw } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, Camera, X, Download } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
