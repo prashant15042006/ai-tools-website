@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, Camera, X } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, Camera, X, MessageSquare, Code, PenTool, Image, Download, RefreshCw } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -14,6 +14,18 @@ import { useLocation } from "react-router-dom";
 // Inject table styles on component mount
 injectTableStyles();
 
+
+function detectRatioFromPrompt(promptText) {
+  const p = promptText.toLowerCase();
+  if (/\b16[:\sx]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
+  if (/\b9[:\sx]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
+  if (/\b4[:\sx]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
+  if (/\b1[:\sx]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
+  if (/\b(16x9|16[/]9)\b/.test(p)) return "16:9";
+  if (/\b(9x16|9[/]16)\b/.test(p)) return "9:16";
+  if (/\b(4x3|4[/]3)\b/.test(p)) return "4:3";
+  return null;
+}
 
 function Chat() {
   const location = useLocation();
@@ -107,14 +119,121 @@ function Chat() {
     // Store image in user message so it renders in the chat bubble
     setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }]);
 
+    const isImageRequest = (promptText) => {
+      const p = promptText.toLowerCase().trim();
+      if (/\b(code|coding|script|program|programming|function|class|algorithm|html|css|javascript|js|python|java|c\+\+|c#|php|ruby|swift|golang|rust|typescript|ts|sql)\b/i.test(p)) {
+        return false;
+      }
+      const triggers = [
+        "generate image", "generate photo", "generate picture", "generate painting", "generate artwork", "generate sketch",
+        "create image", "create photo", "create picture", "create painting", "create artwork", "create sketch",
+        "make image", "make photo", "make picture", "make painting", "make artwork", "make sketch",
+        "draw image", "draw photo", "draw picture", "draw painting", "draw artwork", "draw sketch",
+        "paint image", "paint photo", "paint picture", "paint painting", "paint artwork", "paint sketch",
+        "image generate", "photo generate", "picture generate", "painting generate", "artwork generate", "sketch generate",
+        "image bana", "photo bana", "picture bana", "painting bana", "artwork bana", "sketch bana", "tasveer bana", "chitra bana",
+        "generate an image", "generate a photo", "generate a picture", "generate a painting", "generate a sketch",
+        "create an image", "create a photo", "create a picture", "create a painting", "create a sketch",
+        "make an image", "make a photo", "make a picture", "make a painting", "make a sketch",
+        "draw an image", "draw a photo", "draw a picture", "draw a painting", "draw a sketch",
+        "paint an image", "paint a photo", "paint a picture", "paint a painting", "paint a sketch",
+        "photo bana ke do", "image bana ke do", "picture bana ke do", "tasveer bana ke do",
+        "photo bana do", "image bana do", "picture bana do", "tasveer bana do",
+        "photo banake do", "image banake do", "picture banake do", "tasveer banake do"
+      ];
+      return triggers.some(t => p.includes(t)) || /^(generate|create|make|draw|paint)\s+(an?\s+)?(image|photo|picture|painting|artwork|sketch|portrait|illustration)\b/i.test(p);
+    };
+
+    const cleanImagePrompt = (promptText) => {
+      let cleaned = promptText
+        .replace(/^(generate|create|make|draw|paint|show|display|please|mujhhe|mujhe)\s+(an?\s+)?(image|photo|picture|painting|artwork|sketch|portrait|illustration)\s+(of|about|for)?\s+/i, "")
+        .replace(/(image|photo|picture|painting|artwork|sketch|portrait|illustration)\s+(generate|create|make|draw|paint|bana)\s+(kar\s+)?(ke\s+)?(do|karo|de|dijiye)\s*/i, "")
+        .trim();
+      return cleaned || promptText;
+    };
+
+    if (isImageRequest(text)) {
+      const cleanedPrompt = cleanImagePrompt(text);
+      setMessages((prev) => 
+        prev.map(msg => msg.id === aiMsgId ? { 
+          ...msg, 
+          text: "Generating your image...", 
+          isImageResult: true, 
+          imageLoading: true,
+          promptText: cleanedPrompt
+        } : msg)
+      );
+
+      const generate = async (retryCount = 0) => {
+        try {
+          const ratioStr = detectRatioFromPrompt(cleanedPrompt) || "1:1";
+          let width = 1024;
+          let height = 1024;
+          if (ratioStr === "16:9") { width = 1344; height = 768; }
+          else if (ratioStr === "9:16") { width = 768; height = 1344; }
+          else if (ratioStr === "4:3") { width = 1024; height = 768; }
+
+          const seed = Math.floor(Math.random() * 999999);
+          const genUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanedPrompt)}?width=${width}&height=${height}&model=flux&seed=${seed}&nologo=true&enhance=true`;
+
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.src = genUrl;
+
+          img.onload = () => {
+            setMessages((prev) =>
+              prev.map(msg => msg.id === aiMsgId ? {
+                ...msg,
+                text: "",
+                imageUrl: genUrl,
+                imageLoading: false,
+                seed,
+                ratio: ratioStr
+              } : msg)
+            );
+            setLoading(false);
+          };
+
+          img.onerror = () => {
+            if (retryCount === 0) {
+              generate(1);
+            } else {
+              setMessages((prev) =>
+                prev.map(msg => msg.id === aiMsgId ? {
+                  ...msg,
+                  text: "⚠️ Image generation failed. Please try a different prompt or check your connection.",
+                  imageLoading: false
+                } : msg)
+              );
+              setLoading(false);
+            }
+          };
+        } catch (err) {
+          setMessages((prev) =>
+            prev.map(msg => msg.id === aiMsgId ? {
+              ...msg,
+              text: `⚠️ Error: ${err.message}`,
+              imageLoading: false
+            } : msg)
+          );
+          setLoading(false);
+        }
+      };
+
+      generate(0);
+      return;
+    }
+
     // Prepare history (last 10 messages for context)
     const history = messages.slice(-10).map(msg => ({
       role: msg.sender === "user" ? "user" : "assistant",
       content: msg.text
     })).filter(msg => msg.content); // Filter out empty messages (like the typing indicator)
 
+    let finalMsg = text;
+
     const payload = {
-      message: text,
+      message: finalMsg,
       userName: displayName,
       userEmail: user?.email || localStorage.getItem("nexus_mock_user") || "Anonymous",
       history: history,
@@ -342,6 +461,27 @@ function Chat() {
                       )}
                       {msg.text}
                     </>
+                  ) : msg.isImageResult ? (
+                    msg.imageLoading ? (
+                      <div className="chat-image-loading">
+                        <div className="spinner"></div>
+                        <span>Generating image using Flux.1 AI...</span>
+                      </div>
+                    ) : msg.imageUrl ? (
+                      <div className="chat-image-result-card">
+                        <img src={msg.imageUrl} alt={msg.promptText} className="chat-image-result-img" />
+                        <div className="chat-image-result-actions">
+                          <button onClick={() => window.open(msg.imageUrl, '_blank')} className="chat-img-btn">
+                            <ExternalLink size={14} /> Open
+                          </button>
+                          <a href={msg.imageUrl} download={`pollinations-${msg.seed}.png`} target="_blank" rel="noopener noreferrer" className="chat-img-btn-link">
+                            <Download size={14} style={{ marginRight: '4px' }} /> Download
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <span>{msg.text}</span>
+                    )
                   ) : msg.text ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   ) : (
@@ -394,7 +534,11 @@ function Chat() {
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={imagePreview ? "Ask about the image..." : "Send a message..."}
+            placeholder={
+              imagePreview 
+                ? "Ask about the image..." 
+                : "Ask anything (e.g. write quicksort in python, generate image of a space station...)"
+            }
             rows="1"
             disabled={loading}
             onKeyDown={(e) => {

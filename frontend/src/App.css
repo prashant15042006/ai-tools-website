@@ -1513,7 +1513,10 @@ body {
    MOBILE: ≤768px — Main breakpoint
    ============================================================ */
 @media (max-width: 768px) {
-
+  :root {
+    --bottom-nav-height: 0px !important;
+  }
+ 
   /* Body: allow scroll, add bottom padding for nav bar */
   body {
     overflow: hidden auto !important;
@@ -1595,20 +1598,7 @@ body {
 
   /* ── Bottom Navigation Bar ── */
   .bottom-nav {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
-    padding-bottom: var(--safe-area-bottom);
-    background: var(--bg-sidebar);
-    border-top: 1px solid var(--border-color);
-    z-index: 100;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
-    justify-content: space-around;
-    align-items: center;
-    backdrop-filter: blur(12px);
+    display: none !important;
   }
 
   .bottom-nav-item {
@@ -2085,4 +2075,123 @@ body {
   .light-mode .card-info p {
     color: #475569 !important;
   }
+}
+
+/* All-in-One Chat Mode Selector Bar */
+.mode-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.mode-selector-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(99, 102, 241, 0.25) 100%) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  color: #60a5fa !important;
+}
+
+/* Chat Image Result Card styling */
+.chat-image-result-card {
+  margin-top: 10px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(10px);
+  max-width: 440px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.chat-image-result-img {
+  width: 100%;
+  height: auto;
+  max-height: 440px;
+  object-fit: cover;
+  display: block;
+}
+
+.chat-image-result-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(11, 14, 26, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chat-img-btn, .chat-img-btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.chat-img-btn:hover, .chat-img-btn-link:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #ffffff;
+}
+
+/* Image Generation Loading inside Chat */
+.chat-image-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.chat-image-loading .spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(59, 130, 246, 0.1);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: chat-spin 1s linear infinite;
+}
+
+@keyframes chat-spin {
+  to { transform: rotate(360deg); }
 }
