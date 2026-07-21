@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Code, PenTool, ArrowRight, Sparkles, Zap, Brain } from 'lucide-react';
 import { auth } from './firebase';
 import { AppContext } from './App';
+import API_BASE_URL from './apiConfig';
 import './App.css';
 
 const Dashboard = () => {
@@ -71,7 +72,7 @@ const Dashboard = () => {
       // 2. Fetch latest count from server
       const loadCount = async () => {
         try {
-          const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5001";
+
           const response = await fetch(`${API_BASE_URL}/api/projects?email=${encodeURIComponent(email)}`);
           if (response.ok) {
             const data = await response.json();

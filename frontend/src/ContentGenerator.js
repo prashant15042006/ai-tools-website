@@ -6,7 +6,7 @@ import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
-import API_BASE_URL from "./apiConfig";
+import API_BASE_URL, { IS_PROD } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 
 // Inject table styles on component mount
@@ -73,9 +73,12 @@ function ContentGenerator() {
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
     const endpoints = [];
-    if (API_BASE_URL && !API_BASE_URL.includes("localhost")) endpoints.push(`${API_BASE_URL}/api/chat`);
-    endpoints.push("/api/chat");
-    if (API_BASE_URL && API_BASE_URL.includes("localhost")) endpoints.unshift(`${API_BASE_URL}/api/chat`);
+    if (IS_PROD) {
+      if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/chat`);
+      endpoints.push("/api/chat");
+    } else {
+      if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/chat`);
+    }
 
     let response = null;
     let lastErr = "";

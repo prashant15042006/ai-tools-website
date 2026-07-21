@@ -6,7 +6,7 @@ import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
-import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
+import API_BASE_URL, { IS_MISCONFIGURED, IS_PROD } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 
 import { useLocation } from "react-router-dom";
@@ -251,17 +251,19 @@ function Chat() {
     };
 
     // ── Dual-endpoint fallback ──
-    // 1st try: Render backend (API_BASE_URL)
-    // 2nd try: Vercel same-origin /api/chat (always available)
     const endpoints = [];
-    if (API_BASE_URL && !API_BASE_URL.includes("localhost")) {
-      endpoints.push(`${API_BASE_URL}/api/chat`);
-    }
-    // Always add Vercel same-origin as fallback (works on Vercel deployment)
-    endpoints.push("/api/chat");
-    // If on localhost, also try local backend
-    if (API_BASE_URL && API_BASE_URL.includes("localhost")) {
-      endpoints.unshift(`${API_BASE_URL}/api/chat`);
+    if (IS_PROD) {
+      // 1st try: Render backend (API_BASE_URL)
+      if (API_BASE_URL) {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
+      // 2nd try: Vercel same-origin /api/chat (always available)
+      endpoints.push("/api/chat");
+    } else {
+      // Local dev: always try local backend (constructs automatically using host IP)
+      if (API_BASE_URL) {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
     }
 
     let response = null;
