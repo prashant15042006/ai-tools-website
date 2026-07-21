@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Code, PenTool, ArrowRight, Sparkles, Zap, Brain } from 'lucide-react';
 import { auth } from './firebase';
+import { AppContext } from './App';
 import './App.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { darkMode } = useContext(AppContext);
 
   const tools = [
     {
@@ -13,7 +15,8 @@ const Dashboard = () => {
       description: 'Interact with our advanced AI for brainstorming, analysis, and general assistance.',
       icon: MessageSquare,
       path: '/chat',
-      bg: 'linear-gradient(135deg, #0f172a, #1e293b)',
+      bgDark: 'linear-gradient(135deg, #0f172a, #1e293b)',
+      bgLight: 'linear-gradient(135deg, #dbeafe, #eff6ff)',
       color: '#3b82f6',
       glow: 'rgba(59, 130, 246, 0.4)'
     },
@@ -22,7 +25,8 @@ const Dashboard = () => {
       description: 'Generate high-quality code, debug snippets, and explain complex algorithms.',
       icon: Code,
       path: '/code',
-      bg: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+      bgDark: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+      bgLight: 'linear-gradient(135deg, #ede9fe, #f5f3ff)',
       color: '#8b5cf6',
       glow: 'rgba(139, 92, 246, 0.4)'
     },
@@ -31,18 +35,19 @@ const Dashboard = () => {
       description: 'Create compelling articles, social media posts, and professional emails in seconds.',
       icon: PenTool,
       path: '/content',
-      bg: 'linear-gradient(135deg, #2d1b0b, #452e13)',
+      bgDark: 'linear-gradient(135deg, #2d1b0b, #452e13)',
+      bgLight: 'linear-gradient(135deg, #fef3c7, #fffbeb)',
       color: '#f59e0b',
       glow: 'rgba(245, 158, 11, 0.4)'
-    }
-    ,
+    },
     // Images card removed
     {
       title: 'Prompts',
       description: 'Manage and reuse prompts across chats and generators.',
       icon: Zap,
       path: '/prompts',
-      bg: 'linear-gradient(135deg, #071029, #10233a)',
+      bgDark: 'linear-gradient(135deg, #071029, #10233a)',
+      bgLight: 'linear-gradient(135deg, #cffafe, #ecfeff)',
       color: '#06b6d4',
       glow: 'rgba(6, 182, 212, 0.18)'
     }
@@ -166,7 +171,7 @@ const Dashboard = () => {
               className="tool-card"
               onClick={() => navigate(tool.path)}
               style={{ 
-                background: tool.bg,
+                background: darkMode ? tool.bgDark : tool.bgLight,
                 boxShadow: `0 10px 30px -10px ${tool.glow}`,
               }}
             >

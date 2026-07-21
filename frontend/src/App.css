@@ -15,131 +15,456 @@
   --sidebar-active: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
 
-/* ===== LIGHT MODE OVERRIDES (Optional but keeping consistent) ===== */
+/* ===== LIGHT MODE OVERRIDES ===== */
 .light-mode {
-  --bg-main: #f8fafc;
+  --bg-main: #f0f4f8;
   --bg-sidebar: #ffffff;
-  --bg-hover: #f1f5f9;
+  --bg-hover: #e8edf3;
   --bg-bubble-user: #2563eb;
   --bg-bubble-ai: #ffffff;
-  --bg-input: rgba(255, 255, 255, 0.9);
+  --bg-input: rgba(255, 255, 255, 0.95);
   --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --border-color: #e2e8f0;
+  --text-secondary: #475569;
+  --border-color: #d1dae6;
+  --accent-glow: rgba(59, 130, 246, 0.12);
+  --pink-glow: rgba(236, 72, 153, 0.06);
 }
 
+/* ── Body & App Container ── */
+.light-mode {
+  background: #f0f4f8 !important;
+}
+
+.light-mode .app-container {
+  background-color: #f0f4f8 !important;
+  background-image: radial-gradient(circle at 50% 100%, rgba(37, 99, 235, 0.04), transparent 50%) !important;
+}
+
+/* ── Sidebar ── */
 .light-mode .sidebar {
-  box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+  background-color: #ffffff !important;
+  border-right-color: #d1dae6 !important;
+  box-shadow: 2px 0 20px rgba(0,0,0,0.07) !important;
 }
 
+.light-mode .sidebar-section-title {
+  color: #94a3b8;
+}
+
+.light-mode .logo-text {
+  color: #0f172a;
+}
+
+/* ── Sidebar Items ── */
+.light-mode .menu-item {
+  color: #475569 !important;
+}
+
+.light-mode .menu-item:hover {
+  background-color: #e8edf3 !important;
+  color: #0f172a !important;
+}
+
+.light-mode .menu-item.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25) !important;
+}
+
+/* ── Chat History ── */
+.light-mode .chat-history-item {
+  color: #475569;
+}
+
+.light-mode .chat-history-item:hover {
+  background-color: #e8edf3 !important;
+  color: #0f172a;
+}
+
+/* ── Sidebar Footer ── */
+.light-mode .sidebar-footer {
+  border-top-color: #d1dae6 !important;
+}
+
+/* ── Top Bar / Header ── */
 .light-mode .top-bar {
-  background-color: rgba(240, 244, 248, 0.95) !important;
+  background-color: rgba(248, 250, 252, 0.97) !important;
+  border-bottom-color: #d1dae6 !important;
+  backdrop-filter: blur(12px);
+}
+
+.light-mode .page-title {
+  color: #0f172a !important;
+}
+
+/* ── Buttons & Icons in Header ── */
+.light-mode .close-sidebar-btn,
+.light-mode .open-sidebar-btn,
+.light-mode .icon-btn {
+  color: #64748b !important;
+}
+
+.light-mode .close-sidebar-btn:hover,
+.light-mode .open-sidebar-btn:hover,
+.light-mode .icon-btn:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* ── Search Input ── */
+.light-mode .search-input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #d1dae6 !important;
+}
+
+.light-mode .search-icon {
+  color: #94a3b8;
+}
+
+/* ── Network Status Chip ── */
+.light-mode .network-status-chip {
+  color: #475569 !important;
+  background: rgba(0,0,0,0.05) !important;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08) !important;
+}
+
+/* ── Main Content Background ── */
+.light-mode .main-content {
+  background-color: #f0f4f8 !important;
+}
+
+/* ── Chat Scroll Background ── */
+.light-mode .chat-history-scroll {
+  background-image: 
+    radial-gradient(circle at 50% 120%, rgba(37, 99, 235, 0.06), transparent 40%),
+    radial-gradient(circle at 80% 100%, rgba(236, 72, 153, 0.04), transparent 30%) !important;
+}
+
+/* ── Suggestion Cards ── */
+.light-mode .suggestion-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(240,244,248,0.8) 100%) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+.light-mode .suggestion-card:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(235,242,250,0.9) 100%) !important;
+  transform: translateY(-2px) !important;
+}
+
+.light-mode .suggestion-card-title {
+  color: #0f172a !important;
+}
+
+.light-mode .suggestion-card-sub {
+  color: #64748b !important;
+}
+
+.light-mode .suggestion-card-icon {
+  color: #94a3b8 !important;
+}
+
+/* ── Chat Message Rows ── */
+.light-mode .chat-message-row.user-row {
+  background-color: rgba(37, 99, 235, 0.07) !important;
+  border-color: rgba(37, 99, 235, 0.12) !important;
+}
+
+.light-mode .chat-message-row.ai-row {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: #d1dae6 !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
 }
 
 .light-mode .message-content {
   color: #0f172a !important;
 }
 
-.light-mode .message-content h1,
-.light-mode .message-content h2,
-.light-mode .message-content h3 {
-  color: #6366f1 !important;
+.light-mode .message-content.user-text {
+  color: #1e3a8a !important;
 }
+
+.light-mode .message-sender {
+  color: #334155 !important;
+}
+
+/* ── Markdown in light mode ── */
+.light-mode .message-content h1 { color: #4f46e5 !important; }
+.light-mode .message-content h2 { color: #6d28d9 !important; }
+.light-mode .message-content h3 { color: #059669 !important; }
+.light-mode .message-content p { color: #1e293b !important; }
 
 .light-mode .message-content strong {
   color: #0f172a !important;
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(99, 102, 241, 0.08);
 }
 
 .light-mode .message-content em {
   color: #4f46e5;
 }
 
+.light-mode .message-content li {
+  color: #1e293b !important;
+}
+
+.light-mode .message-content li::marker {
+  color: #6366f1 !important;
+}
+
+.light-mode .message-content blockquote {
+  background: rgba(139, 92, 246, 0.05) !important;
+  color: #475569 !important;
+}
+
 .light-mode .message-content code {
-  background-color: #e2e8f0;
-  color: #dc2626;
+  background-color: #e2e8f0 !important;
+  color: #dc2626 !important;
 }
 
 .light-mode .message-content pre {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
 }
 
 .light-mode .message-content pre code {
-  color: #1e293b;
+  color: #e2e8f0 !important;
 }
 
+.light-mode .message-divider {
+  border-top-color: #d1dae6 !important;
+}
+
+/* ── Input Area ── */
 .light-mode .input-container {
-  background: linear-gradient(to top, #f0f4f8 70%, transparent) !important;
+  background: linear-gradient(to top, #f0f4f8 80%, transparent) !important;
+  border-top-color: rgba(0,0,0,0.06) !important;
 }
 
-.light-mode .search-input {
-  background: #ffffff;
-  color: #0f172a;
+.light-mode .input-box-wrapper {
+  background-color: #ffffff !important;
+  border-color: #d1dae6 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
 }
 
-.light-mode .dashboard-card {
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-
-.light-mode .setting-row {
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-
-.light-mode .chat-history-item {
-  color: #475569;
-}
-
-.light-mode .chat-history-item:hover {
-  background-color: #e8edf2;
-  color: #0f172a;
-}
-
-.light-mode .menu-item {
-  color: #475569;
-}
-
-.light-mode .menu-item:hover,
-.light-mode .menu-item.active {
-  background-color: #e8edf2;
-  color: #0f172a;
-}
-
-.light-mode .close-sidebar-btn,
-.light-mode .open-sidebar-btn,
-.light-mode .icon-btn {
-  color: #64748b;
-}
-
-.light-mode .close-sidebar-btn:hover,
-.light-mode .open-sidebar-btn:hover,
-.light-mode .icon-btn:hover {
-  background-color: #e8edf2;
-  color: #0f172a;
+.light-mode .input-box-wrapper:focus-within {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), 0 8px 24px rgba(0,0,0,0.1) !important;
+  background-color: #ffffff !important;
 }
 
 .light-mode .input-box-wrapper .action-btn {
-  color: #64748b;
+  color: #64748b !important;
 }
 
 .light-mode .input-box-wrapper .action-btn:hover {
-  background-color: rgba(0,0,0,0.06);
-  color: #0f172a;
+  background-color: rgba(0,0,0,0.06) !important;
+  color: #0f172a !important;
 }
 
 .light-mode .chat-textarea {
-  color: #0f172a;
+  color: #0f172a !important;
+}
+
+.light-mode .chat-textarea::placeholder {
+  color: #94a3b8 !important;
 }
 
 .light-mode .input-box-wrapper .send-btn {
-  background-color: #0f172a;
-  color: #ffffff;
+  background: linear-gradient(135deg, #1e40af, #2563eb) !important;
+  color: #ffffff !important;
 }
 
+.light-mode .disclaimer {
+  color: #94a3b8 !important;
+}
+
+/* ── Typing indicator ── */
 .light-mode .typing-dot {
-  background-color: #94a3b8;
+  background-color: #94a3b8 !important;
+}
+
+/* ── Mode Selector Bar ── */
+.light-mode .mode-selector-bar {
+  border-bottom-color: #d1dae6 !important;
+}
+
+.light-mode .mode-btn {
+  background: rgba(0,0,0,0.03) !important;
+  border-color: #d1dae6 !important;
+  color: #64748b !important;
+}
+
+.light-mode .mode-btn:hover {
+  background: rgba(0,0,0,0.06) !important;
+  color: #0f172a !important;
+}
+
+.light-mode .mode-btn.active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(99, 102, 241, 0.18) 100%) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  color: #2563eb !important;
+}
+
+/* ── Dashboard ── */
+.light-mode .dashboard-page {
+  background-image: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.06), transparent 50%) !important;
+}
+
+.light-mode .stat-card {
+  background: rgba(255,255,255,0.9) !important;
+  border-color: #d1dae6 !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
+}
+
+.light-mode .stat-card:hover {
+  border-color: rgba(99,102,241,0.3) !important;
+}
+
+.light-mode .stat-value {
+  color: #0f172a;
+}
+
+.light-mode .stat-label {
+  color: #64748b;
+}
+
+/* ── Dashboard Hero ── */
+.light-mode .dashboard-hero {
+  background: linear-gradient(135deg, #1e3a8a 0%, #312e81 45%, #4c1d95 100%) !important;
+  border-color: rgba(0,0,0,0.1) !important;
+}
+
+/* ── Dashboard Cards ── */
+.light-mode .dashboard-card {
+  background: #ffffff !important;
+  border-color: #d1dae6 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+}
+
+.light-mode .dashboard-card-title {
+  color: #0f172a;
+}
+
+.light-mode .dashboard-card-desc {
+  color: #64748b;
+}
+
+/* ── Tool Cards ── */
+.light-mode .tool-card::before {
+  background: linear-gradient(to top, rgba(248,250,252,0.95) 20%, rgba(248,250,252,0.2) 100%) !important;
+}
+
+.light-mode .card-info h3 {
+  color: #0f172a !important;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+}
+
+.light-mode .card-info p {
+  color: #64748b !important;
+}
+
+.light-mode .card-action {
+  color: #0f172a !important;
+}
+
+.light-mode .card-icon {
+  background-color: rgba(255,255,255,0.95) !important;
+  border-color: #d1dae6 !important;
+}
+
+/* ── Chat Image Cards ── */
+.light-mode .chat-image-result-card {
+  background: rgba(255,255,255,0.95) !important;
+  border-color: #d1dae6 !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08) !important;
+}
+
+.light-mode .chat-image-result-actions {
+  background: rgba(248,250,252,0.9) !important;
+  border-top-color: #d1dae6 !important;
+}
+
+.light-mode .chat-img-btn,
+.light-mode .chat-img-btn-link {
+  background: rgba(0,0,0,0.04) !important;
+  border-color: #d1dae6 !important;
+  color: #475569 !important;
+}
+
+.light-mode .chat-img-btn:hover,
+.light-mode .chat-img-btn-link:hover {
+  background: rgba(59,130,246,0.12) !important;
+  border-color: rgba(59,130,246,0.4) !important;
+  color: #2563eb !important;
+}
+
+/* ── Settings & Projects ── */
+.light-mode .setting-row {
+  background: #ffffff !important;
+  border-color: #d1dae6 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+  color: #0f172a !important;
+}
+
+/* ── Scrollbar in light mode ── */
+.light-mode ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ── Scrollbar colors (page-level) ── */
+.light-mode .dashboard-page::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.light-mode .dashboard-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Page View sections (Settings, Projects) ── */
+.light-mode .page-view {
+  color: #0f172a;
+}
+
+.light-mode .page-view h2 {
+  color: #0f172a;
+}
+
+.light-mode .page-view h3,
+.light-mode section h3 {
+  color: #0f172a !important;
+}
+
+/* Project/Settings frosted panels — catch inline backgrounds */
+.light-mode .page-view .dashboard-card {
+  background: #ffffff !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07) !important;
+  border-color: #d1dae6 !important;
+}
+
+/* Voice select element */
+.light-mode select {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #d1dae6 !important;
+}
+
+/* Form inputs in Projects / Settings */
+.light-mode .page-view input {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #d1dae6 !important;
+}
+
+/* Notes/projects textarea */
+.light-mode .page-view textarea {
+  color: #0f172a !important;
+  background: transparent !important;
 }
 
 * {
@@ -359,11 +684,12 @@ body {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
-  background-color: #0b0d17;
+  background-color: var(--bg-sidebar);
   z-index: 10;
   position: sticky;
   top: 0;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease;
 }
 
 .header-left {
@@ -394,7 +720,7 @@ body {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.3px;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 
@@ -773,8 +1099,8 @@ body {
 .input-box-wrapper {
   max-width: 900px;
   margin: 0 auto;
-  background-color: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
   border-radius: 24px;
   display: flex;
   flex-direction: row;
@@ -788,7 +1114,7 @@ body {
 .input-box-wrapper:focus-within {
   border-color: rgba(59, 130, 246, 0.5);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 12px 32px rgba(0, 0, 0, 0.4);
-  background-color: #131c30;
+  background-color: var(--bg-input);
 }
 
 /* RIGHT group: Mic + Send */
@@ -2064,9 +2390,13 @@ body {
 
   /* Light mode desktop overrides */
   .light-mode .tool-card {
-    background: rgba(0, 0, 0, 0.02) !important;
     border-color: rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07) !important;
   }
+  .light-mode .tool-card:nth-child(1):hover { background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(219, 234, 254, 0.9) 100%) !important; }
+  .light-mode .tool-card:nth-child(2):hover { background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(237, 233, 254, 0.9) 100%) !important; }
+  .light-mode .tool-card:nth-child(3):hover { background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(254, 243, 199, 0.9) 100%) !important; }
+  .light-mode .tool-card:nth-child(4):hover { background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(207, 250, 254, 0.9) 100%) !important; }
   .light-mode .card-info h3 {
     background: none !important;
     -webkit-text-fill-color: initial !important;
