@@ -923,26 +923,22 @@ app.post("/api/chat", async (req, res) => {
 
     // 5. No valid providers completed successfully
     if (!res.headersSent) {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
+      res.statusCode = 503;
+      res.setHeader("Content-Type", "application/json");
+      return res.json({ success: false, error: "No AI providers succeeded" });
+    } else {
+      res.write("data: [DONE]\n\n");
+      res.end();
     }
-    const fallback = fallbackResponse(dynamicMessage);
-    res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
-    res.write(`data: [DONE]\n\n`);
-    res.end();
 
   } catch (error) {
     console.error("Chat Error:", error.message);
     if (!res.headersSent) {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
-    }
-    if (!res.writableEnded) {
-      const fallback = fallbackResponse(req.body?.message || "your query");
-      res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
-      res.write(`data: [DONE]\n\n`);
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.json({ success: false, error: error.message });
+    } else if (!res.writableEnded) {
+      res.write("data: [DONE]\n\n");
       res.end();
     }
   }
@@ -1029,13 +1025,11 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    const fallback = fallbackResponse(dynamicMessage);
-    return res.json({ success: true, model: "fallback", reply: fallback });
+    return res.status(503).json({ success: false, error: "No AI providers succeeded" });
 
   } catch (error) {
     console.error('Chat Complete Error:', error.message);
-    const fallback = fallbackResponse(req.body?.message || "your query");
-    return res.json({ success: true, model: "fallback", reply: fallback });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -1098,13 +1092,11 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    const fallbackCode = `// 🤖 (fallback) Unable to reach AI providers to generate code for:\n// "${dynamicPrompt.slice(0, 100).replace(/\n/g, ' ')}..."\n\nfunction placeholder() {\n  console.log("Please try again later.");\n}`;
-    return res.json({ success: true, provider: 'fallback', result: fallbackCode });
+    return res.status(503).json({ success: false, error: "No API Key configured." });
 
   } catch (error) {
     console.error("Code Error:", error.message);
-    const fallbackCode = `// 🤖 (fallback) Exception occurred: ${error.message}\n\nfunction errorFallback() {}`;
-    return res.json({ success: true, provider: 'fallback', result: fallbackCode });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -1167,13 +1159,11 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    const fallbackContent = `🤖 (fallback) Unable to reach AI providers to write detailed content about: "${dynamicPrompt.slice(0, 100).replace(/\n/g, ' ')}...". Please try again later.`;
-    return res.json({ success: true, provider: 'fallback', result: fallbackContent });
+    return res.status(503).json({ success: false, error: "No API Key configured." });
 
   } catch (error) {
     console.error("Content Error:", error.message);
-    const fallbackContent = `🤖 (fallback) Exception occurred while generating content: ${error.message}`;
-    return res.json({ success: true, provider: 'fallback', result: fallbackContent });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
