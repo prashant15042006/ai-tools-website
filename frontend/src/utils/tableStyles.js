@@ -74,20 +74,75 @@ export const tableStyles = `
     background: rgba(6, 182, 212, 0.1);
   }
 
+  /* ── Light Mode Specific Overrides ── */
+  .light-mode .professional-table-wrapper {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+
+  .light-mode .professional-table-wrapper table {
+    background: #ffffff;
+  }
+
+  .light-mode .professional-table-wrapper thead {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  }
+
+  .light-mode .professional-table-wrapper thead th {
+    color: #1e293b;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-bottom: 2px solid rgba(99, 102, 241, 0.25);
+  }
+
+  .light-mode .professional-table-wrapper tbody tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .light-mode .professional-table-wrapper tbody tr:hover {
+    background-color: rgba(99, 102, 241, 0.08);
+    box-shadow: inset 3px 0 0 0 rgba(99, 102, 241, 0.6);
+  }
+
+  .light-mode .professional-table-wrapper td {
+    color: #334155;
+  }
+
+  .light-mode .professional-table-wrapper tbody tr:hover td {
+    color: #0f172a;
+  }
+
+  .light-mode .professional-table-wrapper td:first-child {
+    color: #0891b2;
+    background: rgba(6, 182, 212, 0.02);
+  }
+
+  .light-mode .professional-table-wrapper tbody tr:hover td:first-child {
+    color: #0e7490;
+    background: rgba(6, 182, 212, 0.06);
+  }
+
   @media (max-width: 768px) {
     .professional-table-wrapper {
-      margin: 16px -8px;
+      margin: 16px 0;
       border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .light-mode .professional-table-wrapper {
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .professional-table-wrapper table {
+      min-width: 550px; /* Prevents squishing of table columns on mobile */
     }
 
     .professional-table-wrapper thead th {
-      padding: 14px 16px;
-      font-size: 12px;
+      padding: 12px 14px;
+      font-size: 11px;
     }
 
     .professional-table-wrapper td {
-      padding: 12px 16px;
-      font-size: 13px;
+      padding: 10px 14px;
+      font-size: 12px;
     }
   }
 `;

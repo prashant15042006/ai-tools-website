@@ -419,7 +419,7 @@ function Chat() {
               <Sparkles size={32} color="white" />
             </div>
             <div style={{ textAlign: "center" }}>
-              <h2 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", letterSpacing: "-1px" }}>Welcome to Nexuss!</h2>
+              <h2 style={{ fontSize: "32px", fontWeight: "800", color: "var(--text-primary)", letterSpacing: "-1px" }}>Welcome to Nexuss!</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "16px", marginTop: "8px" }}>Your intelligent AI workspace.</p>
             </div>
             <div className="chat-suggestions-grid chat-suggestions">
