@@ -29,7 +29,7 @@ async function callCerebras(message, userName) {
   const key = CEREBRAS_KEY;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
-  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
   let lastErr = "Unknown error";
 
   for (const model of models) {
@@ -69,10 +69,10 @@ async function callCerebras(message, userName) {
 }
 
 const OPENROUTER_VISION_MODELS = [
-  "openrouter/free",
+  "google/gemini-2.5-flash:free",
+  "meta-llama/llama-3.2-11b-vision-instruct:free",
   "openai/gpt-4o-mini",
   "google/gemini-2.5-flash",
-  "meta-llama/llama-3.2-11b-vision-instruct:free",
   "google/gemma-3-27b-it:free",
   "mistralai/mistral-small-3.2-24b-instruct:free",
 ];

@@ -131,10 +131,10 @@ async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this i
 
 
 const OPENROUTER_VISION_MODELS = [
-  "openrouter/free",
+  "google/gemini-2.5-flash:free",
+  "meta-llama/llama-3.2-11b-vision-instruct:free",
   "openai/gpt-4o-mini",
   "google/gemini-2.5-flash",
-  "meta-llama/llama-3.2-11b-vision-instruct:free",
   "google/gemma-3-27b-it:free",
   "mistralai/mistral-small-3.2-24b-instruct:free",
 ];
@@ -238,7 +238,7 @@ async function callCerebras(message, userName) {
   const key = process.env.CEREBRAS_API_KEY;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
-  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
   let lastErr = "Unknown error";
 
   for (const model of models) {
@@ -330,23 +330,23 @@ module.exports = async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try OpenRouter (ZAI) first — supports vision via multimodal content & load balanced pool
-  if (getOpenRouterKeyPool().length > 0) {
-    try {
-      reply = await callOpenRouter(dynamicMessage, userName, history, dynamicImage);
-      usedProvider = "OpenRouter";
-    } catch (e) {
-      console.warn("OpenRouter failed:", e.message);
-    }
-  }
-
-  // 2. Try Cerebras second as a fallback — but SKIP if image is attached (Cerebras has no vision support)
+  // 1. Try Cerebras first — SKIP if image is attached (Cerebras has no vision support)
   if (!reply && !dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
     try {
       reply = await callCerebras(dynamicMessage, userName);
       usedProvider = "Cerebras";
     } catch (e) {
       console.warn("Cerebras failed:", e.message);
+    }
+  }
+
+  // 2. Try OpenRouter (ZAI) second — supports vision via multimodal content & load balanced pool
+  if (!reply && getOpenRouterKeyPool().length > 0) {
+    try {
+      reply = await callOpenRouter(dynamicMessage, userName, history, dynamicImage);
+      usedProvider = "OpenRouter";
+    } catch (e) {
+      console.warn("OpenRouter failed:", e.message);
     }
   }
 
