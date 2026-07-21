@@ -338,18 +338,18 @@ const callZAI = async (message, userName = "User", image = null) => {
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
   const visionModels = [
-    "openrouter/free",
+    "google/gemini-2.5-flash:free",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
-    "meta-llama/llama-3.2-11b-vision-instruct:free",
     "google/gemma-3-27b-it:free",
     "mistralai/mistral-small-3.2-24b-instruct:free",
   ];
   const textModels = [
-    "openrouter/free",
+    "google/gemini-2.5-flash:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
-    "meta-llama/llama-3.3-70b-instruct:free",
     "liquid/lfm-2.5-1.2b-instruct:free",
     "poolside/laguna-xs-2.1:free",
     "cohere/north-mini-code:free",
@@ -527,7 +527,7 @@ const callCerebras = async (message, userName = "User", userEmail = "") => {
     throw new Error("Cerebras not configured");
   }
 
-  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
   let lastError = null;
 
   for (const model of models) {
@@ -571,7 +571,7 @@ const callCerebras = async (message, userName = "User", userEmail = "") => {
 };
 
 const callCerebrasStream = async (message, res, userName = "User", userEmail = "", history = []) => {
-  const models = ["gemma-4-31b", "zai-glm-4.7", "gpt-oss-120b"];
+  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
   const apiKey = process.env.CEREBRAS_API_KEY;
   if (!isValidKey(apiKey)) {
     throw new Error("Cerebras not configured");
@@ -685,18 +685,18 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
   // When an image is attached, only use vision-capable models.
   // Most free models do NOT support vision and will error out.
   const visionModels = [
-    "openrouter/free",
+    "google/gemini-2.5-flash:free",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
-    "meta-llama/llama-3.2-11b-vision-instruct:free",
     "google/gemma-3-27b-it:free",
     "mistralai/mistral-small-3.2-24b-instruct:free",
   ];
   const textModels = [
-    "openrouter/free",
+    "google/gemini-2.5-flash:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
     "openai/gpt-4o-mini",
     "google/gemini-2.5-flash",
-    "meta-llama/llama-3.3-70b-instruct:free",
     "liquid/lfm-2.5-1.2b-instruct:free",
     "poolside/laguna-xs-2.1:free",
     "cohere/north-mini-code:free",
@@ -877,19 +877,19 @@ app.post("/api/chat", async (req, res) => {
       }
     };
 
-    // 1. Try OpenRouter / ZAI first (uses balanced multi-key pool)
-    if (getOpenRouterKeyPool().length > 0) {
-      const reply = await tryStreamProvider("OpenRouter", async () => {
-        await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
+    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
+    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      const reply = await tryStreamProvider("Cerebras", async () => {
+        await callCerebrasStream(dynamicMessage, res, userName, userEmail, history);
         return true;
       });
       if (reply) return;
     }
 
-    // 2. Try Cerebras second as a fallback (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      const reply = await tryStreamProvider("Cerebras", async () => {
-        await callCerebrasStream(dynamicMessage, res, userName, userEmail, history);
+    // 2. Try OpenRouter / ZAI second (uses balanced multi-key pool)
+    if (getOpenRouterKeyPool().length > 0) {
+      const reply = await tryStreamProvider("OpenRouter", async () => {
+        await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
         return true;
       });
       if (reply) return;
@@ -923,29 +923,27 @@ app.post("/api/chat", async (req, res) => {
 
     // 5. No valid providers completed successfully
     if (!res.headersSent) {
-      res.statusCode = 503;
-      res.setHeader("Content-Type", "application/json");
-      return res.json({ success: false, error: "No AI providers succeeded" });
-    } else {
-      const fallback = fallbackResponse(dynamicMessage);
-      res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
-      res.write(`data: [DONE]\n\n`);
-      res.end();
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
     }
+    const fallback = fallbackResponse(dynamicMessage);
+    res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
+    res.write(`data: [DONE]\n\n`);
+    res.end();
 
   } catch (error) {
     console.error("Chat Error:", error.message);
     if (!res.headersSent) {
-      res.statusCode = 500;
-      res.setHeader("Content-Type", "application/json");
-      res.json({ success: false, error: error.message });
-    } else if (!res.writableEnded) {
-      if (error?.streamStarted) {
-        res.write("data: [DONE]\n\n");
-        res.end();
-      } else {
-        writeFallbackSSE(res, req.body?.message || "your request");
-      }
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+    }
+    if (!res.writableEnded) {
+      const fallback = fallbackResponse(req.body?.message || "your query");
+      res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
+      res.end();
     }
   }
 });
@@ -978,24 +976,7 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // 1. Prefer OpenRouter / ZAI first (uses balanced multi-key pool)
-    if (getOpenRouterKeyPool().length > 0) {
-      try {
-        const reply = await callZAI(dynamicMessage, userName, dynamicImage);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "zai",
-          provider: "OpenRouter"
-        });
-        return res.json({ success: true, model: 'zai', reply });
-      } catch (err) {
-        console.error('ZAI call failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Try Cerebras second as a fallback (only if no image, since Cerebras doesn't support vision)
+    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
     if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
       try {
         const reply = await callCerebras(dynamicMessage, userName, userEmail);
@@ -1009,6 +990,23 @@ app.post("/api/chat/complete", async (req, res) => {
         return res.json({ success: true, model: 'cerebras', reply });
       } catch (err) {
         console.error('Cerebras call failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Prefer OpenRouter / ZAI second (uses balanced multi-key pool)
+    if (getOpenRouterKeyPool().length > 0) {
+      try {
+        const reply = await callZAI(dynamicMessage, userName, dynamicImage);
+        await saveChatMetadata({
+          question: message,
+          userName,
+          userEmail,
+          model: "zai",
+          provider: "OpenRouter"
+        });
+        return res.json({ success: true, model: 'zai', reply });
+      } catch (err) {
+        console.error('ZAI call failed, falling back:', err.message);
       }
     }
 
@@ -1036,7 +1034,8 @@ app.post("/api/chat/complete", async (req, res) => {
 
   } catch (error) {
     console.error('Chat Complete Error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    const fallback = fallbackResponse(req.body?.message || "your query");
+    return res.json({ success: true, model: "fallback", reply: fallback });
   }
 });
 
@@ -1069,35 +1068,23 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 1. Prefer OpenRouter / ZAI first (uses balanced multi-key pool)
+    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
+    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
+        return res.json({ success: true, provider: 'cerebras', result: reply });
+      } catch (err) {
+        console.warn('Cerebras code generation failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Prefer OpenRouter / ZAI second (uses balanced multi-key pool)
     if (getOpenRouterKeyPool().length > 0) {
       try {
         const result = await callZAI(`Generate clean code for: ${dynamicPrompt}`, userName, dynamicImage);
         return res.json({ success: true, provider: 'zai', result });
       } catch (err) {
         console.warn('OpenRouter code generation failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Try Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'cerebras', result: reply });
-      } catch (err) {
-        console.warn('Cerebras code generation failed, falling back:', err.message);
-      }
-    }
-
-    // Gemini code generation removed — Gemini API disabled by user
-
-    // 3. Prefer Cerebras if configured (and not tried yet, only if no image)
-    if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'cerebras', result: reply });
-      } catch (err) {
-        console.warn('Cerebras code generation failed, falling back:', err.message);
       }
     }
 
@@ -1111,11 +1098,13 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    return res.status(503).json({ success: false, error: "No API Key configured." });
+    const fallbackCode = `// 🤖 (fallback) Unable to reach AI providers to generate code for:\n// "${dynamicPrompt.slice(0, 100).replace(/\n/g, ' ')}..."\n\nfunction placeholder() {\n  console.log("Please try again later.");\n}`;
+    return res.json({ success: true, provider: 'fallback', result: fallbackCode });
 
   } catch (error) {
     console.error("Code Error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    const fallbackCode = `// 🤖 (fallback) Exception occurred: ${error.message}\n\nfunction errorFallback() {}`;
+    return res.json({ success: true, provider: 'fallback', result: fallbackCode });
   }
 });
 
@@ -1148,35 +1137,23 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 1. Prefer OpenRouter / ZAI first (uses balanced multi-key pool)
+    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
+    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
+      try {
+        const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
+        return res.json({ success: true, provider: 'cerebras', result: reply });
+      } catch (err) {
+        console.warn('Cerebras content generation failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Prefer OpenRouter / ZAI second (uses balanced multi-key pool)
     if (getOpenRouterKeyPool().length > 0) {
       try {
         const result = await callZAI(`Write detailed content about: ${dynamicPrompt}`, userName, dynamicImage);
         return res.json({ success: true, provider: 'zai', result });
       } catch (err) {
         console.warn('OpenRouter content generation failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Try Cerebras when MODE=CEREBRAS is enabled (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'cerebras', result: reply });
-      } catch (err) {
-        console.warn('Cerebras content generation failed, falling back:', err.message);
-      }
-    }
-
-    // Gemini content generation removed — Gemini API disabled by user
-
-    // 3. Prefer Cerebras if configured (and not tried yet, only if no image)
-    if (!dynamicImage && !USE_CEREBRAS_MODE && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'cerebras', result: reply });
-      } catch (err) {
-        console.warn('Cerebras content generation failed, falling back:', err.message);
       }
     }
 
@@ -1190,11 +1167,13 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    return res.status(503).json({ success: false, error: "No API Key configured." });
+    const fallbackContent = `🤖 (fallback) Unable to reach AI providers to write detailed content about: "${dynamicPrompt.slice(0, 100).replace(/\n/g, ' ')}...". Please try again later.`;
+    return res.json({ success: true, provider: 'fallback', result: fallbackContent });
 
   } catch (error) {
     console.error("Content Error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    const fallbackContent = `🤖 (fallback) Exception occurred while generating content: ${error.message}`;
+    return res.json({ success: true, provider: 'fallback', result: fallbackContent });
   }
 });
 
