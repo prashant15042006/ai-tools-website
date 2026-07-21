@@ -183,6 +183,19 @@ if (!fs.existsSync(uploadsDir)) {
   console.log("📁 Created uploads directory at:", uploadsDir);
 }
 app.use("/uploads", express.static(uploadsDir));
+// GET diagnostics endpoint
+app.get("/api/diag", (req, res) => {
+  res.json({
+    success: true,
+    message: "Nexuss AI Backend is online.",
+    environment: {
+      CEREBRAS_API_KEY: isValidKey(process.env.CEREBRAS_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.CEREBRAS_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
+      ZAI_API_KEY: isValidKey(process.env.ZAI_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.ZAI_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
+      EMBEDDING_API_KEY: isValidKey(process.env.EMBEDDING_API_KEY) ? "CONFIGURED" : "MISSING"
+    }
+  });
+});
+
 
 // POST upload endpoint — uploads image to Pollinations media storage
 // Returns a permanent media.pollinations.ai URL usable as the `image` parameter

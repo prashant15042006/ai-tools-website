@@ -300,6 +300,17 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method === "GET") {
+    return res.status(200).json({
+      success: true,
+      message: "Nexuss AI API handler is online.",
+      environment: {
+        CEREBRAS_API_KEY: isValidKey(process.env.CEREBRAS_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.CEREBRAS_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
+        ZAI_API_KEY: isValidKey(process.env.ZAI_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.ZAI_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
+        EMBEDDING_API_KEY: isValidKey(process.env.EMBEDDING_API_KEY) ? "CONFIGURED" : "MISSING"
+      }
+    });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { message, userName = "User", history = [], image } = req.body || {};
