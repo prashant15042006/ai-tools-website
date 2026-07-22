@@ -149,10 +149,11 @@ const getOpenRouterKeyPool = () => {
     keys.push({ name: "ZAI", key: process.env.ZAI_API_KEY });
   if (isValidKey(process.env.EMBEDDING_API_KEY))
     keys.push({ name: "EMBEDDING", key: process.env.EMBEDDING_API_KEY });
+  if (isValidKey(process.env.LLAMA_NEMOTRON_API_KEY))
+    keys.push({ name: "LLAMA_NEMOTRON", key: process.env.LLAMA_NEMOTRON_API_KEY });
   if (isValidKey(process.env['LLAMA-NEMOTRON_API_KEY']))
     keys.push({ name: "LLAMA-NEMOTRON", key: process.env['LLAMA-NEMOTRON_API_KEY'] });
-  // Use NEMOTRON_API_KEY as OpenRouter key only if NEMOTRON_API_URL is not a valid endpoint
-  if (isValidKey(process.env.NEMOTRON_API_KEY) && !isValidKey(process.env.NEMOTRON_API_URL))
+  if (isValidKey(process.env.NEMOTRON_API_KEY))
     keys.push({ name: "NEMOTRON_OR", key: process.env.NEMOTRON_API_KEY });
   return keys;
 };
@@ -193,7 +194,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
             "HTTP-Referer": "https://nexuss-ai.io",
             "X-Title": "Nexuss Workspace",
           },
-          body: JSON.stringify({ model, messages, max_tokens: 1024 }),
+          body: JSON.stringify({ model, messages, max_tokens: 350 }),
           signal: controller.signal,
         });
         clearTimeout(timer);
@@ -201,8 +202,8 @@ async function callOpenRouter(message, userName, history = [], image = null) {
         if (!res.ok) {
           lastErr = data.error?.message || `${res.status}`;
           // Switch keys if rate-limited or credits exhausted
-          if (res.status === 429 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
-            console.warn(`⚠️ [${name}] Key rate-limited/exhausted, switching key...`);
+          if (res.status === 429 || res.status === 402 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
+            console.warn(`⚠️ [${name}] Key rate-limited/exhausted (${res.status}), switching key...`);
             break; // break inner model loop -> next key
           }
           continue;
@@ -224,10 +225,10 @@ async function callOpenRouter(message, userName, history = [], image = null) {
 // 3. Cerebras
 // ──────────────────────────────────────────────
 async function callCerebras(message, userName) {
-  const key = process.env.CEREBRAS_API_KEY;
+  const key = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
-  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
+  const models = ["gemma-4-31b", "gpt-oss-120b", "zai-glm-4.7"];
   let lastErr = "Unknown error";
 
   for (const model of models) {
@@ -256,7 +257,7 @@ async function callCerebras(message, userName) {
         lastErr = data.error?.message || `${res.status}`;
         continue;
       }
-      const text = data.choices?.[0]?.message?.content;
+      const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
       if (!text) { lastErr = "Empty response"; continue; }
       return text;
     } catch(e) {
@@ -331,7 +332,8 @@ module.exports = async function handler(req, res) {
   let usedProvider = "";
 
   // 1. Try Cerebras first — SKIP if image is attached (Cerebras has no vision support)
-  if (!reply && !dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
+  const cerebrasKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
+  if (!reply && !dynamicImage && isValidKey(cerebrasKey)) {
     try {
       reply = await callCerebras(dynamicMessage, userName);
       usedProvider = "Cerebras";

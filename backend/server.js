@@ -386,37 +386,36 @@ const callZAI = async (message, userName = "User", image = null) => {
             "X-Title": "Nexuss Workspace",
           },
           body: JSON.stringify({
-            model: model,
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT(userName) },
-              { role: "user", content: userContent }
-            ],
-            max_tokens: 1024,
-          }),
-        });
+          model: model,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT(userName) },
+            { role: "user", content: userContent }
+          ],
+          max_tokens: 350,
+        }),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (!response.ok) {
-          let errorMsg = data.error?.message || `Status ${response.status}`;
-          // If rate-limited (429) or credits exhausted, try next key immediately
-          if (response.status === 429 || (errorMsg && errorMsg.toLowerCase().includes("credit"))) {
-            console.warn(`⚠️ [${name}] Key rate-limited/exhausted, switching key...`);
-            break; // break inner loop → try next key
-          }
-          console.error(`❌ [${name}] ${model} failed:`, errorMsg);
-          lastError = errorMsg;
-          continue;
+      if (!response.ok) {
+        let errorMsg = data.error?.message || `Status ${response.status}`;
+        // If rate-limited (429) or credits exhausted (402), try next key immediately
+        if (response.status === 429 || response.status === 402 || (errorMsg && errorMsg.toLowerCase().includes("credit"))) {
+          console.warn(`⚠️ [${name}] Key rate-limited/exhausted (${response.status}), switching key...`);
+          break; // break inner loop → try next key
         }
-
-        if (data.choices?.[0]?.message?.content) {
-          return data.choices[0].message.content;
-        }
-
+        console.error(`❌ [${name}] ${model} failed:`, errorMsg);
+        lastError = errorMsg;
         continue;
-      } catch (err) {
-        lastError = err.message;
       }
+
+      if (data.choices?.[0]?.message?.content || data.choices?.[0]?.text) {
+        return data.choices[0].message?.content || data.choices[0].text;
+      }
+
+      continue;
+    } catch (err) {
+      lastError = err.message;
     }
   }
 
@@ -450,16 +449,14 @@ const saveChatMetadata = async ({ question, userName, userEmail, model, provider
     const chatData = {
       question,
       userName,
+      userEmail,
       model,
       provider,
-      createdAt: new Date()
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
     };
-    if (userEmail) {
-      chatData.userEmail = userEmail;
-    }
     await db.collection("chats").add(chatData);
-  } catch (dbErr) {
-    console.warn("DB Save error:", dbErr.message);
+  } catch (err) {
+    console.warn("Failed to save chat metadata to Firestore:", err.message);
   }
 };
 
@@ -525,7 +522,7 @@ const callNemotron = async (message, userName = "User", userEmail = "") => {
 };
 
 const callCerebras = async (message, userName = "User", userEmail = "") => {
-  const apiKey = process.env.CEREBRAS_API_KEY;
+  const apiKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!isValidKey(apiKey)) {
     throw new Error("Cerebras not configured");
   }

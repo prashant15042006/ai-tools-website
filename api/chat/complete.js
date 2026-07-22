@@ -29,7 +29,7 @@ async function callCerebras(message, userName) {
   const key = CEREBRAS_KEY;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
-  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
+  const models = ["gemma-4-31b", "gpt-oss-120b", "zai-glm-4.7"];
   let lastErr = "Unknown error";
 
   for (const model of models) {
@@ -58,7 +58,7 @@ async function callCerebras(message, userName) {
         lastErr = data.error?.message || `${res.status}`;
         continue;
       }
-      const text = data.choices?.[0]?.message?.content;
+      const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
       if (!text) { lastErr = "Empty response"; continue; }
       return text;
     } catch(e) {
@@ -114,7 +114,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
           "HTTP-Referer": "https://nexuss-ai.io",
           "X-Title": "Nexuss Workspace",
         },
-        body: JSON.stringify({ model, messages, max_tokens: 1024 }),
+        body: JSON.stringify({ model, messages, max_tokens: 350 }),
         signal: controller.signal,
       });
       clearTimeout(timer);
