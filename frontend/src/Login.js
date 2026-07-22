@@ -38,14 +38,18 @@ async function finalizeGoogleUser(user, navigateFn) {
 // ── Human-readable error messages ────────────────────────────────────────────
 function getErrorMessage(code) {
   const messages = {
+    "auth/api-key-not-valid":
+      "Firebase API key valid nahi hai. Frontend build/configuration check karein.",
+    "auth/invalid-api-key":
+      "Firebase API key valid nahi hai. Frontend build/configuration check karein.",
     "auth/unauthorized-domain":
-      "Yeh domain Firebase mein authorized nahi hai. Firebase Console → Authentication → Settings → Authorized Domains mein apna URL add karo.",
+      "Yeh domain Firebase mein authorized nahi hai. Firebase Console → Authentication → Settings → Authorized Domains mein apna domain URL add karein.",
     "auth/operation-not-allowed":
-      "Google Sign-In enable nahi hai. Firebase Console → Authentication → Sign-in method → Google ko Enable karo.",
+      "Google Sign-In enable nahi hai. Firebase Console → Authentication → Sign-in method → Google ko Enable karein.",
     "auth/popup-blocked":
-      "Browser ne popup block kar diya. Please allow popups for this site and try again.",
+      "Browser ne popup block kar diya. Redirect method se login kar rahe hain...",
     "auth/network-request-failed":
-      "Network error. Please check your internet connection.",
+      "Network error. Check your internet connection.",
     "auth/internal-error":
       "Firebase internal error. Please try again in a moment.",
     "auth/cancelled-popup-request": null, // silent — user opened another popup
@@ -107,8 +111,26 @@ export default function Login() {
     setError("");
     setGoogleLoading(true);
 
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+
+    // On mobile devices, redirect is much more reliable than popups
+    if (isMobile) {
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      } catch (redirectErr) {
+        console.error("[Google Redirect Mobile] Failed:", redirectErr.code, redirectErr.message);
+        const msg = getErrorMessage(redirectErr.code);
+        if (msg) setError(msg);
+        setGoogleLoading(false);
+        return;
+      }
+    }
+
     try {
-      // Try popup first (fastest UX)
+      // Try popup first (fastest UX on desktop)
       const result = await signInWithPopup(auth, googleProvider);
       await finalizeGoogleUser(result.user, navigate);
     } catch (popupErr) {

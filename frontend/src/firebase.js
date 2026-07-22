@@ -8,13 +8,13 @@ const isValidFirebaseValue = (value) => {
 
 // PASTE YOUR FIREBASE CONFIG HERE FROM FIREBASE CONSOLE or set values in frontend/.env
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "mock-api-key",
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "mock-auth-domain",
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "mock-project-id",
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "mock-bucket",
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "mock-sender",
-  appId: process.env.REACT_APP_FIREBASE_APP_ID || "mock-app-id",
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "mock-measurement"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyClou0eTKirnxqlUU4weCpZFhXh-YNxlQ4",
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "ai-workspace-2aa76.firebaseapp.com",
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "ai-workspace-2aa76",
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "ai-workspace-2aa76.firebasestorage.app",
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "126844779624",
+  appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:126844779624:web:d2e2f462f5f264daf20fdd",
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-1V6Q4QTDJK"
 };
 
 const missingConfig = Object.entries(firebaseConfig).filter(([, value]) => !isValidFirebaseValue(value));
