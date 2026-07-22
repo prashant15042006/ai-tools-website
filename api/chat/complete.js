@@ -69,23 +69,16 @@ async function callCerebras(message, userName) {
 }
 
 const OPENROUTER_VISION_MODELS = [
-  "google/gemini-2.5-flash:free",
-  "meta-llama/llama-3.2-11b-vision-instruct:free",
-  "openai/gpt-4o-mini",
   "google/gemini-2.5-flash",
-  "google/gemma-3-27b-it:free",
-  "mistralai/mistral-small-3.2-24b-instruct:free",
+  "openai/gpt-4o-mini",
 ];
 
 const OPENROUTER_TEXT_MODELS = [
-  "google/gemini-2.5-flash:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "google/gemma-4-31b-it:free",
-  "qwen/qwen3-coder:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "liquid/lfm-2.5-1.2b-instruct:free",
-  "openai/gpt-4o-mini",
+  "meta-llama/llama-3.3-70b-instruct",
   "google/gemini-2.5-flash",
+  "deepseek/deepseek-chat",
+  "deepseek/deepseek-r1",
+  "openai/gpt-4o-mini",
 ];
 
 async function callOpenRouter(message, userName, history = [], image = null) {

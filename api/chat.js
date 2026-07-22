@@ -60,14 +60,10 @@ async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this i
     return "";
   }
 
-  // Vision models to try in sequence - putting fastest and free chat-vision models first
+  // Vision models to try in sequence
   const visionModels = [
-    "google/gemini-2.5-flash:free",
-    "meta-llama/llama-3.2-11b-vision-instruct:free",
-    "google/gemma-3-27b-it:free",
     "google/gemini-2.5-flash",
     "openai/gpt-4o-mini",
-    "nvidia/llama-nemotron-embed-vl-1b-v2:free", // Last fallback as it is an embedding model
   ];
 
   let lastError = null;
@@ -131,23 +127,16 @@ async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this i
 
 
 const OPENROUTER_VISION_MODELS = [
-  "google/gemini-2.5-flash:free",
-  "meta-llama/llama-3.2-11b-vision-instruct:free",
-  "openai/gpt-4o-mini",
   "google/gemini-2.5-flash",
-  "google/gemma-3-27b-it:free",
-  "mistralai/mistral-small-3.2-24b-instruct:free",
+  "openai/gpt-4o-mini",
 ];
 
 const OPENROUTER_TEXT_MODELS = [
-  "google/gemini-2.5-flash:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "google/gemma-4-31b-it:free",
-  "qwen/qwen3-coder:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "liquid/lfm-2.5-1.2b-instruct:free",
-  "openai/gpt-4o-mini",
+  "meta-llama/llama-3.3-70b-instruct",
   "google/gemini-2.5-flash",
+  "deepseek/deepseek-chat",
+  "deepseek/deepseek-r1",
+  "openai/gpt-4o-mini",
 ];
 
 // ===============================
