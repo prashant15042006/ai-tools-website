@@ -22,17 +22,23 @@ import {
 async function finalizeGoogleUser(user, navigateFn) {
   const userName = user.displayName || user.email?.split("@")[0] || "User";
   localStorage.setItem("nexus_user_name", userName);
-  setDoc(
-    doc(db, "users", user.email),
-    {
-      name: userName,
-      email: user.email,
-      lastLogin: serverTimestamp(),
-      authProvider: "google",
-    },
-    { merge: true }
-  ).catch((e) => console.warn("Firestore:", e));
-  navigateFn("/");
+  if (user?.email) {
+    try {
+      setDoc(
+        doc(db, "users", user.email),
+        {
+          name: userName,
+          email: user.email,
+          lastLogin: serverTimestamp(),
+          authProvider: "google",
+        },
+        { merge: true }
+      ).catch((e) => console.warn("Firestore:", e));
+    } catch (e) {
+      console.warn("Firestore error:", e);
+    }
+  }
+  navigateFn("/", { replace: true });
 }
 
 // ── Human-readable error messages ────────────────────────────────────────────
@@ -78,8 +84,10 @@ export default function Login() {
       })
       .catch((err) => {
         console.error("[Google Redirect] Error:", err.code, err.message);
-        const msg = getErrorMessage(err.code);
-        if (msg) setError(msg);
+        if (!auth.currentUser) {
+          const msg = getErrorMessage(err.code);
+          if (msg) setError(msg);
+        }
       })
       .finally(() => {
         setCheckingRedirect(false); // always unblock the UI
@@ -90,14 +98,13 @@ export default function Login() {
   // ── 2. Already logged-in user listener ───────────────────────────────────────
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user && step !== "confirm-name") {
+      if (user) {
         const saved = localStorage.getItem("nexus_user_name");
-        if (saved) {
-          navigate("/");
-        } else if (user.displayName) {
-          localStorage.setItem("nexus_user_name", user.displayName);
-          navigate("/");
-        } else {
+        const nameToUse = saved || user.displayName || user.email?.split("@")[0];
+        if (nameToUse) {
+          localStorage.setItem("nexus_user_name", nameToUse);
+          navigate("/", { replace: true });
+        } else if (step !== "confirm-name") {
           setName("");
           setStep("confirm-name");
         }
@@ -111,32 +118,18 @@ export default function Login() {
     setError("");
     setGoogleLoading(true);
 
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    );
-
-    // On mobile devices, redirect is much more reliable than popups
-    if (isMobile) {
-      try {
-        await signInWithRedirect(auth, googleProvider);
-        return;
-      } catch (redirectErr) {
-        console.error("[Google Redirect Mobile] Failed:", redirectErr.code, redirectErr.message);
-        const msg = getErrorMessage(redirectErr.code);
-        if (msg) setError(msg);
-        setGoogleLoading(false);
-        return;
-      }
-    }
-
     try {
-      // Try popup first (fastest UX on desktop)
+      // 1. Try popup first (works directly upon user click/touch gesture)
       const result = await signInWithPopup(auth, googleProvider);
-      await finalizeGoogleUser(result.user, navigate);
+      if (result?.user) {
+        await finalizeGoogleUser(result.user, navigate);
+      } else {
+        setGoogleLoading(false);
+      }
     } catch (popupErr) {
-      console.warn("[Google Popup] Failed:", popupErr.code);
+      console.warn("[Google Popup] Failed:", popupErr.code, popupErr.message);
 
-      // Silent errors — user cancelled
+      // Silent cancellation — user closed popup/dialog
       if (
         popupErr.code === "auth/popup-closed-by-user" ||
         popupErr.code === "auth/cancelled-popup-request"
@@ -145,13 +138,13 @@ export default function Login() {
         return;
       }
 
-      // For all other failures → try redirect method
-      console.log("[Google] Trying redirect method...");
+      // 2. If popup was blocked or failed, try redirect as fallback
+      console.log("[Google] Trying redirect fallback...");
       try {
         await signInWithRedirect(auth, googleProvider);
-        // Page will reload — code below won't run
+        // Page will reload for redirect
       } catch (redirectErr) {
-        console.error("[Google Redirect] Failed:", redirectErr.code, redirectErr.message);
+        console.error("[Google Redirect Fallback] Failed:", redirectErr.code, redirectErr.message);
         const msg = getErrorMessage(redirectErr.code);
         if (msg) setError(msg);
         setGoogleLoading(false);

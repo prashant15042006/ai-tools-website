@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield, Menu, X, Download, ChevronLeft, Save, RotateCw, CheckCircle2, AlertCircle, FileText, Image } from "lucide-react";
 import Chat from "./Chat";
 import CodeGenerator from "./CodeGenerator";
@@ -1057,12 +1057,42 @@ function App() {
     });
   };
 
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#0a0f1e",
+        color: "white",
+        gap: "16px",
+        fontFamily: "system-ui, -apple-system, sans-serif"
+      }}>
+        <div style={{
+          width: "60px",
+          height: "60px",
+          borderRadius: "18px",
+          background: "linear-gradient(135deg, #4f46e5, #9333ea)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)"
+        }}>
+          <Sparkles size={32} color="white" />
+        </div>
+        <div style={{ fontSize: "15px", fontWeight: "500", color: "#94a3b8" }}>Loading Nexuss Workspace...</div>
+      </div>
+    );
+  }
+
   return (
     <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, loading, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/*" element={user ? <AppContent /> : <Login />} />
+          <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+          <Route path="/*" element={user ? <AppContent /> : <Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AppContext.Provider>
