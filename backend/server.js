@@ -752,7 +752,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
             model: model,
             stream: true,
             messages: apiMessages,
-            max_tokens: 1024,
+            max_tokens: 512,
           }),
         });
 
@@ -760,9 +760,15 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
           const errText = await response.text();
           console.error(`❌ [STREAM] [${name}] ${model} failed:`, errText);
           
-          // Switch keys if rate-limited or credits exhausted
-          if (response.status === 429 || errText.toLowerCase().includes("credit") || errText.toLowerCase().includes("rate limit")) {
-            console.warn(`⚠️ [STREAM] [${name}] Key rate-limited/exhausted, switching key...`);
+          // Switch keys immediately if rate-limited (429) or credits exhausted (402)
+          if (
+            response.status === 429 ||
+            response.status === 402 ||
+            errText.toLowerCase().includes("credit") ||
+            errText.toLowerCase().includes("rate limit") ||
+            errText.toLowerCase().includes("afford")
+          ) {
+            console.warn(`⚠️ [STREAM] [${name}] Key exhausted (status ${response.status}), switching key...`);
             break; // break inner model loop -> next key
           }
           lastError = errText;
