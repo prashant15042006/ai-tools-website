@@ -259,14 +259,28 @@ const PORT = process.env.PORT || 5001;
 // ===============================
 let db;
 try {
+  let serviceAccount;
   const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
-  if (!fs.existsSync(serviceAccountPath)) {
-    throw new Error(`Service account file not found at ${serviceAccountPath}`);
+
+  // 1. Try to load from env var (for Render / cloud deployments where the file is gitignored)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      console.log("✅ Loaded Firebase service account from FIREBASE_SERVICE_ACCOUNT env var.");
+    } catch (parseErr) {
+      console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env var:", parseErr.message);
+    }
   }
 
-  const serviceAccount = JSON.parse(
-    fs.readFileSync(serviceAccountPath, "utf-8")
-  );
+  // 2. Fall back to local file (for local development)
+  if (!serviceAccount && fs.existsSync(serviceAccountPath)) {
+    serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
+    console.log("✅ Loaded Firebase service account from local serviceAccountKey.json");
+  }
+
+  if (!serviceAccount) {
+    throw new Error("No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT env var on Render, or add serviceAccountKey.json for local dev.");
+  }
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -389,36 +403,37 @@ const callZAI = async (message, userName = "User", image = null) => {
             "X-Title": "Nexuss Workspace",
           },
           body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT(userName) },
-            { role: "user", content: userContent }
-          ],
-          max_tokens: 350,
-        }),
-      });
+            model: model,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT(userName) },
+              { role: "user", content: userContent }
+            ],
+            max_tokens: 350,
+          }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (!response.ok) {
-        let errorMsg = data.error?.message || `Status ${response.status}`;
-        // If rate-limited (429) or credits exhausted (402), try next key immediately
-        if (response.status === 429 || response.status === 402 || (errorMsg && errorMsg.toLowerCase().includes("credit"))) {
-          console.warn(`⚠️ [${name}] Key rate-limited/exhausted (${response.status}), switching key...`);
-          break; // break inner loop → try next key
+        if (!response.ok) {
+          let errorMsg = data.error?.message || `Status ${response.status}`;
+          // If rate-limited (429) or credits exhausted (402), try next key immediately
+          if (response.status === 429 || response.status === 402 || (errorMsg && errorMsg.toLowerCase().includes("credit"))) {
+            console.warn(`⚠️ [${name}] Key rate-limited/exhausted (${response.status}), switching key...`);
+            break; // break inner loop → try next key
+          }
+          console.error(`❌ [${name}] ${model} failed:`, errorMsg);
+          lastError = errorMsg;
+          continue;
         }
-        console.error(`❌ [${name}] ${model} failed:`, errorMsg);
-        lastError = errorMsg;
+
+        if (data.choices?.[0]?.message?.content || data.choices?.[0]?.text) {
+          return data.choices[0].message?.content || data.choices[0].text;
+        }
+
         continue;
+      } catch (err) {
+        lastError = err.message;
       }
-
-      if (data.choices?.[0]?.message?.content || data.choices?.[0]?.text) {
-        return data.choices[0].message?.content || data.choices[0].text;
-      }
-
-      continue;
-    } catch (err) {
-      lastError = err.message;
     }
   }
 

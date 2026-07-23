@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: nexuss-ai-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: false
+    healthCheckPath: /api/health
