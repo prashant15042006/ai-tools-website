@@ -85,14 +85,12 @@ const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this i
     return "";
   }
 
-  // Vision models to try in sequence - putting fastest and free chat-vision models first
+  // Vision models to try in sequence
   const visionModels = [
-    "google/gemini-2.5-flash:free",
-    "meta-llama/llama-3.2-11b-vision-instruct:free",
-    "google/gemma-3-27b-it:free",
-    "google/gemini-2.5-flash",
-    "openai/gpt-4o-mini",
-    "nvidia/llama-nemotron-embed-vl-1b-v2:free", // Last fallback as it is an embedding model
+    "meta-llama/llama-4-maverick",
+    "meta-llama/llama-4-scout",
+    "google/gemma-3-27b-it",
+    "meta-llama/llama-3.1-8b-instruct",
   ];
 
   let lastError = null;
@@ -338,10 +336,11 @@ const getOpenRouterKeyPool = () => {
     keys.push({ name: "ZAI", key: process.env.ZAI_API_KEY });
   if (isValidKey(process.env.EMBEDDING_API_KEY))
     keys.push({ name: "EMBEDDING", key: process.env.EMBEDDING_API_KEY });
+  if (isValidKey(process.env.LLAMA_NEMOTRON_API_KEY))
+    keys.push({ name: "LLAMA_NEMOTRON", key: process.env.LLAMA_NEMOTRON_API_KEY });
   if (isValidKey(process.env['LLAMA-NEMOTRON_API_KEY']))
     keys.push({ name: "LLAMA-NEMOTRON", key: process.env['LLAMA-NEMOTRON_API_KEY'] });
-  // Use NEMOTRON_API_KEY as OpenRouter key only if NEMOTRON_API_URL is not a valid endpoint
-  if (isValidKey(process.env.NEMOTRON_API_KEY) && !isValidKey(process.env.NEMOTRON_API_URL))
+  if (isValidKey(process.env.NEMOTRON_API_KEY))
     keys.push({ name: "NEMOTRON_OR", key: process.env.NEMOTRON_API_KEY });
   return keys;
 };
@@ -351,15 +350,19 @@ const callZAI = async (message, userName = "User", image = null) => {
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
   const visionModels = [
-    "google/gemini-2.5-flash",
-    "openai/gpt-4o-mini",
+    "meta-llama/llama-4-maverick",
+    "meta-llama/llama-4-scout",
+    "google/gemma-3-27b-it",
+    "meta-llama/llama-3.1-8b-instruct",
   ];
   const textModels = [
     "meta-llama/llama-3.3-70b-instruct",
-    "google/gemini-2.5-flash",
-    "deepseek/deepseek-chat",
-    "deepseek/deepseek-r1",
-    "openai/gpt-4o-mini",
+    "meta-llama/llama-4-maverick",
+    "meta-llama/llama-4-scout",
+    "deepseek/deepseek-chat-v3-0324",
+    "google/gemma-3-27b-it",
+    "qwen/qwen3-8b",
+    "meta-llama/llama-3.1-8b-instruct",
   ];
   const models = image ? visionModels : textModels;
 
@@ -527,7 +530,7 @@ const callCerebras = async (message, userName = "User", userEmail = "") => {
     throw new Error("Cerebras not configured");
   }
 
-  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
+  const models = ["gpt-oss-120b", "gemma-4-31b"];
   let lastError = null;
 
   for (const model of models) {
@@ -685,25 +688,19 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
   // When an image is attached, only use vision-capable models.
   // Most free models do NOT support vision and will error out.
   const visionModels = [
-    "google/gemini-2.5-flash:free",
-    "meta-llama/llama-3.2-11b-vision-instruct:free",
-    "openai/gpt-4o-mini",
-    "google/gemini-2.5-flash",
-    "google/gemma-3-27b-it:free",
-    "mistralai/mistral-small-3.2-24b-instruct:free",
+    "meta-llama/llama-4-maverick",
+    "meta-llama/llama-4-scout",
+    "google/gemma-3-27b-it",
+    "meta-llama/llama-3.1-8b-instruct",
   ];
   const textModels = [
-    "google/gemini-2.5-flash:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "openai/gpt-4o-mini",
-    "google/gemini-2.5-flash",
-    "liquid/lfm-2.5-1.2b-instruct:free",
-    "poolside/laguna-xs-2.1:free",
-    "cohere/north-mini-code:free",
-    "openai/gpt-oss-120b:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemma-4-31b-it:free",
-    "qwen/qwen3-coder:free"
+    "meta-llama/llama-3.3-70b-instruct",
+    "meta-llama/llama-4-maverick",
+    "meta-llama/llama-4-scout",
+    "deepseek/deepseek-chat-v3-0324",
+    "google/gemma-3-27b-it",
+    "qwen/qwen3-8b",
+    "meta-llama/llama-3.1-8b-instruct",
   ];
   const models = image ? visionModels : textModels;
 
@@ -1632,6 +1629,4 @@ const startServer = async () => {
   });
 };
 
-startServer();
-
-
+startServer();   
