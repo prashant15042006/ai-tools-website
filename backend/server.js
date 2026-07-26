@@ -53,44 +53,31 @@ const isValidKey = (val) => {
 // Google Gemini API key disabled by user
 
 
-if (!isValidKey(process.env.ZAI_API_KEY)) {
-  console.warn("⚠️ WARNING: ZAI_API_KEY (OpenRouter Key) is not set or has placeholder value.");
+if (!isValidKey(process.env.OPENROUTER_KEY_NEMOTRON)) {
+  console.warn("⚠️ WARNING: OPENROUTER_KEY_NEMOTRON is not set. Add it in .env");
 } else {
-  console.log("✅ OpenRouter (ZAI) API Key detected (ends with ...", process.env.ZAI_API_KEY.slice(-5), ")");
+  console.log("✅ OpenRouter Nemotron Key detected (ends with ...", process.env.OPENROUTER_KEY_NEMOTRON.slice(-5), ")");
 }
 
-if (!isValidKey(process.env.NEMOTRON_API_KEY)) {
-  console.warn("💡 INFO: NEMOTRON_API_KEY is not set or has placeholder value.");
+if (!isValidKey(process.env.OPENROUTER_KEY_GEMMA)) {
+  console.warn("⚠️ WARNING: OPENROUTER_KEY_GEMMA is not set. Add it in .env");
 } else {
-  console.log("✅ NEMOTRON API Key detected (ends with ...", process.env.NEMOTRON_API_KEY.slice(-5), ")");
+  console.log("✅ OpenRouter Gemma Key detected (ends with ...", process.env.OPENROUTER_KEY_GEMMA.slice(-5), ")");
 }
 
-if (!isValidKey(process.env.CEREBRAS_API_KEY)) {
-  console.warn("💡 INFO: CEREBRAS_API_KEY is not set or has placeholder value.");
-} else {
-  console.log("✅ Cerebras API Key detected (ends with ...", process.env.CEREBRAS_API_KEY.slice(-5), ")");
-}
-
-const USE_CEREBRAS_MODE = process.env.MODE?.toUpperCase() === "CEREBRAS";
-
-// Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
+// Helper to pre-process uploaded images using OpenRouter vision models
 const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this image and describe what is visible in detail.") => {
-  // Gemini API disabled by user
-
-
-  // 2. OpenRouter vision models using EMBEDDING_API_KEY or ZAI_API_KEY
-  const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
+  // Use OPENROUTER_KEY_NEMOTRON or OPENROUTER_KEY_GEMMA for vision
+  const embeddingKey = process.env.OPENROUTER_KEY_NEMOTRON || process.env.OPENROUTER_KEY_GEMMA;
   if (!isValidKey(embeddingKey)) {
-    console.warn("No EMBEDDING_API_KEY or ZAI_API_KEY found, cannot describe image.");
+    console.warn("No OpenRouter keys found, cannot describe image.");
     return "";
   }
 
-  // Vision models to try in sequence
+  // Vision models to try in sequence (using our configured models)
   const visionModels = [
-    "meta-llama/llama-4-maverick",
-    "meta-llama/llama-4-scout",
-    "google/gemma-3-27b-it",
-    "meta-llama/llama-3.1-8b-instruct",
+    "nvidia/nemotron-nano-12b-v2-vl:free",
+    "google/gemma-4-26b-a4b-it:free",
   ];
 
   let lastError = null;
@@ -187,9 +174,8 @@ app.get("/api/diag", (req, res) => {
     success: true,
     message: "Nexuss AI Backend is online.",
     environment: {
-      CEREBRAS_API_KEY: isValidKey(process.env.CEREBRAS_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.CEREBRAS_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
-      ZAI_API_KEY: isValidKey(process.env.ZAI_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.ZAI_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
-      EMBEDDING_API_KEY: isValidKey(process.env.EMBEDDING_API_KEY) ? "CONFIGURED" : "MISSING"
+      OPENROUTER_KEY_NEMOTRON: isValidKey(process.env.OPENROUTER_KEY_NEMOTRON) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_NEMOTRON.slice(-5) + ")" : "MISSING (Configure in dashboard)",
+      OPENROUTER_KEY_GEMMA: isValidKey(process.env.OPENROUTER_KEY_GEMMA) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_GEMMA.slice(-5) + ")" : "MISSING (Configure in dashboard)"
     }
   });
 });
@@ -341,44 +327,39 @@ const cleanAIResponse = (text) => {
 
 
 // ===============================
-// 🔑 OpenRouter Key Pool (Load Distribution)
-// Returns all available OpenRouter API keys for round-robin load balancing.
+// 🔑 OpenRouter Key Pool (Two-key setup)
+// OPENROUTER_KEY_NEMOTRON → nvidia/nemotron-3-ultra-550b-a55b:free
+// OPENROUTER_KEY_GEMMA    → google/gemma-4-26b-a4b-it:free
 // ===============================
 const getOpenRouterKeyPool = () => {
   const keys = [];
-  if (isValidKey(process.env.ZAI_API_KEY))
-    keys.push({ name: "ZAI", key: process.env.ZAI_API_KEY });
-  if (isValidKey(process.env.EMBEDDING_API_KEY))
-    keys.push({ name: "EMBEDDING", key: process.env.EMBEDDING_API_KEY });
-  if (isValidKey(process.env.LLAMA_NEMOTRON_API_KEY))
-    keys.push({ name: "LLAMA_NEMOTRON", key: process.env.LLAMA_NEMOTRON_API_KEY });
-  if (isValidKey(process.env['LLAMA-NEMOTRON_API_KEY']))
-    keys.push({ name: "LLAMA-NEMOTRON", key: process.env['LLAMA-NEMOTRON_API_KEY'] });
-  if (isValidKey(process.env.NEMOTRON_API_KEY))
-    keys.push({ name: "NEMOTRON_OR", key: process.env.NEMOTRON_API_KEY });
+  if (isValidKey(process.env.OPENROUTER_KEY_NEMOTRON))
+    keys.push({ name: "NEMOTRON", key: process.env.OPENROUTER_KEY_NEMOTRON });
+  if (isValidKey(process.env.OPENROUTER_KEY_GEMMA))
+    keys.push({ name: "GEMMA", key: process.env.OPENROUTER_KEY_GEMMA });
   return keys;
+};
+
+// Models available per key (verified via OpenRouter API)
+const NEMOTRON_MODELS = [
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+];
+const GEMMA_MODELS = [
+  "google/gemma-4-26b-a4b-it:free",
+  "google/gemma-4-31b-it:free",
+  "google/gemma-3-27b-it",
+];
+
+const getModelsForKey = (keyName, isVision = false) => {
+  if (keyName === "NEMOTRON") return NEMOTRON_MODELS;
+  if (keyName === "GEMMA") return GEMMA_MODELS;
+  return [];
 };
 
 const callZAI = async (message, userName = "User", image = null) => {
   const keyPool = getOpenRouterKeyPool();
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
-
-  const visionModels = [
-    "meta-llama/llama-4-maverick",
-    "meta-llama/llama-4-scout",
-    "google/gemma-3-27b-it",
-    "meta-llama/llama-3.1-8b-instruct",
-  ];
-  const textModels = [
-    "meta-llama/llama-3.3-70b-instruct",
-    "meta-llama/llama-4-maverick",
-    "meta-llama/llama-4-scout",
-    "deepseek/deepseek-chat-v3-0324",
-    "google/gemma-3-27b-it",
-    "qwen/qwen3-8b",
-    "meta-llama/llama-3.1-8b-instruct",
-  ];
-  const models = image ? visionModels : textModels;
 
   const userContent = image
     ? [
@@ -389,8 +370,9 @@ const callZAI = async (message, userName = "User", image = null) => {
 
   let lastError = null;
 
-  // Try each key × each model for maximum availability
+  // Try each key × its models for maximum availability
   for (const { name, key } of keyPool) {
+    const models = getModelsForKey(name, !!image);
     for (const model of models) {
       try {
         console.log(`🚀 [${name}] Requesting model: ${model}`);
@@ -408,7 +390,7 @@ const callZAI = async (message, userName = "User", image = null) => {
               { role: "system", content: SYSTEM_PROMPT(userName) },
               { role: "user", content: userContent }
             ],
-            max_tokens: 350,
+            max_tokens: 1024,
           }),
         });
 
@@ -480,246 +462,11 @@ const saveChatMetadata = async ({ question, userName, userEmail, model, provider
 
 // callGeminiDirect and callGeminiDirectStream removed — Gemini API disabled by user
 
-
-// ===============================
-// Nemotron caller (generic, tolerant to multiple response shapes)
-// If `NEMOTRON_API_KEY` and `NEMOTRON_API_URL` are set, this will be used as a fast default provider.
-// The function attempts to extract text from a variety of common response shapes.
-const callNemotron = async (message, userName = "User", userEmail = "") => {
-  const apiKey = process.env.NEMOTRON_API_KEY;
-  const apiUrl = process.env.NEMOTRON_API_URL;
-  if (!isValidKey(apiKey) || !isValidKey(apiUrl)) throw new Error("Nemotron not configured");
-
-  // Prepare payload - many TTS/LLM endpoints accept { input } or { prompt } or chat-style messages.
-  const payload = {
-    prompt: message,
-    system: SYSTEM_PROMPT(userName),
-    max_tokens: 800,
-  };
-
-  const resp = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const contentType = (resp.headers.get("content-type") || "").toLowerCase();
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`Nemotron error: ${txt}`);
-  }
-
-  if (contentType.includes("application/json")) {
-    const data = await resp.json();
-
-    // Try several common keys for returned text
-    if (typeof data === "string") return data;
-    if (data.output) return data.output;
-    if (data.response) return data.response;
-    if (data.result) return data.result;
-    if (data.choices && data.choices[0]) {
-      if (data.choices[0].text) return data.choices[0].text;
-      if (data.choices[0].message && data.choices[0].message.content) return data.choices[0].message.content;
-    }
-
-    // Fallback: stringify
-    return JSON.stringify(data);
-  }
-
-  // If response is plain text
-  if (contentType.includes("text/")) {
-    return await resp.text();
-  }
-
-  // If binary - return base64 as best-effort
-  const buffer = await resp.arrayBuffer();
-  return Buffer.from(buffer).toString('base64');
-};
-
-const callCerebras = async (message, userName = "User", userEmail = "") => {
-  const apiKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
-  if (!isValidKey(apiKey)) {
-    throw new Error("Cerebras not configured");
-  }
-
-  const models = ["gpt-oss-120b", "gemma-4-31b"];
-  let lastError = null;
-
-  for (const model of models) {
-    try {
-      console.log(`🚀 [CEREBRAS] Attempting model: ${model}`);
-      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT(userName) },
-            { role: "user", content: message }
-          ],
-          max_tokens: 1024,
-          temperature: 0.7,
-        }),
-      });
-
-      if (!response.ok) {
-        const txt = await response.text();
-        console.error(`❌ [CEREBRAS] ${model} failed:`, txt);
-        lastError = txt;
-        continue;
-      }
-
-      const data = await response.json();
-      if (data.choices?.[0]?.message?.content) {
-        return data.choices[0].message.content;
-      }
-    } catch (err) {
-      console.error(`❌ [CEREBRAS] Exception with ${model}:`, err.message);
-      lastError = err.message;
-    }
-  }
-
-  throw new Error(`Cerebras failed all models: ${lastError}`);
-};
-
-const callCerebrasStream = async (message, res, userName = "User", userEmail = "", history = []) => {
-  const models = ["gpt-oss-120b", "gemma-4-31b", "zai-glm-4.7"];
-  const apiKey = process.env.CEREBRAS_API_KEY;
-  if (!isValidKey(apiKey)) {
-    throw new Error("Cerebras not configured");
-  }
-
-  const apiMessages = [
-    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
-    ...history,
-    { role: "user", content: message }
-  ];
-
-  let lastErr = "Unknown error";
-  for (const model of models) {
-    try {
-      console.log(`🚀 [CEREBRAS STREAM] Attempting model: ${model}`);
-      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: model,
-          stream: true,
-          messages: apiMessages,
-          max_tokens: 1024,
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error(`❌ [CEREBRAS STREAM] ${model} failed:`, errText);
-        lastErr = errText;
-        continue;
-      }
-
-      let buffer = "";
-      let fullReply = "";
-      let streamStarted = false;
-
-      return new Promise((resolve, reject) => {
-        response.body.on("data", (chunk) => {
-          buffer += chunk.toString();
-          let lines = buffer.split("\n");
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-
-            const dataStr = trimmed.slice(6);
-            if (dataStr === "[DONE]") {
-              res.write("data: [DONE]\n\n");
-              continue;
-            }
-
-            try {
-              const data = JSON.parse(dataStr);
-              const content = data.choices?.[0]?.delta?.content || "";
-              if (content) {
-                streamStarted = true;
-                fullReply += content;
-                res.write(`data: ${JSON.stringify({ content })}\n\n`);
-              }
-            } catch (e) {
-              // Fragmented JSON
-            }
-          }
-        });
-
-        response.body.on("end", async () => {
-          // If the full reply contains safety labels, send a correction to the client
-          const cleanedReply = cleanAIResponse(fullReply);
-          if (cleanedReply !== fullReply && cleanedReply.length > 0) {
-            res.write(`data: ${JSON.stringify({ replace: cleanedReply })}\n\n`);
-          }
-          console.log(`✅ [CEREBRAS STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
-          await saveChatMetadata({
-            question: message,
-            userName,
-            userEmail,
-            model: model,
-            provider: "Cerebras"
-          });
-          res.end();
-          resolve(true);
-        });
-
-        response.body.on("error", (err) => {
-          console.error("❌ [CEREBRAS STREAM] Body error:", err.message);
-          err.streamStarted = streamStarted;
-          reject(err);
-        });
-      });
-    } catch (err) {
-      console.error(`❌ [CEREBRAS STREAM] Exception with ${model}:`, err.message);
-      if (err?.streamStarted) {
-        throw err;
-      }
-      lastErr = err.message;
-    }
-  }
-
-  throw new Error(`Cerebras stream failed all models: ${lastErr}`);
-};
-
 const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
   const keyPool = getOpenRouterKeyPool();
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
-  // When an image is attached, only use vision-capable models.
-  // Most free models do NOT support vision and will error out.
-  const visionModels = [
-    "meta-llama/llama-4-maverick",
-    "meta-llama/llama-4-scout",
-    "google/gemma-3-27b-it",
-    "meta-llama/llama-3.1-8b-instruct",
-  ];
-  const textModels = [
-    "meta-llama/llama-3.3-70b-instruct",
-    "meta-llama/llama-4-maverick",
-    "meta-llama/llama-4-scout",
-    "deepseek/deepseek-chat-v3-0324",
-    "google/gemma-3-27b-it",
-    "qwen/qwen3-8b",
-    "meta-llama/llama-3.1-8b-instruct",
-  ];
-  const models = image ? visionModels : textModels;
-
-  // If there's an image, construct the multimodal content format supported by vision models
+  // If there's an image, construct the multimodal content format
   const userContent = image
     ? [
         { type: "text", text: message },
@@ -727,19 +474,18 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
       ]
     : message;
 
-  // Format messages for OpenRouter
-  const apiMessages = [
-    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
-    ...history,
-    { role: "user", content: userContent }
-  ];
-
   let lastError = null;
 
   for (const { name, key } of keyPool) {
+    const models = getModelsForKey(name, !!image);
     for (const model of models) {
       try {
         console.log(`🚀 [STREAM] [${name}] Attempting model: ${model}`);
+        const apiMessages = [
+          { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+          ...history,
+          { role: "user", content: userContent }
+        ];
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -752,7 +498,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
             model: model,
             stream: true,
             messages: apiMessages,
-            max_tokens: 512,
+            max_tokens: 1024,
           }),
         });
 
@@ -852,6 +598,14 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
 };
 
 
+// Stubs for removed providers
+const callGroq = async () => { throw new Error("Groq removed — use OpenRouter"); };
+const callGroqStream = async (message, res, userName, userEmail, history) => {
+  // Groq removed — passthrough to ZAI stream
+  return callZAIStream(message, res, userName, userEmail, history);
+};
+const callHuggingFace = async () => { throw new Error("HuggingFace removed — use OpenRouter"); };
+
 
 // ===============================
 // 💬 CHAT API (STREAMING)
@@ -895,16 +649,7 @@ app.post("/api/chat", async (req, res) => {
       }
     };
 
-    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      const reply = await tryStreamProvider("Cerebras", async () => {
-        await callCerebrasStream(dynamicMessage, res, userName, userEmail, history);
-        return true;
-      });
-      if (reply) return;
-    }
-
-    // 2. Try OpenRouter / ZAI second (uses balanced multi-key pool)
+    // Use OpenRouter only (NEMOTRON + GEMMA keys)
     if (getOpenRouterKeyPool().length > 0) {
       const reply = await tryStreamProvider("OpenRouter", async () => {
         await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
@@ -913,33 +658,7 @@ app.post("/api/chat", async (req, res) => {
       if (reply) return;
     }
 
-    // Gemini streaming disabled by user
-
-    // 4. If Nemotron is configured (fast provider), use it for a single non-streaming reply
-    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
-      const reply = await tryStreamProvider("Nemotron", async () => {
-        const replyText = await callNemotron(dynamicMessage, userName, userEmail);
-
-        // Send as a single SSE message and mark done
-        res.write(`data: ${JSON.stringify({ content: replyText })}\n\n`);
-        res.write("data: [DONE]\n\n");
-
-        // Save metadata only, without AI reply text
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "nemotron",
-          provider: "Nemotron"
-        });
-
-        res.end();
-        return replyText;
-      });
-      if (reply) return;
-    }
-
-    // 5. No valid providers completed successfully
+    // No valid providers completed successfully
     if (!res.headersSent) {
       res.statusCode = 503;
       res.setHeader("Content-Type", "application/json");
@@ -990,56 +709,14 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(dynamicMessage, userName, userEmail);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "cerebras",
-          provider: "Cerebras"
-        });
-        return res.json({ success: true, model: 'cerebras', reply });
-      } catch (err) {
-        console.error('Cerebras call failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Prefer OpenRouter / ZAI second (uses balanced multi-key pool)
+    // Use OpenRouter only (NEMOTRON + GEMMA keys)
     if (getOpenRouterKeyPool().length > 0) {
       try {
         const reply = await callZAI(dynamicMessage, userName, dynamicImage);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "zai",
-          provider: "OpenRouter"
-        });
-        return res.json({ success: true, model: 'zai', reply });
+        await saveChatMetadata({ question: message, userName, userEmail, model: "openrouter", provider: "OpenRouter" });
+        return res.json({ success: true, model: 'openrouter', reply });
       } catch (err) {
-        console.error('ZAI call failed, falling back:', err.message);
-      }
-    }
-
-    // Gemini fallback removed — Gemini API disabled by user
-
-    // 4. Prefer Nemotron when available
-    if (isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
-      try {
-        const reply = await callNemotron(dynamicMessage, userName, userEmail);
-        await saveChatMetadata({
-          question: message,
-          userName,
-          userEmail,
-          model: "nemotron",
-          provider: "Nemotron"
-        });
-        return res.json({ success: true, model: 'nemotron', reply });
-      } catch (err) {
-        console.error('Nemotron call failed, falling back:', err.message);
+        console.error('OpenRouter call failed:', err.message);
       }
     }
 
@@ -1080,33 +757,13 @@ app.post("/api/code", async (req, res) => {
       }
     }
 
-    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(`Generate clean code for: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'cerebras', result: reply });
-      } catch (err) {
-        console.warn('Cerebras code generation failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Prefer OpenRouter / ZAI second (uses balanced multi-key pool)
+    // Use OpenRouter only (NEMOTRON + GEMMA keys)
     if (getOpenRouterKeyPool().length > 0) {
       try {
         const result = await callZAI(`Generate clean code for: ${dynamicPrompt}`, userName, dynamicImage);
-        return res.json({ success: true, provider: 'zai', result });
+        return res.json({ success: true, provider: 'openrouter', result });
       } catch (err) {
-        console.warn('OpenRouter code generation failed, falling back:', err.message);
-      }
-    }
-
-    // 4. Prefer Nemotron if configured (only if no image, since Nemotron doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
-      try {
-        const reply = await callNemotron(`Generate clean code for: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'nemotron', result: reply });
-      } catch (err) {
-        console.warn('Nemotron code generation failed, falling back:', err.message);
+        console.warn('OpenRouter code generation failed:', err.message);
       }
     }
 
@@ -1147,33 +804,13 @@ app.post("/api/content", async (req, res) => {
       }
     }
 
-    // 1. Try Cerebras first (only if no image, since Cerebras doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.CEREBRAS_API_KEY)) {
-      try {
-        const reply = await callCerebras(`Write detailed content about: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'cerebras', result: reply });
-      } catch (err) {
-        console.warn('Cerebras content generation failed, falling back:', err.message);
-      }
-    }
-
-    // 2. Prefer OpenRouter / ZAI second (uses balanced multi-key pool)
+    // Use OpenRouter only (NEMOTRON + GEMMA keys)
     if (getOpenRouterKeyPool().length > 0) {
       try {
         const result = await callZAI(`Write detailed content about: ${dynamicPrompt}`, userName, dynamicImage);
-        return res.json({ success: true, provider: 'zai', result });
+        return res.json({ success: true, provider: 'openrouter', result });
       } catch (err) {
-        console.warn('OpenRouter content generation failed, falling back:', err.message);
-      }
-    }
-
-    // 4. Prefer Nemotron if configured (only if no image, since Nemotron doesn't support vision)
-    if (!dynamicImage && isValidKey(process.env.NEMOTRON_API_KEY) && isValidKey(process.env.NEMOTRON_API_URL)) {
-      try {
-        const reply = await callNemotron(`Write detailed content about: ${dynamicPrompt}`, userName);
-        return res.json({ success: true, provider: 'nemotron', result: reply });
-      } catch (err) {
-        console.warn('Nemotron content generation failed, falling back:', err.message);
+        console.warn('OpenRouter content generation failed:', err.message);
       }
     }
 
@@ -1196,10 +833,8 @@ app.post("/api/embed", async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "text field required" });
 
-    // Gemini embedding removed — Gemini API disabled by user
-
-    // 2. Fallback: OpenRouter embeddings via EMBEDDING_API_KEY
-    const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
+    // OpenRouter embeddings via new key pool
+    const embeddingKey = process.env.OPENROUTER_KEY_NEMOTRON || process.env.OPENROUTER_KEY_GEMMA;
     if (isValidKey(embeddingKey)) {
       try {
         const response = await fetchWithTimeout("https://openrouter.ai/api/v1/embeddings", {
@@ -1527,19 +1162,15 @@ const upsertEnvVar = (key, value) => {
   }
 };
 
-// Save Nemotron API key + optional URL
+// TTS config: deprecated (OpenRouter keys set via .env only now)
 app.post("/api/tts/config", (req, res) => {
   try {
-    const { apiKey, apiUrl } = req.body || {};
+    const { apiKey } = req.body || {};
     if (!apiKey) return res.status(400).json({ success: false, error: "apiKey is required" });
-
-    const ok1 = upsertEnvVar("NEMOTRON_API_KEY", apiKey);
-    let ok2 = true;
-    if (apiUrl) ok2 = upsertEnvVar("NEMOTRON_API_URL", apiUrl);
-
-    if (!ok1 || !ok2) return res.status(500).json({ success: false, error: "Failed to persist config" });
-
-    return res.json({ success: true, message: "Nemotron config saved" });
+    // Store as OPENROUTER_KEY_NEMOTRON for compatibility
+    const ok = upsertEnvVar("OPENROUTER_KEY_NEMOTRON", apiKey);
+    if (!ok) return res.status(500).json({ success: false, error: "Failed to persist config" });
+    return res.json({ success: true, message: "OpenRouter Nemotron key saved" });
   } catch (err) {
     console.error("TTS Config Error:", err.message || err);
     return res.status(500).json({ success: false, error: err.message || String(err) });
@@ -1553,8 +1184,8 @@ app.post("/api/tts/synthesize", async (req, res) => {
     const { text, voice } = req.body || {};
     if (!text) return res.status(400).json({ success: false, error: "text is required" });
 
-    const apiKey = req.body.apiKey || process.env.NEMOTRON_API_KEY;
-    const apiUrl = req.body.apiUrl || process.env.NEMOTRON_API_URL;
+    const apiKey = req.body.apiKey || process.env.OPENROUTER_KEY_NEMOTRON;
+    const apiUrl = req.body.apiUrl || null; // TTS URL must be provided in request body
 
     if (!apiKey || !apiUrl) {
       return res.status(503).json({ success: false, error: "Nemotron API key or URL not configured. Use /api/tts/config or include apiKey/apiUrl in body." });
