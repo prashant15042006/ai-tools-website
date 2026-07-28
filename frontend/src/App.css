@@ -2074,19 +2074,51 @@ body {
 
   .message-content {
     font-size: 15px !important;
+    line-height: 1.65 !important;
+    letter-spacing: -0.01em;
   }
 
   .message-content.user-text {
-    font-size: 16px !important;
+    font-size: 15.5px !important;
+    font-weight: 500;
+    line-height: 1.55 !important;
   }
 
   .message-content p {
     font-size: 15px !important;
+    line-height: 1.65 !important;
+    margin-bottom: 0.7rem !important;
   }
+
+  .message-content p:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .message-content h1 { font-size: 18px !important; margin: 16px 0 8px 0 !important; font-weight: 700 !important; line-height: 1.35 !important; }
+  .message-content h2 { font-size: 17px !important; margin: 14px 0 6px 0 !important; font-weight: 700 !important; line-height: 1.35 !important; }
+  .message-content h3 { font-size: 16px !important; margin: 12px 0 6px 0 !important; font-weight: 600 !important; line-height: 1.35 !important; }
 
   .message-content ul,
   .message-content ol {
     font-size: 15px !important;
+    line-height: 1.65 !important;
+    padding-left: 20px !important;
+    margin-bottom: 0.7rem !important;
+  }
+
+  .message-content li {
+    margin-bottom: 4px !important;
+  }
+
+  .message-content pre {
+    margin: 10px 0 !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* ── Input Area (mobile) ── */
