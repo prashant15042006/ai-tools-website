@@ -842,8 +842,67 @@ app.post("/api/chat/complete", async (req, res) => {
 
     return res.status(503).json({ success: false, error: "No AI providers succeeded" });
 
+// ===============================
+// 🎨 AI IMAGE PROMPT ENHANCER & TRANSLATOR
+// Translates any user request (Hinglish/Hindi/English) & edit commands
+// into an immaculate 8k English prompt for FLUX / SD image generation
+// ===============================
+app.post("/api/image-prompt", async (req, res) => {
+  try {
+    const { prompt, imageContext } = req.body;
+    if (!prompt) return res.status(400).json({ success: false, error: "prompt is required" });
+
+    const systemPrompt = `You are an expert AI Image Prompt Engineer.
+Your task is to take the user's raw image generation or editing request (which might be in Hinglish, Hindi, English, or slang) and convert it into a clear, highly detailed, photorealistic English prompt for image generation models like FLUX.1.
+
+CRITICAL RULES:
+1. GENDER & SUBJECT ACCURACY:
+   - "man", "ladka", "boy", "aadmi", "male" ➔ Specify "A handsome adult man / male".
+   - "woman", "ladki", "girl", "aurat", "female" ➔ Specify "A beautiful adult woman / female".
+   - "couple" ➔ Specify "A man and a woman together".
+   - Never confuse gender! Be explicit in English.
+
+2. EDIT / MODIFICATION REQUESTS (Background change, hair color, glasses, etc.):
+   - If user asks for edits (e.g., "background me pahad kar do", "red hair", "chashma pehna do", "hair color blue"):
+     Include the specific requested edits explicitly into a complete photographic scene description.
+
+3. TRANSLATION & ENHANCEMENT:
+   - Convert all Hinglish/Hindi words ("banao", "pic", "photo", "kar do", "ke sath") into vibrant English descriptive words.
+   - Add lighting, style, and quality keywords like "photorealistic, 8k resolution, studio lighting, detailed features, sharp focus".
+
+4. OUTPUT FORMAT:
+   - Output ONLY the final English prompt text. No explanations, no conversation, no quotation marks.
+   - Keep length between 15 and 45 words.`;
+
+    let userMessage = prompt;
+    if (imageContext) {
+      userMessage = `[Target Image Context: ${imageContext}]\nUser Request: ${prompt}`;
+    }
+
+    let enhancedPrompt = "";
+    try {
+      // Call AI to craft the immaculate image prompt
+      enhancedPrompt = await callZAI(`${systemPrompt}\n\nUser Request: ${userMessage}`, "User", null);
+      enhancedPrompt = enhancedPrompt.replace(/^["']|["']$/g, "").replace(/^Here is (the|your) prompt:?/i, "").trim();
+    } catch (err) {
+      console.warn("⚠️ AI Image Prompt enhancement failed, using fallback cleaning:", err.message);
+    }
+
+    // Fallback if AI call failed or returned empty
+    if (!enhancedPrompt) {
+      enhancedPrompt = prompt
+        .replace(/^(generate|create|make|draw|paint|banao|bana do|bana ke do)\s+/i, "")
+        .replace(/\b(man|ladka|aadmi)\b/gi, "a handsome adult man")
+        .replace(/\b(woman|ladki|aurat)\b/gi, "a beautiful adult woman")
+        .trim();
+      enhancedPrompt += ", photorealistic 8k portrait, detailed lighting, sharp focus";
+    }
+
+    console.log(`🎨 [IMAGE PROMPT] Raw: "${prompt}" ➔ Enhanced: "${enhancedPrompt}"`);
+    return res.json({ success: true, original: prompt, enhanced: enhancedPrompt });
+
   } catch (error) {
-    console.error('Chat Complete Error:', error.message);
+    console.error("Image Prompt Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

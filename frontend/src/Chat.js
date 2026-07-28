@@ -149,35 +149,47 @@ function Chat() {
         "paint an image", "paint a photo", "paint a picture", "paint a painting", "paint a sketch",
         "photo bana ke do", "image bana ke do", "picture bana ke do", "tasveer bana ke do",
         "photo bana do", "image bana do", "picture bana do", "tasveer bana do",
-        "photo banake do", "image banake do", "picture banake do", "tasveer banake do"
+        "photo banake do", "image banake do", "picture banake do", "tasveer banake do",
+        "pic bana", "pic generate", "pic create", "pic photo", "ka pic", "ki pic", "ka photo", "ki photo",
+        "background change", "hair color", "hair change", "background badal", "glass pehna", "chashma pehna"
       ];
-      return triggers.some(t => p.includes(t)) || /^(generate|create|make|draw|paint)\s+(an?\s+)?(image|photo|picture|painting|artwork|sketch|portrait|illustration)\b/i.test(p);
-    };
-
-    const cleanImagePrompt = (promptText) => {
-      let cleaned = promptText
-        .replace(/^(generate|create|make|draw|paint|show|display|please|mujhhe|mujhe)\s+(an?\s+)?(image|photo|picture|painting|artwork|sketch|portrait|illustration)\s+(of|about|for)?\s+/i, "")
-        .replace(/(image|photo|picture|painting|artwork|sketch|portrait|illustration)\s+(generate|create|make|draw|paint|bana)\s+(kar\s+)?(ke\s+)?(do|karo|de|dijiye)\s*/i, "")
-        .trim();
-      return cleaned || promptText;
+      return triggers.some(t => p.includes(t)) || 
+             /^(generate|create|make|draw|paint)\s+(an?\s+)?(image|photo|picture|painting|artwork|sketch|portrait|illustration)\b/i.test(p) ||
+             /\b(photo|image|pic|picture|tasveer)\b.*\b(banao|bana do|generate|create|change|edit)\b/i.test(p);
     };
 
     if (isImageRequest(text)) {
-      const cleanedPrompt = cleanImagePrompt(text);
       setMessages((prev) => 
         prev.map(msg => msg.id === aiMsgId ? { 
           ...msg, 
-          text: "Generating your image...", 
+          text: "✨ Enhancing prompt with AI for photorealistic generation...", 
           isImageResult: true, 
           imageLoading: true,
-          promptText: cleanedPrompt
+          promptText: text
         } : msg)
       );
 
-      const generate = async (retryCount = 0) => {
+      const generateImageWithAi = async () => {
         try {
-          const ratioStr = detectRatioFromPrompt(cleanedPrompt) || "1:1";
-          // Use smaller dimensions on mobile for faster generation
+          // 1. Call AI Prompt Enhancer API to translate Hinglish/Hindi & build photorealistic English prompt
+          let enhancedPrompt = text;
+          try {
+            const promptResp = await fetch(`${API_BASE_URL}/api/image-prompt`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: text, imageContext: imageToBeSent ? "Attached image uploaded by user" : "" }),
+            });
+            if (promptResp.ok) {
+              const promptData = await promptResp.json();
+              if (promptData.enhanced) {
+                enhancedPrompt = promptData.enhanced;
+              }
+            }
+          } catch (e) {
+            console.warn("Prompt enhancement fallback to original:", e.message);
+          }
+
+          const ratioStr = detectRatioFromPrompt(text) || "1:1";
           const isMobile = window.innerWidth <= 768;
           let width = isMobile ? 768 : 1024;
           let height = isMobile ? 768 : 1024;
@@ -186,51 +198,61 @@ function Chat() {
           else if (ratioStr === "4:3") { width = isMobile ? 800 : 1024; height = isMobile ? 600 : 768; }
 
           const seed = Math.floor(Math.random() * 999999);
-          const genUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanedPrompt)}?width=${width}&height=${height}&model=flux&seed=${seed}&nologo=true&enhance=true`;
+          // Try flux-realism model first for exact photographic face/subject & gender accuracy
+          const modelsToTry = ["flux-realism", "flux", "turbo"];
 
-          // Use fetch instead of window.Image - much more reliable on mobile browsers
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 90000); // 90s timeout for image gen
-          const response = await fetch(genUrl, { signal: controller.signal });
-          clearTimeout(timer);
+          let successfulBlobUrl = null;
+          let successfulDownloadUrl = null;
 
-          if (response.ok) {
-            // Convert blob to object URL for display - works perfectly on mobile
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
+          for (const m of modelsToTry) {
+            try {
+              const genUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&model=${m}&seed=${seed}&nologo=true&enhance=true`;
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), 45000);
+              const response = await fetch(genUrl, { signal: controller.signal });
+              clearTimeout(timer);
+
+              if (response.ok) {
+                const blob = await response.blob();
+                successfulBlobUrl = URL.createObjectURL(blob);
+                successfulDownloadUrl = genUrl;
+                break;
+              }
+            } catch (err) {
+              console.warn(`Model ${m} attempt failed, trying fallback...`, err.message);
+            }
+          }
+
+          if (successfulBlobUrl) {
             setMessages((prev) =>
               prev.map(msg => msg.id === aiMsgId ? {
                 ...msg,
                 text: "",
-                imageUrl: objectUrl,
-                imageDownloadUrl: genUrl, // keep original URL for download
+                imageUrl: successfulBlobUrl,
+                imageDownloadUrl: successfulDownloadUrl,
                 imageLoading: false,
+                enhancedPromptText: enhancedPrompt,
                 seed,
                 ratio: ratioStr
               } : msg)
             );
             setLoading(false);
           } else {
-            throw new Error(`Image service returned ${response.status}`);
+            throw new Error("All image models failed to generate.");
           }
         } catch (err) {
-          if (retryCount === 0 && err.name !== 'AbortError') {
-            // Retry once with a different seed
-            generate(1);
-          } else {
-            setMessages((prev) =>
-              prev.map(msg => msg.id === aiMsgId ? {
-                ...msg,
-                text: "⚠️ Image generation failed. Please try again or use a simpler prompt.",
-                imageLoading: false
-              } : msg)
-            );
-            setLoading(false);
-          }
+          setMessages((prev) =>
+            prev.map(msg => msg.id === aiMsgId ? {
+              ...msg,
+              text: "⚠️ Image generation failed. Please try again or rephrase your prompt.",
+              imageLoading: false
+            } : msg)
+          );
+          setLoading(false);
         }
       };
 
-      generate(0);
+      generateImageWithAi();
       return;
     }
 
@@ -491,6 +513,16 @@ function Chat() {
                           <a href={msg.imageDownloadUrl || msg.imageUrl} download={`nexuss-image-${msg.seed}.png`} target="_blank" rel="noopener noreferrer" className="chat-img-btn-link">
                             <Download size={14} style={{ marginRight: '4px' }} /> Download
                           </a>
+                          <button 
+                            onClick={() => {
+                              setInput(`is photo me background change karke beach kar do aur hair color red kar do`);
+                            }} 
+                            className="chat-img-btn"
+                            style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}
+                            title="Quick Edit / Modify"
+                          >
+                            <Sparkles size={14} /> Edit Photo
+                          </button>
                         </div>
                       </div>
                     ) : (
