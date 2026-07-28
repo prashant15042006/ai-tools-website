@@ -65,6 +65,18 @@ if (!isValidKey(process.env.OPENROUTER_KEY_GEMMA)) {
   console.log("✅ OpenRouter Gemma Key detected (ends with ...", process.env.OPENROUTER_KEY_GEMMA.slice(-5), ")");
 }
 
+if (!isValidKey(process.env.OPENROUTER_KEY_EMBED)) {
+  console.warn("⚠️ WARNING: OPENROUTER_KEY_EMBED is not set. Embeddings will fallback to Nemotron key.");
+} else {
+  console.log("✅ OpenRouter Embed Key (llama-nemotron-embed-vl-1b-v2) detected (ends with ...", process.env.OPENROUTER_KEY_EMBED.slice(-5), ")");
+}
+
+if (!isValidKey(process.env.OPENROUTER_KEY_RERANK)) {
+  console.warn("⚠️ WARNING: OPENROUTER_KEY_RERANK is not set. Reranking will be unavailable.");
+} else {
+  console.log("✅ OpenRouter Rerank Key (llama-nemotron-rerank-vl-1b-v2) detected (ends with ...", process.env.OPENROUTER_KEY_RERANK.slice(-5), ")");
+}
+
 // Helper to pre-process uploaded images using OpenRouter vision models
 const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this image and describe what is visible in detail.") => {
   // Use OPENROUTER_KEY_NEMOTRON or OPENROUTER_KEY_GEMMA for vision
@@ -174,8 +186,10 @@ app.get("/api/diag", (req, res) => {
     success: true,
     message: "Nexuss AI Backend is online.",
     environment: {
-      OPENROUTER_KEY_NEMOTRON: isValidKey(process.env.OPENROUTER_KEY_NEMOTRON) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_NEMOTRON.slice(-5) + ")" : "MISSING (Configure in dashboard)",
-      OPENROUTER_KEY_GEMMA: isValidKey(process.env.OPENROUTER_KEY_GEMMA) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_GEMMA.slice(-5) + ")" : "MISSING (Configure in dashboard)"
+      OPENROUTER_KEY_NEMOTRON: isValidKey(process.env.OPENROUTER_KEY_NEMOTRON) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_NEMOTRON.slice(-5) + ")" : "MISSING",
+      OPENROUTER_KEY_GEMMA: isValidKey(process.env.OPENROUTER_KEY_GEMMA) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_GEMMA.slice(-5) + ")" : "MISSING",
+      OPENROUTER_KEY_EMBED: isValidKey(process.env.OPENROUTER_KEY_EMBED) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_EMBED.slice(-5) + ")" : "MISSING",
+      OPENROUTER_KEY_RERANK: isValidKey(process.env.OPENROUTER_KEY_RERANK) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_RERANK.slice(-5) + ")" : "MISSING"
     }
   });
 });
@@ -825,7 +839,7 @@ app.post("/api/content", async (req, res) => {
 
 // ===============================
 // 🧬 EMBEDDING API
-// Generates text embeddings via Google Gemini text-embedding-004
+// Generates text/vision embeddings using nvidia/llama-nemotron-embed-vl-1b-v2:free
 // Body: { text: string } — returns { embedding: number[] }
 // ===============================
 app.post("/api/embed", async (req, res) => {
@@ -833,37 +847,141 @@ app.post("/api/embed", async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "text field required" });
 
-    // OpenRouter embeddings via new key pool
-    const embeddingKey = process.env.OPENROUTER_KEY_NEMOTRON || process.env.OPENROUTER_KEY_GEMMA;
-    if (isValidKey(embeddingKey)) {
+    // Priority: dedicated EMBED key → fallback to NEMOTRON key
+    const embedKey = process.env.OPENROUTER_KEY_EMBED || process.env.OPENROUTER_KEY_NEMOTRON || process.env.OPENROUTER_KEY_GEMMA;
+    if (!isValidKey(embedKey)) {
+      return res.status(503).json({ success: false, error: "No embedding key configured. Set OPENROUTER_KEY_EMBED in .env" });
+    }
+
+    // Try dedicated Nemotron embed model first, then fallback
+    const embedModels = [
+      "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+      "openai/text-embedding-ada-002",
+    ];
+
+    let lastError = null;
+    for (const model of embedModels) {
       try {
+        console.log(`🧬 [EMBED] Trying model: ${model}`);
         const response = await fetchWithTimeout("https://openrouter.ai/api/v1/embeddings", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${embeddingKey}`,
+            "Authorization": `Bearer ${embedKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": "https://nexuss-ai.io",
             "X-Title": "Nexuss Workspace",
           },
-          body: JSON.stringify({
-            model: "openai/text-embedding-ada-002",
-            input: text,
-          }),
-        }, 10000);
+          body: JSON.stringify({ model, input: text }),
+        }, 12000);
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || `Status ${response.status}`);
+        if (!response.ok) {
+          lastError = data.error?.message || `Status ${response.status}`;
+          console.warn(`⚠️ [EMBED] ${model} failed:`, lastError);
+          continue;
+        }
         const embedding = data.data?.[0]?.embedding;
-        if (!embedding) throw new Error("Empty embedding from OpenRouter");
-        return res.json({ success: true, provider: "openrouter", embedding });
+        if (!embedding) { lastError = "Empty embedding"; continue; }
+        console.log(`✅ [EMBED] Success with ${model}. Dims: ${embedding.length}`);
+        return res.json({ success: true, provider: "openrouter", model, embedding });
       } catch (err) {
-        console.error("OpenRouter embedding failed:", err.message);
+        lastError = err.message;
+        console.warn(`⚠️ [EMBED] Exception with ${model}:`, err.message);
       }
     }
 
-    return res.status(503).json({ success: false, error: "No embedding provider configured." });
+    return res.status(503).json({ success: false, error: lastError || "All embedding models failed." });
 
   } catch (error) {
     console.error("Embed Error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// ===============================
+// 🔀 RERANK API
+// Semantically reranks a list of documents given a query.
+// Uses nvidia/llama-nemotron-rerank-vl-1b-v2:free via OpenRouter
+// Body: { query: string, documents: string[] }
+// Returns: { results: [{ index, text, score }] } sorted by relevance
+// Used by: Prompt Manager smart search, Chat history search
+// ===============================
+app.post("/api/rerank", async (req, res) => {
+  try {
+    const { query, documents } = req.body;
+    if (!query) return res.status(400).json({ success: false, error: "query is required" });
+    if (!Array.isArray(documents) || documents.length === 0) {
+      return res.status(400).json({ success: false, error: "documents must be a non-empty array" });
+    }
+
+    const rerankKey = process.env.OPENROUTER_KEY_RERANK;
+    if (!isValidKey(rerankKey)) {
+      // Graceful fallback: return documents in original order with dummy scores
+      console.warn("⚠️ [RERANK] OPENROUTER_KEY_RERANK not configured. Returning original order.");
+      return res.json({
+        success: true,
+        provider: "fallback",
+        results: documents.map((text, index) => ({ index, text, score: 1 - index * 0.01 }))
+      });
+    }
+
+    console.log(`🔀 [RERANK] Query: "${query.slice(0, 60)}..." | Documents: ${documents.length}`);
+
+    try {
+      const response = await fetchWithTimeout("https://openrouter.ai/api/v1/rerank", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${rerankKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss Workspace",
+        },
+        body: JSON.stringify({
+          model: "nvidia/llama-nemotron-rerank-vl-1b-v2:free",
+          query,
+          documents,
+          top_n: documents.length, // return all, sorted by relevance
+        }),
+      }, 15000);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errMsg = data.error?.message || `Status ${response.status}`;
+        console.error(`❌ [RERANK] OpenRouter rerank failed:`, errMsg);
+        // Graceful fallback
+        return res.json({
+          success: true,
+          provider: "fallback",
+          results: documents.map((text, index) => ({ index, text, score: 1 - index * 0.01 }))
+        });
+      }
+
+      // OpenRouter rerank response: { results: [{ index, relevance_score }] }
+      const rawResults = data.results || [];
+      const ranked = rawResults
+        .sort((a, b) => (b.relevance_score ?? 0) - (a.relevance_score ?? 0))
+        .map(r => ({
+          index: r.index,
+          text: documents[r.index],
+          score: r.relevance_score ?? 0
+        }));
+
+      console.log(`✅ [RERANK] Reranking complete. Top result index: ${ranked[0]?.index}`);
+      return res.json({ success: true, provider: "openrouter", model: "nvidia/llama-nemotron-rerank-vl-1b-v2:free", results: ranked });
+
+    } catch (err) {
+      console.error("❌ [RERANK] Exception:", err.message);
+      // Graceful fallback
+      return res.json({
+        success: true,
+        provider: "fallback",
+        results: documents.map((text, index) => ({ index, text, score: 1 - index * 0.01 }))
+      });
+    }
+
+  } catch (error) {
+    console.error("Rerank Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

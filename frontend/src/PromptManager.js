@@ -51,6 +51,9 @@ export default function PromptManager() {
   const [generateError, setGenerateError] = useState('');
   const [copiedId, setCopiedId]           = useState(null);
   const [toast, setToast]                 = useState(null);
+  const [isReranking, setIsReranking]     = useState(false);
+  const [rerankedOrder, setRerankedOrder] = useState(null); // null = no AI rerank yet
+  const rerankDebounce                    = React.useRef(null);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -142,12 +145,74 @@ export default function PromptManager() {
     showToast('Loaded into Chat! 💬');
   };
 
-  const filtered = prompts.filter(p => {
-    if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (p.title || '').toLowerCase().includes(q) || (p.prompt || '').toLowerCase().includes(q);
-  });
+  // Smart AI-powered search with reranking
+  const handleSearchChange = (e) => {
+    const q = e.target.value;
+    setQuery(q);
+    setRerankedOrder(null); // reset on new query
+
+    // Only rerank if query is meaningful
+    if (q.trim().length < 3) return;
+
+    clearTimeout(rerankDebounce.current);
+    rerankDebounce.current = setTimeout(async () => {
+      // Build candidate list (text filter first for speed)
+      const candidates = prompts.filter(p => {
+        if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
+        return true; // pass all to reranker for semantic scoring
+      });
+      if (candidates.length === 0) return;
+
+      const docs = candidates.map(p => `${p.title} — ${(p.prompt || '').slice(0, 200)}`);
+      setIsReranking(true);
+      try {
+        const resp = await fetch(`${API_BASE_URL}/api/rerank`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: q, documents: docs }),
+        });
+        if (!resp.ok) throw new Error('Rerank failed');
+        const data = await resp.json();
+        if (data.success && data.results) {
+          // Filter out low-relevance results (score < 0.01) when using real AI
+          const threshold = data.provider === 'fallback' ? -1 : 0.01;
+          const orderedIds = data.results
+            .filter(r => r.score >= threshold)
+            .map(r => candidates[r.index]?.id)
+            .filter(Boolean);
+          setRerankedOrder(orderedIds);
+        }
+      } catch (err) {
+        console.warn('[Rerank] Falling back to text search:', err.message);
+        setRerankedOrder(null);
+      } finally {
+        setIsReranking(false);
+      }
+    }, 500); // 500ms debounce
+  };
+
+  // Apply rerank order or fall back to text match
+  const filtered = (() => {
+    const base = prompts.filter(p => {
+      if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
+      if (!query) return true;
+      const q = query.toLowerCase();
+      return (p.title || '').toLowerCase().includes(q) || (p.prompt || '').toLowerCase().includes(q);
+    });
+
+    if (query.trim().length >= 3 && rerankedOrder) {
+      // Sort by AI rerank order; items not in rerankedOrder go to end
+      return [...base].sort((a, b) => {
+        const ai = rerankedOrder.indexOf(a.id);
+        const bi = rerankedOrder.indexOf(b.id);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
+    }
+    return base;
+  })();
 
   const isBuiltin = selected ? String(selected.id).startsWith('builtin') : false;
   const totalCustom  = prompts.filter(p => String(p.id).startsWith('user-')).length;
@@ -183,9 +248,15 @@ export default function PromptManager() {
           <input
             type="search"
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search templates..."
+            onChange={handleSearchChange}
+            placeholder="Search templates (AI-powered)..."
           />
+          {isReranking && (
+            <span style={{ fontSize: '10px', color: 'var(--accent)', marginLeft: 6, whiteSpace: 'nowrap', opacity: 0.8 }}
+              title="AI is ranking results by relevance">
+              ✦ AI
+            </span>
+          )}
         </div>
 
         {/* Category Pills */}
