@@ -54,28 +54,37 @@ const isValidKey = (val) => {
 
 
 if (!isValidKey(process.env.OPENROUTER_KEY_NEMOTRON)) {
-  console.warn("⚠️ WARNING: OPENROUTER_KEY_NEMOTRON is not set. Add it in .env");
+  console.warn("⚠️  WARNING: OPENROUTER_KEY_NEMOTRON is not set.");
 } else {
-  console.log("✅ OpenRouter Nemotron Key detected (ends with ...", process.env.OPENROUTER_KEY_NEMOTRON.slice(-5), ")");
+  console.log("✅ OpenRouter NEMOTRON Key detected (ends with ...", process.env.OPENROUTER_KEY_NEMOTRON.slice(-5), ")");
 }
 
 if (!isValidKey(process.env.OPENROUTER_KEY_GEMMA)) {
-  console.warn("⚠️ WARNING: OPENROUTER_KEY_GEMMA is not set. Add it in .env");
+  console.warn("⚠️  WARNING: OPENROUTER_KEY_GEMMA is not set.");
 } else {
-  console.log("✅ OpenRouter Gemma Key detected (ends with ...", process.env.OPENROUTER_KEY_GEMMA.slice(-5), ")");
+  console.log("✅ OpenRouter GEMMA Key detected (ends with ...", process.env.OPENROUTER_KEY_GEMMA.slice(-5), ")");
 }
 
 if (!isValidKey(process.env.OPENROUTER_KEY_EMBED)) {
-  console.warn("⚠️ WARNING: OPENROUTER_KEY_EMBED is not set. Embeddings will fallback to Nemotron key.");
+  console.warn("⚠️  WARNING: OPENROUTER_KEY_EMBED is not set. Embeddings will fallback to Nemotron key.");
 } else {
   console.log("✅ OpenRouter Embed Key (llama-nemotron-embed-vl-1b-v2) detected (ends with ...", process.env.OPENROUTER_KEY_EMBED.slice(-5), ")");
 }
 
 if (!isValidKey(process.env.OPENROUTER_KEY_RERANK)) {
-  console.warn("⚠️ WARNING: OPENROUTER_KEY_RERANK is not set. Reranking will be unavailable.");
+  console.warn("⚠️  WARNING: OPENROUTER_KEY_RERANK is not set. Reranking will be unavailable.");
 } else {
   console.log("✅ OpenRouter Rerank Key (llama-nemotron-rerank-vl-1b-v2) detected (ends with ...", process.env.OPENROUTER_KEY_RERANK.slice(-5), ")");
 }
+
+if (!isValidKey(process.env.GROQ_API_KEY)) {
+  console.warn("⚠️  WARNING: GROQ_API_KEY is not set. Groq provider will be skipped.");
+} else {
+  console.log("✅ Groq API Key detected (ends with ...", process.env.GROQ_API_KEY.slice(-5), ")");
+}
+
+console.log("🌸 Pollinations AI is always available as emergency fallback (no key needed).");
+
 
 // Helper to pre-process uploaded images using OpenRouter vision models
 const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this image and describe what is visible in detail.") => {
@@ -182,17 +191,22 @@ if (!fs.existsSync(uploadsDir)) {
 app.use("/uploads", express.static(uploadsDir));
 // GET diagnostics endpoint
 app.get("/api/diag", (req, res) => {
+  const activeProviders = getActiveProviders().map(p => p.name);
   res.json({
     success: true,
     message: "Nexuss AI Backend is online.",
+    providerChain: [...activeProviders, "Pollinations (no key — always available)"],
     environment: {
+      GROQ_API_KEY: isValidKey(process.env.GROQ_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.GROQ_API_KEY.slice(-5) + ")" : "MISSING",
       OPENROUTER_KEY_NEMOTRON: isValidKey(process.env.OPENROUTER_KEY_NEMOTRON) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_NEMOTRON.slice(-5) + ")" : "MISSING",
       OPENROUTER_KEY_GEMMA: isValidKey(process.env.OPENROUTER_KEY_GEMMA) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_GEMMA.slice(-5) + ")" : "MISSING",
       OPENROUTER_KEY_EMBED: isValidKey(process.env.OPENROUTER_KEY_EMBED) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_EMBED.slice(-5) + ")" : "MISSING",
-      OPENROUTER_KEY_RERANK: isValidKey(process.env.OPENROUTER_KEY_RERANK) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_RERANK.slice(-5) + ")" : "MISSING"
+      OPENROUTER_KEY_RERANK: isValidKey(process.env.OPENROUTER_KEY_RERANK) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_RERANK.slice(-5) + ")" : "MISSING",
+      POLLINATIONS: "ALWAYS AVAILABLE (no key)"
     }
   });
 });
+
 
 
 // POST upload endpoint — uploads image to Pollinations media storage
@@ -341,10 +355,65 @@ const cleanAIResponse = (text) => {
 
 
 // ===============================
-// 🔑 OpenRouter Key Pool (Two-key setup)
-// OPENROUTER_KEY_NEMOTRON → nvidia/nemotron-3-ultra-550b-a55b:free
-// OPENROUTER_KEY_GEMMA    → google/gemma-4-26b-a4b-it:free
+// 🔗 UNIFIED AI PROVIDER CHAIN
+// Priority: Groq (fastest) → OpenRouter NEMOTRON → OpenRouter GEMMA
+// Emergency: Pollinations AI (no key needed — always available)
 // ===============================
+const PROVIDER_CHAIN = [
+  {
+    name: "GROQ",
+    envKey: "GROQ_API_KEY",
+    baseUrl: "https://api.groq.com/openai/v1/chat/completions",
+    models: [
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant",
+      "gemma2-9b-it",
+      "mixtral-8x7b-32768",
+    ],
+    getHeaders: (key) => ({
+      "Authorization": `Bearer ${key}`,
+      "Content-Type": "application/json",
+    }),
+  },
+  {
+    name: "NEMOTRON",
+    envKey: "OPENROUTER_KEY_NEMOTRON",
+    baseUrl: "https://openrouter.ai/api/v1/chat/completions",
+    models: [
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "nvidia/nemotron-nano-12b-v2-vl:free",
+    ],
+    getHeaders: (key) => ({
+      "Authorization": `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://nexuss-ai.io",
+      "X-Title": "Nexuss Workspace",
+    }),
+  },
+  {
+    name: "GEMMA",
+    envKey: "OPENROUTER_KEY_GEMMA",
+    baseUrl: "https://openrouter.ai/api/v1/chat/completions",
+    models: [
+      "google/gemma-4-26b-a4b-it:free",
+      "google/gemma-4-31b-it:free",
+      "google/gemma-3-27b-it:free",
+    ],
+    getHeaders: (key) => ({
+      "Authorization": `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://nexuss-ai.io",
+      "X-Title": "Nexuss Workspace",
+    }),
+  },
+];
+
+// Returns only providers with valid keys configured
+const getActiveProviders = () =>
+  PROVIDER_CHAIN.filter(p => isValidKey(process.env[p.envKey]));
+
+// Keep legacy helper so existing references (e.g. image pre-processor) still work
 const getOpenRouterKeyPool = () => {
   const keys = [];
   if (isValidKey(process.env.OPENROUTER_KEY_NEMOTRON))
@@ -354,52 +423,47 @@ const getOpenRouterKeyPool = () => {
   return keys;
 };
 
-// Models available per key (verified via OpenRouter API)
-const NEMOTRON_MODELS = [
-  "nvidia/nemotron-3-ultra-550b-a55b:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-];
-const GEMMA_MODELS = [
-  "google/gemma-4-26b-a4b-it:free",
-  "google/gemma-4-31b-it:free",
-  "google/gemma-3-27b-it",
-];
-
-const getModelsForKey = (keyName, isVision = false) => {
-  if (keyName === "NEMOTRON") return NEMOTRON_MODELS;
-  if (keyName === "GEMMA") return GEMMA_MODELS;
-  return [];
+// ── Pollinations AI — emergency fallback, no API key required ─────────────
+// Called only when ALL keyed providers are exhausted.
+const callPollinationsFallback = async (messages) => {
+  console.log("🌸 [FALLBACK] Attempting Pollinations AI (no key required)...");
+  const resp = await fetchWithTimeout("https://text.pollinations.ai/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "openai-large",
+      messages,
+      stream: false,
+      seed: Math.floor(Math.random() * 99999),
+    }),
+  }, 25000);
+  if (!resp.ok) throw new Error(`Pollinations HTTP ${resp.status}`);
+  const text = await resp.text();
+  if (!text?.trim()) throw new Error("Pollinations returned empty response");
+  console.log("✅ [FALLBACK] Pollinations replied. Length:", text.trim().length);
+  return cleanAIResponse(text.trim());
 };
 
-const callZAI = async (message, userName = "User", image = null) => {
-  const keyPool = getOpenRouterKeyPool();
-  if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
+// ── Non-streaming AI call (used by /api/code, /api/content, /api/chat/complete) ──
+const callZAI = async (message, userName = "User", image = null) => {
   const userContent = image
-    ? [
-        { type: "text", text: message },
-        { type: "image_url", image_url: { url: image } }
-      ]
+    ? [{ type: "text", text: message }, { type: "image_url", image_url: { url: image } }]
     : message;
 
   let lastError = null;
+  const providers = getActiveProviders();
 
-  // Try each key × its models for maximum availability
-  for (const { name, key } of keyPool) {
-    const models = getModelsForKey(name, !!image);
+  for (const { name, envKey, baseUrl, models, getHeaders } of providers) {
+    const key = process.env[envKey];
     for (const model of models) {
       try {
         console.log(`🚀 [${name}] Requesting model: ${model}`);
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const response = await fetch(baseUrl, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${key}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://nexuss-ai.io",
-            "X-Title": "Nexuss Workspace",
-          },
+          headers: getHeaders(key),
           body: JSON.stringify({
-            model: model,
+            model,
             messages: [
               { role: "system", content: SYSTEM_PROMPT(userName) },
               { role: "user", content: userContent }
@@ -411,30 +475,50 @@ const callZAI = async (message, userName = "User", image = null) => {
         const data = await response.json();
 
         if (!response.ok) {
-          let errorMsg = data.error?.message || `Status ${response.status}`;
-          // If rate-limited (429) or credits exhausted (402), try next key immediately
-          if (response.status === 429 || response.status === 402 || (errorMsg && errorMsg.toLowerCase().includes("credit"))) {
-            console.warn(`⚠️ [${name}] Key rate-limited/exhausted (${response.status}), switching key...`);
-            break; // break inner loop → try next key
+          const errorMsg = data.error?.message || `Status ${response.status}`;
+          if (
+            response.status === 429 || response.status === 402 ||
+            errorMsg.toLowerCase().includes("credit") ||
+            errorMsg.toLowerCase().includes("rate") ||
+            errorMsg.toLowerCase().includes("quota")
+          ) {
+            console.warn(`⚠️ [${name}] Rate-limited/exhausted — switching provider...`);
+            break; // jump to next provider
           }
           console.error(`❌ [${name}] ${model} failed:`, errorMsg);
           lastError = errorMsg;
           continue;
         }
 
-        if (data.choices?.[0]?.message?.content || data.choices?.[0]?.text) {
-          return data.choices[0].message?.content || data.choices[0].text;
+        const reply = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+        if (reply?.trim()) {
+          console.log(`✅ [${name}] ${model} replied. Length: ${reply.length}`);
+          return reply;
         }
 
+        console.warn(`⚠️ [${name}] ${model} returned empty — trying next...`);
+        lastError = "Empty reply";
         continue;
       } catch (err) {
+        console.error(`❌ [${name}] Exception with ${model}:`, err.message);
         lastError = err.message;
       }
     }
   }
 
-  throw new Error(lastError || "All OpenRouter keys and models failed.");
+  // ── Emergency Pollinations fallback ──────────────────────────────────────
+  try {
+    return await callPollinationsFallback([
+      { role: "system", content: SYSTEM_PROMPT(userName) },
+      { role: "user", content: message }
+    ]);
+  } catch (err) {
+    lastError = err.message;
+  }
+
+  throw new Error(lastError || "All providers (Groq + OpenRouter + Pollinations) failed.");
 };
+
 
 
 // ===============================
@@ -477,21 +561,15 @@ const saveChatMetadata = async ({ question, userName, userEmail, model, provider
 // callGeminiDirect and callGeminiDirectStream removed — Gemini API disabled by user
 
 const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
-  const keyPool = getOpenRouterKeyPool();
-  if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
-
-  // If there's an image, construct the multimodal content format
   const userContent = image
-    ? [
-        { type: "text", text: message },
-        { type: "image_url", image_url: { url: image } }
-      ]
+    ? [{ type: "text", text: message }, { type: "image_url", image_url: { url: image } }]
     : message;
 
   let lastError = null;
+  const providers = getActiveProviders();
 
-  for (const { name, key } of keyPool) {
-    const models = getModelsForKey(name, !!image);
+  for (const { name, envKey, baseUrl, models, getHeaders } of providers) {
+    const key = process.env[envKey];
     for (const model of models) {
       try {
         console.log(`🚀 [STREAM] [${name}] Attempting model: ${model}`);
@@ -500,16 +578,12 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
           ...history,
           { role: "user", content: userContent }
         ];
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+
+        const response = await fetch(baseUrl, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${key}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://nexuss-ai.io",
-            "X-Title": "Nexuss Workspace",
-          },
+          headers: getHeaders(key),
           body: JSON.stringify({
-            model: model,
+            model,
             stream: true,
             messages: apiMessages,
             max_tokens: 1024,
@@ -519,17 +593,16 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
         if (!response.ok) {
           const errText = await response.text();
           console.error(`❌ [STREAM] [${name}] ${model} failed:`, errText);
-          
-          // Switch keys immediately if rate-limited (429) or credits exhausted (402)
           if (
             response.status === 429 ||
             response.status === 402 ||
             errText.toLowerCase().includes("credit") ||
             errText.toLowerCase().includes("rate limit") ||
+            errText.toLowerCase().includes("quota") ||
             errText.toLowerCase().includes("afford")
           ) {
-            console.warn(`⚠️ [STREAM] [${name}] Key exhausted (status ${response.status}), switching key...`);
-            break; // break inner model loop -> next key
+            console.warn(`⚠️ [STREAM] [${name}] Rate-limited/exhausted — switching provider...`);
+            break; // next provider
           }
           lastError = errText;
           continue;
@@ -548,13 +621,10 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
             for (const line of lines) {
               const trimmed = line.trim();
               if (!trimmed || !trimmed.startsWith("data: ")) continue;
-              
+
               const dataStr = trimmed.slice(6);
-              if (dataStr === "[DONE]") {
-                res.write("data: [DONE]\n\n");
-                continue;
-              }
-              
+              if (dataStr === "[DONE]") { res.write("data: [DONE]\n\n"); continue; }
+
               try {
                 const data = JSON.parse(dataStr);
                 const content = data.choices?.[0]?.delta?.content || "";
@@ -563,44 +633,29 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
                   fullReply += content;
                   res.write(`data: ${JSON.stringify({ content })}\n\n`);
                 }
-              } catch (e) {
-                // Fragmented JSON
-              }
+              } catch (e) { /* fragmented JSON — ignore */ }
             }
           });
 
           response.body.on("end", async () => {
-            console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
+            console.log(`✅ [STREAM] Finished with [${name}] ${model}. Reply length: ${fullReply.length}`);
 
-            // ── EMPTY RESPONSE FIX ─────────────────────────────────────────
-            // If the model returned nothing (Reply length: 0) AND we haven't
-            // written any content to the client yet, reject so the outer loop
-            // tries the next model/key automatically.
+            // ── Empty response guard ─────────────────────────────────────
             if (fullReply.trim().length === 0 && !streamStarted) {
-              console.warn(`⚠️ [STREAM] ${model} returned empty reply. Trying next model/key...`);
-              lastError = `${model} returned empty reply`;
-              // Abort this stream attempt — outer for-loop will continue
+              console.warn(`⚠️ [STREAM] [${name}] ${model} returned empty reply. Trying next...`);
+              lastError = `${model} empty reply`;
               reject(Object.assign(new Error("EMPTY_REPLY"), { emptyReply: true }));
               return;
             }
-            // ──────────────────────────────────────────────────────────────
+            // ────────────────────────────────────────────────────────────
 
-            // If the full reply contains safety labels, send a correction to the client
+            // Strip safety labels if injected by model
             const cleanedReply = cleanAIResponse(fullReply);
             if (cleanedReply !== fullReply && cleanedReply.length > 0) {
-              // Send a special replace signal so the client can swap the full reply
               res.write(`data: ${JSON.stringify({ replace: cleanedReply })}\n\n`);
             }
-            
-            // Save metadata only, without AI reply text
-            await saveChatMetadata({
-              question: message,
-              userName,
-              userEmail,
-              model: model,
-              provider: "OpenRouter"
-            });
-            
+
+            await saveChatMetadata({ question: message, userName, userEmail, model, provider: name });
             res.end();
             resolve();
           });
@@ -613,31 +668,47 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
         });
 
       } catch (err) {
-        // EMPTY_REPLY: model returned nothing → try next model (not a fatal error)
         if (err?.emptyReply) {
-          console.warn(`⏭️ [STREAM] [${name}] ${model} gave empty reply — trying next...`);
-          continue; // try next model in inner loop
+          console.warn(`⏭️ [STREAM] [${name}] ${model} empty — trying next model/provider...`);
+          continue;
         }
         console.error(`❌ [STREAM] [${name}] Exception with ${model}:`, err.message);
-        if (err?.streamStarted) {
-          throw err;
-        }
+        if (err?.streamStarted) throw err;
         lastError = err.message;
       }
     }
   }
 
-  throw new Error(`OpenRouter stream exhausted all keys/models. Last error: ${lastError}`);
+  // ── Emergency Pollinations fallback (non-streaming → sent as single SSE chunk) ──
+  console.log("🌸 [STREAM] All keyed providers failed. Falling back to Pollinations...");
+  try {
+    const apiMessages = [
+      { role: "system", content: SYSTEM_PROMPT(userName) },
+      ...history,
+      { role: "user", content: message }
+    ];
+    const fallbackReply = await callPollinationsFallback(apiMessages);
+    res.write(`data: ${JSON.stringify({ content: fallbackReply })}\n\n`);
+    res.write("data: [DONE]\n\n");
+    await saveChatMetadata({ question: message, userName, userEmail, model: "pollinations/openai-large", provider: "Pollinations" });
+    res.end();
+    return;
+  } catch (err) {
+    console.error("❌ [STREAM] Pollinations fallback also failed:", err.message);
+    lastError = err.message;
+  }
+
+  throw new Error(`All providers exhausted (Groq + OpenRouter + Pollinations). Last error: ${lastError}`);
 };
 
 
-// Stubs for removed providers
-const callGroq = async () => { throw new Error("Groq removed — use OpenRouter"); };
-const callGroqStream = async (message, res, userName, userEmail, history) => {
-  // Groq removed — passthrough to ZAI stream
-  return callZAIStream(message, res, userName, userEmail, history);
-};
-const callHuggingFace = async () => { throw new Error("HuggingFace removed — use OpenRouter"); };
+// Groq is now integrated into the main provider chain above.
+// Legacy stubs kept for backwards compatibility.
+const callGroq = async () => { throw new Error("callGroq stub — Groq is now in PROVIDER_CHAIN"); };
+const callGroqStream = async (message, res, userName, userEmail, history) =>
+  callZAIStream(message, res, userName, userEmail, history);
+const callHuggingFace = async () => { throw new Error("HuggingFace removed — use PROVIDER_CHAIN"); };
+
 
 
 // ===============================
