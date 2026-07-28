@@ -570,13 +570,27 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
           });
 
           response.body.on("end", async () => {
+            console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
+
+            // ── EMPTY RESPONSE FIX ─────────────────────────────────────────
+            // If the model returned nothing (Reply length: 0) AND we haven't
+            // written any content to the client yet, reject so the outer loop
+            // tries the next model/key automatically.
+            if (fullReply.trim().length === 0 && !streamStarted) {
+              console.warn(`⚠️ [STREAM] ${model} returned empty reply. Trying next model/key...`);
+              lastError = `${model} returned empty reply`;
+              // Abort this stream attempt — outer for-loop will continue
+              reject(Object.assign(new Error("EMPTY_REPLY"), { emptyReply: true }));
+              return;
+            }
+            // ──────────────────────────────────────────────────────────────
+
             // If the full reply contains safety labels, send a correction to the client
             const cleanedReply = cleanAIResponse(fullReply);
             if (cleanedReply !== fullReply && cleanedReply.length > 0) {
               // Send a special replace signal so the client can swap the full reply
               res.write(`data: ${JSON.stringify({ replace: cleanedReply })}\n\n`);
             }
-            console.log(`✅ [STREAM] Finished with ${model}. Reply length: ${fullReply.length}`);
             
             // Save metadata only, without AI reply text
             await saveChatMetadata({
@@ -599,6 +613,11 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
         });
 
       } catch (err) {
+        // EMPTY_REPLY: model returned nothing → try next model (not a fatal error)
+        if (err?.emptyReply) {
+          console.warn(`⏭️ [STREAM] [${name}] ${model} gave empty reply — trying next...`);
+          continue; // try next model in inner loop
+        }
         console.error(`❌ [STREAM] [${name}] Exception with ${model}:`, err.message);
         if (err?.streamStarted) {
           throw err;
