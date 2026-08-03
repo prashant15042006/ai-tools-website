@@ -871,12 +871,20 @@ app.post("/api/chat/complete", async (req, res) => {
 
     return res.status(503).json({ success: false, error: "No AI providers succeeded" });
 
+  } catch (err) {
+    console.error("❌ /api/chat/complete error:", err.message);
+    return res.status(500).json({ success: false, error: err.message || "Internal server error" });
+  }
+});
+
+
 // ===============================
 // 🎨 AI IMAGE PROMPT ENHANCER & TRANSLATOR
 // Translates any user request (Hinglish/Hindi/English) & edit commands
 // into an immaculate 8k English prompt for FLUX / SD image generation
 // ===============================
 app.post("/api/image-prompt", async (req, res) => {
+
   try {
     const { prompt, imageContext } = req.body;
     if (!prompt) return res.status(400).json({ success: false, error: "prompt is required" });
