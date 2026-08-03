@@ -309,6 +309,45 @@ try {
 
 
 // ===============================
+// 🌐 LANGUAGE DETECTOR
+// ===============================
+const detectLanguage = (text) => {
+  if (!text) return "english";
+  // Devanagari Unicode range — pure Hindi
+  const devanagariChars = (text.match(/[\u0900-\u097F]/g) || []).length;
+  const totalChars = text.replace(/\s/g, "").length || 1;
+  const devanagariRatio = devanagariChars / totalChars;
+  if (devanagariRatio > 0.3) return "hindi";
+
+  // Hinglish detection — common Hindi Roman words
+  const hinglishWords = [
+    "kya","hai","kaise","batao","mujhe","karo","kar","aur","mera","tera",
+    "tum","hum","yeh","woh","kyun","nahi","haan","matlab","bata","bhai",
+    "yaar","ek","do","teen","kuch","sab","acha","thik","samjha","likho",
+    "likh","banao","bana","dikhao","chahiye","please","thoda","bahut",
+    "bilkul","zaroor","sirf","abhi","kal","aaj","pehle","baad","upar",
+    "niche","sahi","galat","accha","bolo","puchna","puch","dekho","dekh"
+  ];
+  const lowerText = text.toLowerCase();
+  const words = lowerText.split(/\s+/);
+  const hinglishCount = words.filter(w => hinglishWords.includes(w)).length;
+  const hinglishRatio = hinglishCount / (words.length || 1);
+  if (hinglishRatio > 0.12 || hinglishCount >= 2) return "hinglish";
+
+  return "english";
+};
+
+const getLanguageInstruction = (lang) => {
+  if (lang === "hindi") {
+    return "IMPORTANT: The user wrote in Hindi (Devanagari script). You MUST reply ONLY in Hindi (Devanagari). Do NOT use English or Roman script in your response.";
+  }
+  if (lang === "hinglish") {
+    return "IMPORTANT: The user wrote in Hinglish (Hindi in Roman script). You MUST reply in natural, friendly Hinglish (Roman Hindi). Do NOT switch to full English or full Hindi Devanagari.";
+  }
+  return "IMPORTANT: The user wrote in English. You MUST reply ONLY in English. Do NOT mix Hindi or Hinglish words.";
+};
+
+// ===============================
 // 🔥 COMMON AI SYSTEM PROMPT
 // ===============================
 const SYSTEM_PROMPT = (userName = "User") => `You are Nexuss AI - a smart, warm, and highly capable AI companion built for ${userName}.
@@ -371,13 +410,17 @@ When ${userName} asks what you can do:
 
 
 const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
-  let prompt = SYSTEM_PROMPT(userName);
-  const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine|расписание|時間表/i.test(userMessage);
-  
+  const lang = detectLanguage(userMessage);
+  const langInstruction = getLanguageInstruction(lang);
+
+  // Prepend the hard language rule at the very TOP so AI always sees it first
+  let prompt = langInstruction + "\n\n" + SYSTEM_PROMPT(userName);
+
+  const isTableRequest = /table|tabular|format|list|daily|schedule|routine/i.test(userMessage);
   if (isTableRequest) {
-    prompt += `\n\n- **IMPORTANT FORMAT NOTE**: The user asked for a table/list. Format the answer with clean Markdown tables using pipes (|) and dashes (-).`;
+    prompt += "\n\n- FORMAT NOTE: The user asked for a table/list. Use clean Markdown tables with pipes (|) and dashes (-).";
   }
-  
+
   return prompt;
 };
 
