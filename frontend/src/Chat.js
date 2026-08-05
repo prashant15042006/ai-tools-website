@@ -8,6 +8,7 @@ import { injectTableStyles } from "./utils/tableStyles";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL, { IS_MISCONFIGURED, IS_PROD } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
+import { detectRatioFromPrompt, cleanFrontendResponse } from "./utils/helpers";
 
 import { useLocation } from "react-router-dom";
 
@@ -15,27 +16,7 @@ import { useLocation } from "react-router-dom";
 injectTableStyles();
 
 
-function detectRatioFromPrompt(promptText) {
-  const p = promptText.toLowerCase();
-  if (/\b16[:\sx]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
-  if (/\b9[:\sx]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
-  if (/\b4[:\sx]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
-  if (/\b1[:\sx]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
-  if (/\b(16x9|16[/]9)\b/.test(p)) return "16:9";
-  if (/\b(9x16|9[/]16)\b/.test(p)) return "9:16";
-  if (/\b(4x3|4[/]3)\b/.test(p)) return "4:3";
-  return null;
-}
 
-// Strip safety rating labels that some AI models inject into responses
-function cleanFrontendResponse(text) {
-  if (!text) return text;
-  return text
-    .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
-    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
-    .replace(/^\s*[\r\n]/gm, "")
-    .trim();
-}
 
 function Chat() {
   const location = useLocation();

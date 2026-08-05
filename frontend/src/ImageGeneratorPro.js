@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronUp
 } from "lucide-react";
+import { detectRatioFromPrompt } from "./utils/helpers";
 
 function buildImageUrl(prompt, options = {}) {
   const {
@@ -34,17 +35,6 @@ function buildImageUrl(prompt, options = {}) {
   return url;
 }
 
-function detectRatioFromPrompt(promptText) {
-  const p = promptText.toLowerCase();
-  if (/\b16[:\sx]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
-  if (/\b9[:\sx]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
-  if (/\b4[:\sx]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
-  if (/\b1[:\sx]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
-  if (/\b(16x9|16[/]9)\b/.test(p)) return "16:9";
-  if (/\b(9x16|9[/]16)\b/.test(p)) return "9:16";
-  if (/\b(4x3|4[/]3)\b/.test(p)) return "4:3";
-  return null;
-}
 
 const MODELS = [
   { id: "flux", label: "⚡ Flux.1 (Premium)", desc: "Best overall details, realism and quality" },
@@ -562,18 +552,48 @@ export default function ImageGeneratorPro() {
         </div>
 
         <div className="img-gen-panel img-gen-output-panel">
-          {loading && (
-            <div style={{ width: "100%", height: "100%", minHeight: "360px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "20px" }}>
-              <div style={{ position: "relative", width: "80px", height: "80px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ position: "absolute", width: "100%", height: "100%", border: "4px solid rgba(6, 182, 212, 0.15)", borderTopColor: "#06b6d4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                <Sparkles size={32} color="#06b6d4" style={{ animation: "pulse 1.5s infinite" }} />
+          {loading && (() => {
+            const ratio = ASPECT_RATIOS.find(r => r.id === aspectRatio);
+            const shimmerAspect = ratio ? ratio.width / ratio.height : 1;
+            return (
+              <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Shimmer skeleton matching selected aspect ratio */}
+                <div style={{
+                  width: "100%",
+                  aspectRatio: shimmerAspect,
+                  borderRadius: "18px",
+                  overflow: "hidden",
+                  position: "relative",
+                  background: "linear-gradient(90deg, rgba(6,182,212,0.04) 25%, rgba(6,182,212,0.1) 50%, rgba(6,182,212,0.04) 75%)",
+                  backgroundSize: "200% 100%",
+                  animation: "shimmer 1.8s infinite",
+                  border: "2px solid rgba(6,182,212,0.15)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+                }}>
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center", gap: "16px"
+                  }}>
+                    <div style={{ position: "relative", width: "72px", height: "72px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ position: "absolute", width: "100%", height: "100%", border: "3px solid rgba(6,182,212,0.15)", borderTopColor: "#06b6d4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                      <Sparkles size={28} color="#06b6d4" />
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <h4 style={{ color: "#e9d5ff", fontSize: "16px", fontWeight: "700", margin: "0 0 6px 0" }}>Rendering Masterpiece</h4>
+                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>FLUX.1 is weaving the pixels... usually 5–15 seconds</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Shimmer detail bars */}
+                <div style={{ display: "flex", gap: "10px" }}>
+                  {["60%", "25%", "15%"].map((w, i) => (
+                    <div key={i} style={{ height: "36px", borderRadius: "10px", background: "rgba(6,182,212,0.06)", animation: "shimmer 1.8s infinite", backgroundSize: "200% 100%", width: w }} />
+                  ))}
+                </div>
               </div>
-              <div style={{ textAlign: "center" }}>
-                <h4 style={{ color: "#e9d5ff", fontSize: "16px", fontWeight: "700", margin: "0 0 6px 0" }}>Rendering Masterpiece</h4>
-                <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0, padding: "0 20px" }}>Injecting details and lightning layers. This takes a few seconds...</p>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {loadFailed && !loading && (
             <div style={{ padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", textAlign: "center" }}>

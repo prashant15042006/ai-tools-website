@@ -164,14 +164,47 @@ const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this i
 // ===============================
 const app = express();
 
-// Configure CORS for production
+// Configure CORS — allow only known production & dev origins
+const ALLOWED_ORIGINS = [
+  "https://ai-tools-website.vercel.app",
+  "https://nexuss-ai.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+];
+// Also allow any *.vercel.app preview deployments dynamically
 app.use(cors({
-  origin: "*", // Allows access from any domain (including Vercel)
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., mobile apps, curl, Render health checks)
+    if (!origin) return callback(null, true);
+    if (
+      ALLOWED_ORIGINS.includes(origin) ||
+      origin.endsWith(".vercel.app") ||
+      origin.endsWith(".onrender.com")
+    ) {
+      return callback(null, true);
+    }
+    console.warn(`🚫 CORS blocked origin: ${origin}`);
+    return callback(new Error(`CORS: Origin ${origin} not allowed`), false);
+  },
   methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 app.use(express.json({ limit: '15mb' }));
+
+// 🚀 Request Logging Middleware (Morgan-style HTTP logger)
+app.use((req, res, next) => {
+  const start = performance.now();
+  const { method, originalUrl } = req;
+  res.on('finish', () => {
+    const duration = (performance.now() - start).toFixed(1);
+    const status = res.statusCode;
+    const statusEmoji = status >= 500 ? '❌' : status >= 400 ? '⚠️' : '✅';
+    console.log(`${statusEmoji} [${new Date().toISOString()}] ${method} ${originalUrl} ${status} - ${duration}ms`);
+  });
+  next();
+});
 
 // Handle invalid JSON bodies gracefully instead of crashing
 app.use((err, req, res, next) => {
@@ -790,22 +823,27 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
 };
 
 
-// Groq is now integrated into the main provider chain above.
-// Legacy stubs kept for backwards compatibility.
-const callGroq = async () => { throw new Error("callGroq stub — Groq is now in PROVIDER_CHAIN"); };
-const callGroqStream = async (message, res, userName, userEmail, history) =>
-  callZAIStream(message, res, userName, userEmail, history);
-const callHuggingFace = async () => { throw new Error("HuggingFace removed — use PROVIDER_CHAIN"); };
+// ✅ Legacy stubs removed — Groq & HuggingFace are cleaned up.
+// All providers are now managed via PROVIDER_CHAIN above.
 
 
 
 // ===============================
 // 💬 CHAT API (STREAMING)
 // ===============================
+// ── Input validation helper ──────────────────────────────────────────────
+const validateMessage = (message) => {
+  if (!message || typeof message !== "string") return "Message is required";
+  if (message.trim().length === 0) return "Message cannot be empty";
+  if (message.length > 12000) return "Message too long (max 12000 characters)";
+  return null;
+};
+
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, userName, userEmail, history, image } = req.body;
-    if (!message) return res.status(400).json({ error: "Message required" });
+    const validationError = validateMessage(message);
+    if (validationError) return res.status(400).json({ error: validationError });
 
     let dynamicMessage = message;
     let dynamicImage = image;
@@ -995,9 +1033,8 @@ app.post("/api/code", async (req, res) => {
   try {
     const { prompt, userName, image } = req.body;
 
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt required" });
-    }
+    const validationError = validateMessage(prompt);
+    if (validationError) return res.status(400).json({ error: validationError });
 
     let dynamicPrompt = prompt;
     let dynamicImage = image;
@@ -1042,9 +1079,8 @@ app.post("/api/content", async (req, res) => {
   try {
     const { prompt, userName, image } = req.body;
 
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt required" });
-    }
+    const validationError = validateMessage(prompt);
+    if (validationError) return res.status(400).json({ error: validationError });
 
     let dynamicPrompt = prompt;
     let dynamicImage = image;

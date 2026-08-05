@@ -1,23 +1,33 @@
-import React, { useState, useEffect, createContext, useContext } from "react";
-
+import React, { useState, useEffect, createContext, useContext, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Trash2, User, Shield, Menu, X, Download, ChevronLeft, Save, RotateCw, CheckCircle2, AlertCircle, FileText, Image } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Menu, Image, Download, X } from "lucide-react";
+
+// â”€â”€ Eager-loaded (small / always needed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import Chat from "./Chat";
-import CodeGenerator from "./CodeGenerator";
-import ContentGenerator from "./ContentGenerator";
 import Dashboard from "./Dashboard";
-import PromptManager from "./PromptManager";
-import ImageGenerator from "./ImageGeneratorPro";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Login from "./Login";
 import API_BASE_URL from "./apiConfig";
 import "./App.css";
+import { useUIStore } from "./uiStore";
+
+// â”€â”€ Split components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+import ErrorBoundary from "./components/ErrorBoundary";
+import ProjectsView from "./components/ProjectsView";
+import SettingsView from "./components/SettingsView";
+
+// â”€â”€ Lazy-loaded (heavy components) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const CodeGenerator    = lazy(() => import("./CodeGenerator"));
+const ContentGenerator = lazy(() => import("./ContentGenerator"));
+const ImageGenerator   = lazy(() => import("./ImageGeneratorPro"));
+const PromptManager    = lazy(() => import("./PromptManager"));
 
 // Global context for dark mode & TTS
 export const AppContext = createContext();
 
-// ── Custom hook: detect mobile ──────────────────────────────
+// â”€â”€ Custom hook: detect mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   useEffect(() => {
@@ -35,601 +45,30 @@ const SidebarItem = ({ to, icon: Icon, label, isActive, color, onClick }) => (
   </Link>
 );
 
-// Toggle switch component
-const Toggle = ({ checked, onChange }) => (
-  <div
-    onClick={onChange}
-    style={{
-      width: '52px', height: '28px',
-      background: checked ? 'var(--accent)' : '#334155',
-      borderRadius: '14px', position: 'relative', cursor: 'pointer',
-      transition: 'all 0.3s'
-    }}
-  >
-    <div style={{
-      width: '22px', height: '22px', background: 'white', borderRadius: '50%',
-      position: 'absolute', top: '3px',
-      left: checked ? '27px' : '3px',
-      transition: 'left 0.3s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
-    }} />
+// â”€â”€ Suspense fallback UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const SuspenseFallback = () => (
+  <div className="suspense-loading">
+    <div className="suspense-loading-spinner" />
+    <span>Loading...</span>
   </div>
 );
 
-// --- New Components for Projects and Settings ---
+// â”€â”€ Page transition wrapper using framer-motion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const PageTransition = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -8 }}
+    transition={{ duration: 0.22, ease: "easeOut" }}
+    style={{ height: "100%" }}
+  >
+    {children}
+  </motion.div>
+);
 
-const ProjectsView = ({ projects, setProjects }) => {
-  const { user } = useContext(AppContext);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [notes, setNotes] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [syncStatus, setSyncStatus] = useState("saved"); // 'saved' | 'saving' | 'offline'
-  const [searchQuery, setSearchQuery] = useState("");
-  const autoSaveTimerRef = React.useRef(null);
 
-  // Load selected project notes when opened
-  const openProject = (proj) => {
-    setSelectedProject(proj);
-    setNotes(proj.notes || "");
-    setSyncStatus("saved");
-  };
 
-  const closeProject = () => {
-    setSelectedProject(null);
-    setNotes("");
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-  };
-
-  const addProject = async () => {
-    if (!newName.trim() || !user?.email) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/projects`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          name: newName,
-          desc: newDesc || "New workspace project"
-        })
-      });
-
-      if (response.ok) {
-        const created = await response.json();
-        const updatedList = [...projects, created];
-        setProjects(updatedList);
-        localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
-      } else {
-        throw new Error("API call failed");
-      }
-    } catch (err) {
-      console.warn("API add failed, saving locally:", err.message);
-      // Local fallback
-      const id = Date.now().toString();
-      const created = {
-        id,
-        email: user.email,
-        name: newName,
-        desc: newDesc || "New workspace project",
-        notes: "",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      const updatedList = [...projects, created];
-      setProjects(updatedList);
-      localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
-    }
-
-    setNewName("");
-    setNewDesc("");
-    setIsAdding(false);
-  };
-
-  const deleteProject = async (id) => {
-    if (!window.confirm("Delete this project? This action cannot be undone.")) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
-        method: "DELETE"
-      });
-      if (!response.ok) throw new Error("API call failed");
-    } catch (err) {
-      console.warn("API delete failed, updating local state:", err.message);
-    }
-
-    const updatedList = projects.filter(p => p.id !== id);
-    setProjects(updatedList);
-    localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
-    if (selectedProject?.id === id) {
-      closeProject();
-    }
-  };
-
-  const saveNotes = async (currentNotes = notes, silent = false) => {
-    if (!selectedProject || !user?.email) return;
-    if (!silent) setSyncStatus("saving");
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          notes: currentNotes
-        })
-      });
-
-      if (response.ok) {
-        setSyncStatus("saved");
-      } else {
-        throw new Error("Server error");
-      }
-    } catch (err) {
-      console.warn("Auto-save to server failed, saved locally:", err.message);
-      setSyncStatus("offline");
-    }
-
-    // Always update local state & cache
-    const updatedProjects = projects.map(p => {
-      if (p.id === selectedProject.id) {
-        return { ...p, notes: currentNotes, updatedAt: new Date().toISOString() };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedProjects));
-
-    // Update active selected project object
-    setSelectedProject(prev => prev ? { ...prev, notes: currentNotes } : null);
-  };
-
-  // Auto-save effect
-  const handleNotesChange = (e) => {
-    const val = e.target.value;
-    setNotes(val);
-    setSyncStatus("saving");
-
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-
-    autoSaveTimerRef.current = setTimeout(() => {
-      saveNotes(val, true);
-    }, 1500); // Save notes after 1.5 seconds of silence
-  };
-
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.desc && p.desc.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  // If a project is selected, render the gorgeous glassmorphic editor
-  if (selectedProject) {
-    const wordCount = notes.trim() === "" ? 0 : notes.trim().split(/\s+/).length;
-    const charCount = notes.length;
-
-    return (
-      <div className="page-view" style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-        
-        {/* Editor Header Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button 
-              onClick={closeProject}
-              style={{ 
-                background: 'rgba(255,255,255,0.05)', 
-                color: 'white', 
-                border: '1px solid var(--border-color)', 
-                padding: '8px 16px', 
-                borderRadius: '10px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px', 
-                fontWeight: '600', 
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              className="back-btn"
-            >
-              <ChevronLeft size={16} /> Back to Projects
-            </button>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <h2 style={{ 
-                fontSize: '26px', 
-                fontWeight: '800', 
-                background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', 
-                WebkitBackgroundClip: 'text', 
-                WebkitTextFillColor: 'transparent',
-                lineHeight: '1.2'
-              }}>
-                {selectedProject.name}
-              </h2>
-            </div>
-          </div>
-
-          {/* Sync Status Badge & Action */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px', 
-                padding: '8px 14px', 
-                borderRadius: '10px', 
-                background: syncStatus === 'saved' ? 'rgba(34, 197, 94, 0.1)' : syncStatus === 'saving' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                border: `1px solid ${syncStatus === 'saved' ? 'rgba(34, 197, 94, 0.2)' : syncStatus === 'saving' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
-                fontSize: '13px',
-                color: syncStatus === 'saved' ? '#4ade80' : syncStatus === 'saving' ? '#60a5fa' : '#fbbf24',
-                fontWeight: '600'
-              }}
-            >
-              {syncStatus === 'saved' && (
-                <>
-                  <CheckCircle2 size={15} />
-                  <span>All changes synced</span>
-                </>
-              )}
-              {syncStatus === 'saving' && (
-                <>
-                  <RotateCw size={15} className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
-                  <span>Saving changes...</span>
-                </>
-              )}
-              {syncStatus === 'offline' && (
-                <>
-                  <AlertCircle size={15} />
-                  <span>Saved locally (Offline)</span>
-                </>
-              )}
-            </div>
-
-            <button 
-              onClick={() => saveNotes(notes, false)}
-              style={{ 
-                background: 'var(--accent)', 
-                color: 'white', 
-                border: 'none', 
-                padding: '9px 18px', 
-                borderRadius: '10px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px', 
-                fontWeight: '700', 
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Save size={16} /> Save Now
-            </button>
-          </div>
-        </div>
-
-        {/* Project Description Banner */}
-        {selectedProject.desc && (
-          <div style={{ padding: '0 4px', marginBottom: '20px', color: 'var(--text-secondary)', fontSize: '15px' }}>
-            <strong>Description:</strong> {selectedProject.desc}
-          </div>
-        )}
-
-        {/* Text Editor Container */}
-        <div style={{ 
-          flex: 1, 
-          position: 'relative', 
-          background: 'rgba(255, 255, 255, 0.02)', 
-          border: '1px solid var(--border-color)', 
-          borderRadius: '18px',
-          padding: '24px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '300px'
-        }}>
-          {/* Notes Title Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px', color: '#a78bfa' }}>
-            <FileText size={18} />
-            <span style={{ fontSize: '14px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Workspace Notebook</span>
-          </div>
-
-          <textarea
-            value={notes}
-            onChange={handleNotesChange}
-            placeholder="Write your ideas, code snippets, notes, prompts, or generate some creative text and store them here! Auto-saves as you type..."
-            style={{
-              width: '100%',
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              color: '#f8fafc',
-              fontSize: '16px',
-              lineHeight: '1.6',
-              resize: 'none',
-              outline: 'none',
-              fontFamily: 'Outfit, sans-serif'
-            }}
-          />
-
-          {/* Editor Footer (Counters and Info) */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            borderTop: '1px solid rgba(255,255,255,0.06)', 
-            paddingTop: '16px', 
-            marginTop: '16px',
-            fontSize: '13px',
-            color: 'var(--text-secondary)',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            <span style={{ fontStyle: 'italic' }}>AI-compatible notepad. Everything written is stored under your email profile.</span>
-            <div style={{ display: 'flex', gap: '16px', fontWeight: '600' }}>
-              <span>{wordCount} words</span>
-              <span>{charCount} characters</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // List View (rendered when selectedProject === null)
-  return (
-    <div className="page-view" style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '32px', fontWeight: '800' }}>Projects</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Manage your AI workspaces, documentations, and workspace notes.</p>
-        </div>
-        <button 
-          onClick={() => setIsAdding(true)}
-          style={{ background: 'var(--accent)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', cursor: 'pointer' }}
-        >
-          <Plus size={20} /> New Project
-        </button>
-      </div>
-
-      {/* New Project Form */}
-      {isAdding && (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', marginBottom: '32px' }}>
-          <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '700' }}>Create New Project</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <input 
-              type="text" 
-              placeholder="Project Name" 
-              value={newName} 
-              onChange={(e) => setNewName(e.target.value)}
-              style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', color: 'white', fontSize: '14px' }}
-            />
-            <input 
-              type="text" 
-              placeholder="Project Description (optional)" 
-              value={newDesc} 
-              onChange={(e) => setNewDesc(e.target.value)}
-              style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', color: 'white', fontSize: '14px' }}
-            />
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setIsAdding(false)} style={{ background: 'transparent', border: '1px solid var(--border-color)', padding: '10px 20px', borderRadius: '8px', color: 'white', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={addProject} style={{ background: 'var(--accent)', border: 'none', padding: '10px 24px', borderRadius: '8px', color: 'white', fontWeight: '600', cursor: 'pointer' }}>Create Project</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Search Filter Bar */}
-      <div style={{ position: 'relative', marginBottom: '32px' }}>
-        <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-        <input 
-          type="text" 
-          placeholder="Search projects..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 12px 12px 48px', color: 'white', fontSize: '15px' }}
-        />
-      </div>
-
-      {/* Projects Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-        {filteredProjects.length === 0 ? (
-          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border-color)', borderRadius: '16px' }}>
-            No projects found. Create one to get started!
-          </div>
-        ) : (
-          filteredProjects.map(p => {
-            const wordCount = p.notes ? p.notes.trim().split(/\s+/).filter(Boolean).length : 0;
-            return (
-              <div 
-                key={p.id} 
-                onClick={() => openProject(p)}
-                className="dashboard-card"
-                style={{ 
-                  background: 'rgba(255,255,255,0.02)', 
-                  border: '1px solid var(--border-color)', 
-                  padding: '24px', 
-                  borderRadius: '16px', 
-                  position: 'relative', 
-                  transition: 'all 0.3s',
-                  cursor: 'pointer',
-                  overflow: 'hidden'
-                }}
-              >
-                {/* Glowing ambient background inside card */}
-                <div style={{ position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle, rgba(96,165,250,0.04) 0%, transparent 60%)', pointerEvents: 'none' }} />
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
-                  <div style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#3b82f6', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FolderOpen size={20} />
-                  </div>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent opening the project when clicking delete
-                      deleteProject(p.id);
-                    }} 
-                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.8, transition: 'all 0.2s' }}
-                    title="Delete Project"
-                    className="delete-project-btn"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px', color: '#f8fafc' }}>{p.name}</h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '42px' }}>
-                  {p.desc || "No description provided."}
-                </p>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  <span>{wordCount} words stored</span>
-                  <span style={{ color: 'var(--accent)', fontWeight: '700' }}>Open Workspace &rarr;</span>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-};
-
-const SettingsView = () => {
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user, voicePreset, setVoicePreset } = useContext(AppContext);
-  const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
-
-  const handleTestVoice = (preset) => {
-    import('./utils/voiceEngine').then(({ testVoice }) => testVoice(preset));
-  };
-  
-  return (
-    <div className="page-view" style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-      <h2 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '32px' }}>Settings</h2>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        {/* Profile Section */}
-        <section>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', color: 'var(--accent)' }}>
-            <User size={20} />
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'white' }}>Profile</h3>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <img 
-              src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} 
-              alt="Profile" 
-              style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent)' }} 
-            />
-            <div>
-              <div style={{ fontSize: '20px', fontWeight: '700' }}>{displayName}</div>
-              <div style={{ color: 'var(--text-secondary)' }}>{user?.email}</div>
-              <div style={{ display: 'inline-block', marginTop: '8px', padding: '4px 10px', background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>Pro Member</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Preferences Section */}
-        <section>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', color: 'var(--accent)' }}>
-            <Settings size={20} />
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'white' }}>Preferences</h3>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
-              <div>
-                <div style={{ fontWeight: '600' }}>Dark Mode</div>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Toggle between dark and light interface themes.</div>
-              </div>
-              <Toggle checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
-            </div>
-            <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
-              <div>
-                <div style={{ fontWeight: '600' }}>AI Voice Response</div>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Listen to AI responses using Text-to-Speech.</div>
-              </div>
-              <Toggle checked={ttsEnabled} onChange={() => setTtsEnabled(!ttsEnabled)} />
-            </div>
-            {ttsEnabled && (
-              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ minWidth: 220 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 6 }}>Voice Preset</div>
-                    <select 
-                      value={voicePreset} 
-                      onChange={(e) => setVoicePreset(e.target.value)} 
-                      style={{ padding: '8px', borderRadius: 8, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', minWidth: 220 }}
-                    >
-                      <option value="ironman_en">🎙️ J.A.R.V.I.S. (English - Movie Premium)</option>
-                      <option value="ironman_hi">🎙️ J.A.R.V.I.S. (Hindi - Movie Premium)</option>
-                      <option value="ironman_hinglish">🎙️ J.A.R.V.I.S. (Hinglish Mix - Movie Premium)</option>
-                    </select>
-                  </div>
-                  <button 
-                    onClick={() => handleTestVoice(voicePreset)} 
-                    style={{ 
-                      padding: '8px 16px', 
-                      borderRadius: 8, 
-                      background: 'linear-gradient(135deg, #2563eb, #7c3aed)', 
-                      color: 'white', 
-                      fontWeight: 700, 
-                      border: 'none', 
-                      cursor: 'pointer', 
-                      fontSize: '13px', 
-                      transition: 'all 0.2s', 
-                      boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
-                      marginTop: '20px'
-                    }}
-                  >
-                    🔊 Test Voice
-                  </button>
-                </div>
-                {voicePreset === 'ironman_hinglish' ? (
-                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700, color: '#10b981', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Hinglish Mix Movie Premium Profile</div>
-                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Cinematic Movie Premium Jarvis voice with metallic intercom suit effect. Auto-detects Hindi & English in each sentence and speaks with the matching voice. Perfect for mixed Hindi-English (Hinglish) conversations.
-                    </div>
-                  </div>
-                ) : voicePreset === 'ironman_hi' ? (
-                  <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.18)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>🤖 J.A.R.V.I.S. Hindi Movie Premium Profile</div>
-                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Cinematic Movie Premium Jarvis voice with metallic intercom suit effect (Atul Kapoor style). Plays high-fidelity Hindi & Hinglish audio bypassing local system limitations.
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ background: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.15)', borderRadius: 10, padding: '12px 16px', fontSize: 13 }}>
-                    <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>🤖 J.A.R.V.I.S. English Movie Premium Profile</div>
-                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      Cinematic Movie Premium Jarvis voice with metallic intercom suit effect (Paul Bettany style). High-fidelity English speech synthesis with calm, polite tone.
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Security Section */}
-        <section>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', color: 'var(--accent)' }}>
-            <Shield size={20} />
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'white' }}>Account & Security</h3>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '16px' }}>
-             <button 
-               onClick={() => {
-                 localStorage.removeItem("nexus_mock_user");
-                 localStorage.removeItem("nexus_user_name");
-                 signOut(auth).finally(() => window.location.reload());
-               }}
-               style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
-             >
-               Sign Out from Account
-             </button>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-};
-
-// ── Bottom Navigation Bar (Mobile) ────────────────────────────────────────
+// â”€â”€ Bottom Navigation Bar (Mobile) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BottomNav = ({ navigate, pathname }) => {
   const navItems = [
     { to: '/menu',    icon: Layout,        label: 'Home',     color: '#ec4899' },
@@ -665,7 +104,7 @@ const BottomNav = ({ navigate, pathname }) => {
   );
 };
 
-// ── PWA Install Banner ────────────────────────────────────────────────────
+// â”€â”€ PWA Install Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PwaInstallBanner = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showBanner, setShowBanner] = useState(false);
@@ -729,7 +168,9 @@ const PwaInstallBanner = () => {
   const navigate = useNavigate();
   const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, loading } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
+  const isSidebarOpen = !sidebarCollapsed;
+  const setIsSidebarOpen = (val) => setSidebarCollapsed(!val);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const isMobile = useIsMobile();
@@ -828,14 +269,14 @@ const PwaInstallBanner = () => {
   return (
     <div className={`app-container ${darkMode ? '' : 'light-mode'}`}>
       
-      {/* ── Mobile Sidebar Backdrop Overlay ── */}
+      {/* â”€â”€ Mobile Sidebar Backdrop Overlay â”€â”€ */}
       <div
         className={`sidebar-overlay ${isMobileSidebarOpen ? 'visible' : ''}`}
         onClick={() => setIsMobileSidebarOpen(false)}
         aria-hidden="true"
       />
 
-      {/* ── Sidebar ── */}
+      {/* â”€â”€ Sidebar â”€â”€ */}
       <aside className={`sidebar ${!isSidebarOpen ? "collapsed" : ""} ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-header">
           <div className="logo-section">
@@ -917,12 +358,12 @@ const PwaInstallBanner = () => {
         </div>
       </aside>
 
-      {/* ── Main Content ── */}
+      {/* â”€â”€ Main Content â”€â”€ */}
       <main className="main-content">
-        {/* ── Header ── */}
+        {/* â”€â”€ Header â”€â”€ */}
         <header className="top-bar">
           <div className="header-left">
-            {/* Mobile hamburger — always visible on mobile */}
+            {/* Mobile hamburger â€” always visible on mobile */}
             <button
               className="mobile-menu-btn open-sidebar-btn"
               onClick={() => setIsMobileSidebarOpen(true)}
@@ -975,24 +416,30 @@ const PwaInstallBanner = () => {
           </div>
         </header>
 
-        {/* ── Routes Container ── */}
-        <Routes location={location}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/menu" element={<Dashboard />} />
-          <Route path="/chat" element={<Chat key={chatKey} />} />
-          <Route path="/code" element={<CodeGenerator />} />
-          <Route path="/content" element={<ContentGenerator />} />
-          <Route path="/images" element={<ImageGenerator />} />
-          <Route path="/prompts" element={<PromptManager />} />
-          <Route path="/projects" element={<ProjectsView projects={projects} setProjects={setProjects} />} />
-          <Route path="/settings" element={<SettingsView />} />
-        </Routes>
+        {/* â”€â”€ Routes Container â€” with lazy loading + transitions â”€â”€ */}
+        <ErrorBoundary>
+          <Suspense fallback={<SuspenseFallback />}>
+            <AnimatePresence mode="wait">
+              <Routes location={location} key={location.pathname}>
+                <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
+                <Route path="/menu" element={<PageTransition><Dashboard /></PageTransition>} />
+                <Route path="/chat" element={<PageTransition><Chat key={chatKey} /></PageTransition>} />
+                <Route path="/code" element={<PageTransition><CodeGenerator /></PageTransition>} />
+                <Route path="/content" element={<PageTransition><ContentGenerator /></PageTransition>} />
+                <Route path="/images" element={<PageTransition><ImageGenerator /></PageTransition>} />
+                <Route path="/prompts" element={<PageTransition><PromptManager /></PageTransition>} />
+                <Route path="/projects" element={<PageTransition><ProjectsView projects={projects} setProjects={setProjects} /></PageTransition>} />
+                <Route path="/settings" element={<PageTransition><SettingsView /></PageTransition>} />
+              </Routes>
+            </AnimatePresence>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
-      {/* ── Mobile Bottom Navigation ── */}
+      {/* â”€â”€ Mobile Bottom Navigation â”€â”€ */}
       <BottomNav navigate={navigate} pathname={location.pathname} />
 
-      {/* ── PWA Install Banner ── */}
+      {/* â”€â”€ PWA Install Banner â”€â”€ */}
       <PwaInstallBanner />
     </div>
   );
@@ -1050,7 +497,7 @@ function App() {
   }, [customVoiceUrl]);
 
   const addRecentChat = (question) => {
-    const title = question.length > 36 ? question.substring(0, 36) + '…' : question;
+    const title = question.length > 36 ? question.substring(0, 36) + 'â€¦' : question;
     setRecentChats((prev) => {
       if (prev.length > 0 && prev[0].title === title) return prev;
       return [{ title, id: Date.now() }, ...prev].slice(0, 10);
@@ -1100,3 +547,4 @@ function App() {
 }
 
 export default App;
+

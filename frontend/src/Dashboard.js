@@ -41,7 +41,16 @@ const Dashboard = () => {
       color: '#f59e0b',
       glow: 'rgba(245, 158, 11, 0.4)'
     },
-    // Images card removed
+    {
+      title: 'Image Studio',
+      description: 'Generate stunning AI images with FLUX.1 — photorealistic, anime, 3D and more.',
+      icon: Brain,
+      path: '/images',
+      bgDark: 'linear-gradient(135deg, #1a0533, #2d0a52)',
+      bgLight: 'linear-gradient(135deg, #fce7f3, #fdf2f8)',
+      color: '#ec4899',
+      glow: 'rgba(236, 72, 153, 0.4)'
+    },
     {
       title: 'Prompts',
       description: 'Manage and reuse prompts across chats and generators.',
@@ -93,9 +102,9 @@ const Dashboard = () => {
   }, []);
 
   const stats = [
-    { label: 'Workspaces', value: (projectCount > 0 ? projectCount + 4 : 5).toString(), icon: Sparkles, color: '#a855f7' },
-    { label: 'AI Models', value: '8+', icon: Brain, color: '#3b82f6' },
-    { label: 'Responses', value: '∞', icon: Zap, color: '#10b981' },
+    { label: 'Projects', value: projectCount > 0 ? projectCount.toString() : '0', icon: Sparkles, color: '#a855f7' },
+    { label: 'AI Models', value: '10+', icon: Brain, color: '#3b82f6' },
+    { label: 'Unlimited', icon: Zap, color: '#10b981', value: 'Responses' },
   ];
 
   return (
