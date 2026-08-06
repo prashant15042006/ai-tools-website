@@ -9,8 +9,6 @@ import {
   Settings,
   Sparkles,
   Trash2,
-  Upload,
-  X,
   ChevronDown,
   ChevronUp
 } from "lucide-react";
@@ -101,11 +99,6 @@ export default function ImageGeneratorPro() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [toast, setToast] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [strength, setStrength] = useState(0.65);
-  const [refImage, setRefImage] = useState(null);
-  const [refImageFile, setRefImageFile] = useState(null);
-  const [refImageUrl, setRefImageUrl] = useState(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [history, setHistory] = useState(() => {
     try {
       const saved = localStorage.getItem("nexus_image_history");
@@ -115,8 +108,6 @@ export default function ImageGeneratorPro() {
     }
   });
   const [historyQuery, setHistoryQuery] = useState("");
-
-  const fileInputRef = useRef(null);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -146,39 +137,6 @@ export default function ImageGeneratorPro() {
     });
   };
 
-  const processFile = (file) => {
-    if (!file.type.startsWith("image/")) {
-      showToast("Please upload an image file only!", "error");
-      return;
-    }
-
-    setRefImageFile(file);
-    setRefImageUrl(null);
-    setShowAdvanced(true);
-
-    const reader = new FileReader();
-    reader.onload = (e) => setRefImage(e.target.result);
-    reader.readAsDataURL(file);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
-  };
-
-  const handleDragOver = (e) => e.preventDefault();
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) processFile(file);
-  };
-
-  const clearRefImage = () => {
-    setRefImage(null);
-    setRefImageFile(null);
-    setRefImageUrl(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
 
   const generateImage = async () => {
     if (!prompt.trim()) {
@@ -190,58 +148,6 @@ export default function ImageGeneratorPro() {
     setLoadFailed(false);
     setLoading(true);
 
-    let activeImage = null;
-
-    if (refImageFile && !refImageUrl) {
-      setUploadingImage(true);
-      try {
-        let uploadedUrl = null;
-
-        if (refImage) {
-          try {
-            const backendRes = await fetch("/api/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ image: refImage }),
-            });
-            const backendData = await backendRes.json();
-            if (backendRes.ok && backendData?.success && backendData.url) {
-              uploadedUrl = backendData.url;
-            }
-          } catch (error) {
-            console.warn("Backend upload attempt failed:", error?.message || error);
-          }
-        }
-
-        if (!uploadedUrl) {
-          const formData = new FormData();
-          formData.append("file", refImageFile);
-          const res = await fetch("https://tmpfiles.org/api/v1/upload", {
-            method: "POST",
-            body: formData,
-          });
-          const data = await res.json();
-          if (!res.ok || data.status !== "success" || !data.data?.url) {
-            throw new Error(data?.message || "Upload to tmpfiles failed");
-          }
-          uploadedUrl = data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
-        }
-
-        setRefImageUrl(uploadedUrl);
-        activeImage = uploadedUrl;
-        showToast("Reference image ready! 🖼️");
-      } catch (error) {
-        console.error("Image upload failed:", error);
-        showToast("Image upload failed. Try again with another image.", "error");
-        setLoading(false);
-        setUploadingImage(false);
-        return;
-      } finally {
-        setUploadingImage(false);
-      }
-    } else if (refImageUrl) {
-      activeImage = refImageUrl;
-    }
 
     const detectedRatioId = detectRatioFromPrompt(prompt);
     const finalRatioId = detectedRatioId || aspectRatio;
@@ -255,8 +161,6 @@ export default function ImageGeneratorPro() {
       model,
       seed,
       enhance,
-      image: activeImage,
-      strength,
     });
 
     const loadWithUrl = (genUrl, isRetry = false) => {
@@ -283,8 +187,6 @@ export default function ImageGeneratorPro() {
             model,
             seed: retrySeed,
             enhance,
-            image: activeImage,
-            strength,
           });
           loadWithUrl(retryUrl, true);
           return;
@@ -292,7 +194,7 @@ export default function ImageGeneratorPro() {
 
         setLoading(false);
         setLoadFailed(true);
-        showToast(activeImage ? "Image editing failed. Try a different prompt or model." : "Generation failed. Check your network connection.", "error");
+        showToast("Generation failed. Check your network connection.", "error");
       };
     };
 
@@ -440,44 +342,6 @@ export default function ImageGeneratorPro() {
             )}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <label style={{ fontSize: "12px", fontWeight: "800", color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.8px" }}>🖼️ Reference Image (Optional)</label>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" style={{ display: "none" }} />
-            {!refImage ? (
-              <div onDragOver={handleDragOver} onDrop={handleDrop} onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ border: "2px dashed rgba(6, 182, 212, 0.25)", borderRadius: "16px", padding: "16px", textAlign: "center", background: "rgba(0, 0, 0, 0.2)", cursor: "pointer", transition: "all 0.2s", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                <Upload size={20} color="rgba(6, 182, 212, 0.6)" />
-                <div style={{ fontSize: "12px", color: "#d1d5db", fontWeight: "600" }}>Drag & Drop or Click to Upload</div>
-                <div style={{ fontSize: "10px", color: "#9ca3af" }}>Select an image to modify or transform</div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(0, 0, 0, 0.25)", border: "1px solid rgba(6, 182, 212, 0.25)", borderRadius: "16px", padding: "10px", position: "relative" }}>
-                <div style={{ width: "50px", height: "50px", borderRadius: "8px", overflow: "hidden", border: "1px solid rgba(6, 182, 212, 0.3)", background: "#07070d", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <img src={refImage} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "12px", fontWeight: "600", color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{refImageFile ? refImageFile.name : "Selected Image"}</div>
-                  <div style={{ fontSize: "10px", color: uploadingImage ? "#38bdf8" : "#4ade80", display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
-                    {uploadingImage ? (
-                      <><RefreshCw size={10} className="animate-spin" /><span>Uploading...</span></>
-                    ) : (
-                      <><CheckCircle2 size={10} /><span>Ready!</span></>
-                    )}
-                  </div>
-                </div>
-                <button type="button" onClick={clearRefImage} disabled={loading || uploadingImage} style={{ background: "rgba(239, 68, 68, 0.15)", color: "#f87171", border: "none", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                  <X size={12} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {refImage && (
-            <div style={{ background: "rgba(6, 182, 212, 0.08)", border: "1px solid rgba(6, 182, 212, 0.25)", borderRadius: "10px", padding: "8px 12px", fontSize: "11px", color: "#22d3ee", display: "flex", alignItems: "center", gap: "6px" }}>
-              <span>💡</span>
-              <span><strong>Tip:</strong> Write details in your prompt describing how you want to modify this reference image!</span>
-            </div>
-          )}
-
           <button type="button" onClick={() => setShowAdvanced(prev => !prev)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "14px", padding: "12px 16px", color: "#e5e7eb", fontSize: "13px", fontWeight: "700", cursor: "pointer", transition: "all 0.2s", marginTop: "6px", outline: "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Settings size={16} style={{ color: "#22d3ee" }} />
@@ -513,19 +377,6 @@ export default function ImageGeneratorPro() {
                 </div>
               </div>
 
-              {refImage && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <label style={{ fontSize: "11px", fontWeight: "800", color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.8px" }}>🎨 Image Similarity</label>
-                    <span style={{ fontSize: "12px", color: "#38bdf8", fontWeight: "700" }}>{Math.round((1 - strength) * 100)}% Match</span>
-                  </div>
-                  <input type="range" min="0.1" max="0.95" step="0.05" value={strength} onChange={e => setStrength(parseFloat(e.target.value))} style={{ width: "100%", accentColor: "#06b6d4", cursor: "pointer", outline: "none" }} />
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#9ca3af" }}>
-                    <span>Creative (Change more)</span>
-                    <span>Exact (Keep structure)</span>
-                  </div>
-                </div>
-              )}
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "14px" }}>
                 <div>
