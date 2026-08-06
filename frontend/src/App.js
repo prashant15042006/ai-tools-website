@@ -60,7 +60,13 @@ const PageTransition = ({ children }) => (
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -8 }}
     transition={{ duration: 0.22, ease: "easeOut" }}
-    style={{ height: "100%" }}
+    style={{
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      minHeight: 0,
+    }}
   >
     {children}
   </motion.div>
@@ -405,9 +411,9 @@ const PwaInstallBanner = () => {
             <button className="icon-btn">
               <Bell size={20} />
             </button>
-            <div 
-              className="profile-btn" 
-              style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }} 
+            <div
+              className="profile-btn"
+              style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }}
               title={user?.email || displayName || 'Profile'}
               onClick={() => navigate('/settings')}
             >
