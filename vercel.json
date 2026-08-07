@@ -1,45 +1,23 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/build",
+  "rewrites": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
+      "source": "/api/chat/complete",
+      "destination": "/api/chat/complete.js"
     },
     {
-      "src": "api/chat.js",
-      "use": "@vercel/node"
+      "source": "/api/chat",
+      "destination": "/api/chat.js"
     },
     {
-      "src": "api/chat/complete.js",
-      "use": "@vercel/node"
+      "source": "/api/embed",
+      "destination": "/api/embed.js"
     },
     {
-      "src": "api/embed.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/chat/complete",
-      "dest": "/api/chat/complete.js"
-    },
-    {
-      "src": "/api/chat",
-      "dest": "/api/chat.js"
-    },
-    {
-      "src": "/api/embed",
-      "dest": "/api/embed.js"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
