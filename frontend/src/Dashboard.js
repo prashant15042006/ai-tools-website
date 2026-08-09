@@ -17,9 +17,9 @@ const Dashboard = () => {
       icon: MessageSquare,
       path: '/chat',
       bgDark: 'linear-gradient(135deg, #0f172a, #1e293b)',
-      bgLight: 'linear-gradient(135deg, #ffffff, #eff6ff)',
-      color: '#2563eb',
-      glow: 'rgba(37, 99, 235, 0.25)'
+      bgLight: 'linear-gradient(135deg, #ffffff, #dbeafe)',
+      color: '#1d4ed8',
+      glow: 'rgba(29, 78, 216, 0.2)'
     },
     {
       title: 'Code Generator',
@@ -27,9 +27,9 @@ const Dashboard = () => {
       icon: Code,
       path: '/code',
       bgDark: 'linear-gradient(135deg, #1e1b4b, #312e81)',
-      bgLight: 'linear-gradient(135deg, #ffffff, #f5f3ff)',
-      color: '#7c3aed',
-      glow: 'rgba(124, 58, 237, 0.25)'
+      bgLight: 'linear-gradient(135deg, #ffffff, #ede9fe)',
+      color: '#6d28d9',
+      glow: 'rgba(109, 40, 217, 0.2)'
     },
     {
       title: 'Content Writer',
@@ -37,9 +37,9 @@ const Dashboard = () => {
       icon: PenTool,
       path: '/content',
       bgDark: 'linear-gradient(135deg, #2d1b0b, #452e13)',
-      bgLight: 'linear-gradient(135deg, #ffffff, #fffbeb)',
-      color: '#d97706',
-      glow: 'rgba(217, 119, 6, 0.25)'
+      bgLight: 'linear-gradient(135deg, #ffffff, #fef3c7)',
+      color: '#b45309',
+      glow: 'rgba(180, 83, 9, 0.2)'
     },
     {
       title: 'Image Studio',
@@ -47,9 +47,9 @@ const Dashboard = () => {
       icon: Brain,
       path: '/images',
       bgDark: 'linear-gradient(135deg, #1a0533, #2d0a52)',
-      bgLight: 'linear-gradient(135deg, #ffffff, #fdf2f8)',
-      color: '#db2777',
-      glow: 'rgba(219, 39, 119, 0.25)'
+      bgLight: 'linear-gradient(135deg, #ffffff, #fce7f3)',
+      color: '#be185d',
+      glow: 'rgba(190, 24, 93, 0.2)'
     },
     {
       title: 'Prompts',
@@ -57,9 +57,9 @@ const Dashboard = () => {
       icon: Zap,
       path: '/prompts',
       bgDark: 'linear-gradient(135deg, #071029, #10233a)',
-      bgLight: 'linear-gradient(135deg, #ffffff, #ecfeff)',
-      color: '#0891b2',
-      glow: 'rgba(8, 145, 178, 0.25)'
+      bgLight: 'linear-gradient(135deg, #ffffff, #cffafe)',
+      color: '#0e7490',
+      glow: 'rgba(14, 116, 144, 0.2)'
     }
   ];
 
