@@ -331,28 +331,49 @@
 
 /* ── Dashboard Hero ── */
 .light-mode .dashboard-hero {
-  background: linear-gradient(135deg, #1e3a8a 0%, #312e81 45%, #4c1d95 100%) !important;
-  border-color: rgba(0,0,0,0.1) !important;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #f3e8ff 100%) !important;
+  border: 1px solid #c7d2fe !important;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1) !important;
 }
 
-/* ── Dashboard Cards ── */
+.light-mode .dashboard-hero .hero-content h1 {
+  color: #1e1b4b !important;
+}
+
+.light-mode .dashboard-hero .hero-content p {
+  color: #334155 !important;
+}
+
+.light-mode .dashboard-hero .badge {
+  background: #ffffff !important;
+  border: 1px solid #c084fc !important;
+  color: #7e22ce !important;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.12) !important;
+}
+
+/* ── Dashboard Cards & Tool Cards ── */
 .light-mode .dashboard-card {
   background: #ffffff !important;
-  border-color: #d1dae6 !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05) !important;
 }
 
 .light-mode .dashboard-card-title {
-  color: #0f172a;
+  color: #0f172a !important;
 }
 
 .light-mode .dashboard-card-desc {
-  color: #64748b;
+  color: #475569 !important;
 }
 
 /* ── Tool Cards ── */
+.light-mode .tool-card {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
+}
+
 .light-mode .tool-card::before {
-  background: linear-gradient(to top, rgba(248,250,252,0.95) 20%, rgba(248,250,252,0.2) 100%) !important;
+  background: linear-gradient(to top, rgba(255,255,255,0.95) 20%, rgba(255,255,255,0.2) 100%) !important;
 }
 
 .light-mode .card-info h3 {
@@ -362,7 +383,7 @@
 }
 
 .light-mode .card-info p {
-  color: #64748b !important;
+  color: #475569 !important;
 }
 
 .light-mode .card-action {
@@ -1865,7 +1886,7 @@ body {
    ============================================================ */
 @media (max-width: 768px) {
   :root {
-    --bottom-nav-height: 0px !important;
+    --bottom-nav-height: 64px !important;
   }
  
   /* Body: allow scroll, add bottom padding for nav bar */
@@ -1890,7 +1911,7 @@ body {
     z-index: 1000;
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 4px 0 40px rgba(0, 0, 0, 0.8) !important;
+    box-shadow: 4px 0 40px rgba(0, 0, 0, 0.5) !important;
   }
 
   .sidebar.mobile-open {
@@ -1908,7 +1929,9 @@ body {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 999;
     opacity: 0;
     pointer-events: none;
@@ -1949,7 +1972,20 @@ body {
 
   /* ── Bottom Navigation Bar ── */
   .bottom-nav {
-    display: none !important;
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+    padding-bottom: var(--safe-area-bottom);
+    background: rgba(11, 14, 26, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 990;
+    align-items: center;
+    justify-content: space-around;
   }
 
   .bottom-nav-item {
@@ -1968,18 +2004,24 @@ body {
     font-weight: 600;
     letter-spacing: 0.3px;
     text-decoration: none;
-    transition: color 0.2s;
+    transition: all 0.2s ease;
     padding: 8px 0;
     -webkit-tap-highlight-color: transparent;
   }
 
   .bottom-nav-item.active {
     color: var(--accent);
+    transform: translateY(-1px);
   }
 
   .bottom-nav-item svg {
     width: 22px;
     height: 22px;
+    transition: transform 0.2s ease;
+  }
+
+  .bottom-nav-item.active svg {
+    transform: scale(1.1);
   }
 
   .bottom-nav-item span {
@@ -1990,12 +2032,13 @@ body {
   .bottom-nav-item.active::before {
     content: '';
     display: block;
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
     position: absolute;
-    top: 6px;
+    top: 5px;
   }
 
   /* ── Dashboard Page ── */
@@ -2300,13 +2343,36 @@ body {
 
   /* Light mode mobile overrides */
   .light-mode .bottom-nav {
-    background: #ffffff;
-    border-top-color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-top: 1px solid #cbd5e1 !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07) !important;
+  }
+
+  .light-mode .bottom-nav-item {
+    color: #64748b !important;
+  }
+
+  .light-mode .bottom-nav-item.active {
+    color: #2563eb !important;
+  }
+
+  .light-mode .bottom-nav-item.active::before {
+    background: #2563eb !important;
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
   }
 
   .light-mode .pwa-install-banner {
-    background: linear-gradient(135deg, #f8fafc, #ffffff);
-    border-color: rgba(37, 99, 235, 0.2);
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    border-color: rgba(37, 99, 235, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  .light-mode .pwa-banner-text strong {
+    color: #0f172a;
+  }
+
+  .light-mode .pwa-banner-text span {
+    color: #475569;
   }
 }
 

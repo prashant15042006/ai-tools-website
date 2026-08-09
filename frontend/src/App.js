@@ -452,7 +452,10 @@ const PwaInstallBanner = () => {
 }
 
 function App() {
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("nexus_theme");
+    return saved ? saved === "dark" : false; // Defaults to Light mode
+  });
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [voicePreset, setVoicePreset] = useState(() => {
     const saved = localStorage.getItem('tts_voice');
@@ -465,6 +468,10 @@ function App() {
     const saved = localStorage.getItem("nexus_chats");
     return saved ? JSON.parse(saved) : [];
   });
+
+  useEffect(() => {
+    localStorage.setItem("nexus_theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -503,7 +510,7 @@ function App() {
   }, [customVoiceUrl]);
 
   const addRecentChat = (question) => {
-    const title = question.length > 36 ? question.substring(0, 36) + 'â€¦' : question;
+    const title = question.length > 36 ? question.substring(0, 36) + '…' : question;
     setRecentChats((prev) => {
       if (prev.length > 0 && prev[0].title === title) return prev;
       return [{ title, id: Date.now() }, ...prev].slice(0, 10);
@@ -518,8 +525,8 @@ function App() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#0a0f1e",
-        color: "white",
+        backgroundColor: darkMode ? "#0a0f1e" : "#f8fafc",
+        color: darkMode ? "white" : "#0f172a",
         gap: "16px",
         fontFamily: "system-ui, -apple-system, sans-serif"
       }}>
@@ -535,7 +542,7 @@ function App() {
         }}>
           <Sparkles size={32} color="white" />
         </div>
-        <div style={{ fontSize: "15px", fontWeight: "500", color: "#94a3b8" }}>Loading Nexuss Workspace...</div>
+        <div style={{ fontSize: "15px", fontWeight: "500", color: darkMode ? "#94a3b8" : "#475569" }}>Loading Nexuss Workspace...</div>
       </div>
     );
   }
