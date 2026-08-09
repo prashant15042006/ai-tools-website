@@ -8,6 +8,8 @@ import { AppContext } from "./App";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL, { IS_PROD } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
+import { generateOfflineResponse } from "./utils/offlineAiEngine";
+import { addBlockToLedger, cacheResponseForOffline } from "./utils/blockchainLedger";
 
 // Inject table styles on component mount
 injectTableStyles();
@@ -96,7 +98,9 @@ function CodeGenerator() {
     }
 
     try {
-      if (!response) throw new Error(lastErr || "All endpoints failed.");
+      if (!response || !navigator.onLine) {
+        throw new Error(lastErr || "Offline / Network unavailable");
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -139,11 +143,26 @@ function CodeGenerator() {
           } catch (e) { }
         }
       }
+      cacheResponseForOffline(text, aiReply);
+      const block = await addBlockToLedger(text, aiReply, false);
+      setMessages((prev) =>
+        prev.map(msg => msg.id === aiMsgId ? { ...msg, blockchainBlock: block } : msg)
+      );
       handleSpeak(aiReply);
     } catch (error) {
+      console.warn("Code Generator API failed, triggering Nexuss Offline AI Engine:", error.message);
+      const offlineReply = generateOfflineResponse(text, "code");
+      const block = await addBlockToLedger(text, offlineReply, true);
+
       setMessages((prev) => 
-        prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${error.message}` } : msg)
+        prev.map(msg => msg.id === aiMsgId ? { 
+          ...msg, 
+          text: offlineReply,
+          isOffline: true,
+          blockchainBlock: block
+        } : msg)
       );
+      handleSpeak(offlineReply);
     }
     setLoading(false);
   };
