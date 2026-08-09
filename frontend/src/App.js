@@ -461,6 +461,7 @@ function App() {
     const saved = localStorage.getItem('tts_voice');
     return saved === 'ironman_hi' ? 'ironman_hi' : 'ironman_en';
   });
+  const [customVoiceUrl, setCustomVoiceUrl] = useState(() => localStorage.getItem('tts_custom_url') || '');
   const [user, setUser] = useState(() => {
     const mockEmail = localStorage.getItem("nexus_mock_user");
     const mockName = localStorage.getItem("nexus_user_name");
