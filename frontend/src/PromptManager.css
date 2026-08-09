@@ -899,3 +899,327 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   LIGHT MODE OVERRIDES FOR PROMPT MANAGER
+   ========================================================= */
+
+.light-mode .pm-root {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* Sidebar */
+.light-mode .pm-sidebar {
+  background: #ffffff;
+  border-right-color: #e2e8f0;
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .pm-sidebar-head {
+  border-bottom-color: #f1f5f9;
+}
+
+.light-mode .pm-sidebar-eyebrow {
+  color: #4f46e5;
+}
+
+.light-mode .pm-sidebar-title {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.light-mode .pm-new-btn {
+  background: linear-gradient(135deg, #4f46e5, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+}
+
+/* Search Box */
+.light-mode .pm-search-icon {
+  color: #94a3b8;
+}
+
+.light-mode .pm-search input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .pm-search input::placeholder {
+  color: #94a3b8;
+}
+
+.light-mode .pm-search input:focus {
+  background: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* Category Pills */
+.light-mode .pm-pill {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.light-mode .pm-pill:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.light-mode .pm-pill--on {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #4338ca;
+}
+
+/* Prompt Cards */
+.light-mode .pm-empty-list {
+  color: #94a3b8;
+}
+
+.light-mode .pm-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.light-mode .pm-card:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.light-mode .pm-card--active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.04));
+  border-color: #818cf8;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.12);
+}
+
+.light-mode .pm-card-type {
+  color: #94a3b8;
+}
+
+.light-mode .pm-card-title {
+  color: #1e293b;
+}
+
+.light-mode .pm-card-preview {
+  color: #64748b;
+}
+
+.light-mode .pm-card-arrow {
+  color: #cbd5e1;
+}
+
+.light-mode .pm-card:hover .pm-card-arrow {
+  color: #6366f1;
+}
+
+/* Workspace / Editor */
+.light-mode .pm-workspace {
+  background: #f8fafc;
+}
+
+.light-mode .pm-back {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.light-mode .pm-back:hover {
+  background: #f1f5f9;
+}
+
+.light-mode .pm-editor-header {
+  border-bottom-color: #e2e8f0;
+}
+
+.light-mode .pm-editor-title {
+  color: #0f172a;
+}
+
+.light-mode .pm-editor-title:not(:disabled):focus {
+  border-bottom-color: #6366f1;
+}
+
+.light-mode .pm-label {
+  color: #64748b;
+}
+
+.light-mode .pm-select {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .pm-select:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.light-mode .pm-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.light-mode .pm-char-count {
+  color: #94a3b8;
+}
+
+.light-mode .pm-textarea {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .pm-textarea:focus:not(:disabled) {
+  background: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+/* Action Buttons */
+.light-mode .pm-btn--ghost {
+  background: #ffffff;
+  color: #334155;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .pm-btn--ghost:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.light-mode .pm-btn--danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.light-mode .pm-btn--danger:hover {
+  background: #fee2e2;
+}
+
+.light-mode .pm-btn--indigo {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338ca;
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+.light-mode .pm-btn--indigo:hover {
+  background: rgba(99, 102, 241, 0.18);
+}
+
+/* Result Panel */
+.light-mode .pm-result {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .pm-result-header {
+  background: #f8fafc;
+  border-bottom-color: #e2e8f0;
+  color: #64748b;
+}
+
+.light-mode .pm-result-body {
+  color: #1e293b;
+}
+
+.light-mode .pm-result--error {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.light-mode .pm-result--error .pm-result-header,
+.light-mode .pm-result--error .pm-result-body {
+  color: #dc2626;
+}
+
+/* Dashboard / Empty state */
+.light-mode .pm-dashboard-hero h3 {
+  color: #0f172a;
+}
+
+.light-mode .pm-dashboard-hero p {
+  color: #64748b;
+}
+
+.light-mode .pm-hero-icon {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(59, 130, 246, 0.08));
+  border-color: rgba(99, 102, 241, 0.2);
+  color: #4f46e5;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.08);
+}
+
+.light-mode .pm-stats {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.light-mode .pm-stat-num {
+  background: linear-gradient(135deg, #4338ca, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.light-mode .pm-stat-lbl {
+  color: #64748b;
+}
+
+.light-mode .pm-stat-divider {
+  background: #e2e8f0;
+}
+
+.light-mode .pm-qs-label {
+  color: #64748b;
+}
+
+.light-mode .pm-qs-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.light-mode .pm-qs-card:hover {
+  background: #f8fafc;
+  border-color: #818cf8;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.light-mode .pm-qs-info h5 {
+  color: #1e293b;
+}
+
+.light-mode .pm-qs-arrow {
+  color: #cbd5e1;
+}
+
+.light-mode .pm-qs-card:hover .pm-qs-arrow {
+  color: #6366f1;
+}
+
+/* Toast */
+.light-mode .pm-toast {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #334155;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
+}
+
+.light-mode .pm-toast.error {
+  background: #991b1b;
+  border-color: #fca5a5;
+  color: #ffffff;
+}
+

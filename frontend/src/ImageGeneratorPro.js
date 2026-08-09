@@ -293,12 +293,12 @@ export default function ImageGeneratorPro() {
         <div className="img-gen-panel">
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
-              <label style={{ fontSize: "12px", fontWeight: "800", color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.8px" }}>🖊️ Image Prompt</label>
+              <label className="img-gen-label">🖊️ Image Prompt</label>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "11px", color: "#9ca3af", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "999px", padding: "4px 10px" }}>{promptWordCount} words</span>
-                <span style={{ fontSize: "11px", color: "#9ca3af", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "999px", padding: "4px 10px" }}>{promptCharCount} chars</span>
+                <span className="img-gen-counter-badge">{promptWordCount} words</span>
+                <span className="img-gen-counter-badge">{promptCharCount} chars</span>
                 {prompt.trim() && (
-                  <button type="button" onClick={clearPrompt} style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#f87171", borderRadius: "10px", padding: "6px 10px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear</button>
+                  <button type="button" onClick={clearPrompt} className="img-gen-clear-btn">Clear</button>
                 )}
               </div>
             </div>
@@ -309,14 +309,12 @@ export default function ImageGeneratorPro() {
               onKeyDown={handleKeyDown}
               placeholder="Describe what you want to see... e.g. A majestic white owl in a magical fantasy library, oil painting style..."
               rows={4}
-              style={{ width: "100%", boxSizing: "border-box", background: "rgba(0, 0, 0, 0.3)", border: "1px solid rgba(6, 182, 212, 0.25)", borderRadius: "16px", padding: "14px 16px", color: "#f3f4f6", fontSize: "15px", lineHeight: "1.6", resize: "vertical", outline: "none", fontFamily: "Outfit, Inter, sans-serif", transition: "all 0.2s" }}
-              onFocus={e => (e.target.style.borderColor = "rgba(6, 182, 212, 0.7)")}
-              onBlur={e => (e.target.style.borderColor = "rgba(6, 182, 212, 0.25)")}
+              className="img-gen-textarea"
             />
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {PROMPT_CHIPS.map(fragment => (
-                <button key={fragment} type="button" onClick={() => appendPromptFragment(fragment)} style={{ background: "rgba(6, 182, 212, 0.06)", border: "1px solid rgba(6, 182, 212, 0.18)", borderRadius: "999px", padding: "6px 10px", fontSize: "11px", color: "#22d3ee", cursor: "pointer", transition: "all 0.2s", fontWeight: "600" }}>
+                <button key={fragment} type="button" onClick={() => appendPromptFragment(fragment)} className="img-gen-chip">
                   + {fragment}
                 </button>
               ))}
@@ -324,25 +322,25 @@ export default function ImageGeneratorPro() {
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
               {SUGGESTIONS.map((s, i) => (
-                <button key={i} type="button" onClick={() => setPrompt(s)} style={{ background: "rgba(6, 182, 212, 0.05)", border: "1px solid rgba(6, 182, 212, 0.2)", borderRadius: "20px", padding: "5px 12px", fontSize: "11px", color: "#22d3ee", cursor: "pointer", transition: "all 0.2s", fontWeight: "500" }}>
+                <button key={i} type="button" onClick={() => setPrompt(s)} className="img-gen-suggestion">
                   {s.length > 32 ? s.slice(0, 30) + "…" : s}
                 </button>
               ))}
             </div>
 
             {prompt.trim() && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", padding: "10px 12px", borderRadius: "12px", background: "rgba(6, 182, 212, 0.06)", border: "1px solid rgba(6, 182, 212, 0.14)" }}>
-                <div style={{ fontSize: "11px", color: "#9ca3af", lineHeight: "1.4" }}>
-                  <strong style={{ color: "#e5e7eb" }}>Tip:</strong> Add subject + style + lighting + mood for stronger results.
+              <div className="img-gen-tip-box">
+                <div className="img-gen-tip-text">
+                  <strong>Tip:</strong> Add subject + style + lighting + mood for stronger results.
                 </div>
-                <button type="button" onClick={() => navigator.clipboard.writeText(prompt).then(() => showToast("Prompt copied! 📋")).catch(() => showToast("Failed to copy.", "error"))} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(6, 182, 212, 0.18)", color: "#d1d5db", borderRadius: "10px", padding: "7px 12px", fontSize: "11px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+                <button type="button" onClick={() => navigator.clipboard.writeText(prompt).then(() => showToast("Prompt copied! 📋")).catch(() => showToast("Failed to copy.", "error"))} className="img-gen-chip-copy">
                   <Copy size={12} /> Copy Prompt
                 </button>
               </div>
             )}
           </div>
 
-          <button type="button" onClick={() => setShowAdvanced(prev => !prev)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "14px", padding: "12px 16px", color: "#e5e7eb", fontSize: "13px", fontWeight: "700", cursor: "pointer", transition: "all 0.2s", marginTop: "6px", outline: "none" }}>
+          <button type="button" onClick={() => setShowAdvanced(prev => !prev)} className="img-gen-adv-toggle">
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Settings size={16} style={{ color: "#22d3ee" }} />
               <span>Advanced Settings (Model, Ratio)</span>
@@ -351,37 +349,37 @@ export default function ImageGeneratorPro() {
           </button>
 
           {showAdvanced && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px", padding: "16px", background: "rgba(0, 0, 0, 0.15)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "16px" }}>
+            <div className="img-gen-adv-panel">
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <label style={{ fontSize: "11px", fontWeight: "800", color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.8px" }}>🤖 AI Model</label>
+                <label className="img-gen-label">🤖 AI Model</label>
                 <div className="img-gen-model-grid">
                   {MODELS.map(m => (
-                    <button key={m.id} type="button" onClick={() => setModel(m.id)} style={{ padding: "10px 12px", borderRadius: "12px", cursor: "pointer", transition: "all 0.2s", textAlign: "left", background: model === m.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)", border: model === m.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)", boxShadow: model === m.id ? "0 4px 15px rgba(6, 182, 212, 0.2)" : "none" }}>
-                      <div style={{ fontSize: "12px", fontWeight: "700", color: model === m.id ? "#22d3ee" : "#d1d5db" }}>{m.label}</div>
-                      <div style={{ fontSize: "9px", color: "#9ca3af", marginTop: "2px", lineHeight: "1.3" }}>{m.desc}</div>
+                    <button key={m.id} type="button" onClick={() => setModel(m.id)} className={`img-gen-model-btn ${model === m.id ? "active" : ""}`}>
+                      <div className="img-gen-model-label">{m.label}</div>
+                      <div className="img-gen-model-desc">{m.desc}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="img-gen-ratio-wrapper" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <label style={{ fontSize: "11px", fontWeight: "800", color: "#22d3ee", textTransform: "uppercase", letterSpacing: "0.8px" }}>📐 Aspect Ratio</label>
+                <label className="img-gen-label">📐 Aspect Ratio</label>
                 <div className="img-gen-ratio-grid">
                   {ASPECT_RATIOS.map(ratio => (
-                    <button key={ratio.id} type="button" onClick={() => setAspectRatio(ratio.id)} style={{ padding: "8px 6px", borderRadius: "10px", cursor: "pointer", transition: "all 0.2s", textAlign: "center", background: aspectRatio === ratio.id ? "rgba(6, 182, 212, 0.12)" : "rgba(0, 0, 0, 0.25)", border: aspectRatio === ratio.id ? "2px solid rgba(6, 182, 212, 0.75)" : "1px solid rgba(255, 255, 255, 0.05)" }}>
+                    <button key={ratio.id} type="button" onClick={() => setAspectRatio(ratio.id)} className={`img-gen-ratio-btn ${aspectRatio === ratio.id ? "active" : ""}`}>
                       <div style={{ fontSize: "16px", marginBottom: "2px" }}>{ratio.icon}</div>
-                      <div style={{ fontSize: "10px", fontWeight: "700", color: "#e5e7eb" }}>{ratio.label}</div>
-                      <div style={{ fontSize: "8px", color: "#9ca3af", marginTop: "1px" }}>{ratio.desc}</div>
+                      <div className="img-gen-ratio-label">{ratio.label}</div>
+                      <div className="img-gen-ratio-desc">{ratio.desc}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "14px" }}>
+              <div className="img-gen-enhance-row">
                 <div>
-                  <span style={{ fontSize: "13px", fontWeight: "600", color: "#e5e7eb", display: "block" }}>Enhance Prompt</span>
-                  <span style={{ fontSize: "10px", color: "#9ca3af" }}>Automatically add details to prompt</span>
+                  <span className="img-gen-enhance-title">Enhance Prompt</span>
+                  <span className="img-gen-enhance-desc">Automatically add details to prompt</span>
                 </div>
                 <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
                   <input type="checkbox" checked={enhance} onChange={e => setEnhance(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
@@ -431,8 +429,8 @@ export default function ImageGeneratorPro() {
                       <Sparkles size={28} color="#06b6d4" />
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <h4 style={{ color: "#e9d5ff", fontSize: "16px", fontWeight: "700", margin: "0 0 6px 0" }}>Rendering Masterpiece</h4>
-                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>FLUX.1 is weaving the pixels... usually 5–15 seconds</p>
+                      <h4 className="img-gen-empty-title">Rendering Masterpiece</h4>
+                      <p className="img-gen-empty-subtitle">FLUX.1 is weaving the pixels... usually 5–15 seconds</p>
                     </div>
                   </div>
                 </div>
@@ -451,7 +449,7 @@ export default function ImageGeneratorPro() {
               <AlertCircle size={48} color="#ef4444" />
               <div>
                 <h4 style={{ color: "#f87171", fontSize: "16px", fontWeight: "700", margin: "0 0 8px 0" }}>Generation Interrupted</h4>
-                <p style={{ color: "#9ca3af", fontSize: "13px", maxWidth: "300px", margin: 0 }}>Pollinations AI server took too long to respond. Let's retry with a different configuration.</p>
+                <p className="img-gen-empty-subtitle">Pollinations AI server took too long to respond. Let's retry with a different configuration.</p>
               </div>
               <button onClick={generateImage} style={{ background: "rgba(168,85,247,0.15)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.3)", padding: "10px 20px", borderRadius: "10px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
                 <RefreshCw size={14} /> Try Again
@@ -465,8 +463,8 @@ export default function ImageGeneratorPro() {
                 <ImageIcon size={44} color="rgba(6, 182, 212, 0.4)" />
               </div>
               <div>
-                <h4 style={{ color: "#e5e7eb", fontSize: "18px", fontWeight: "700", margin: "0 0 6px 0" }}>Output Workspace</h4>
-                <p style={{ color: "#9ca3af", fontSize: "13px", maxWidth: "320px", margin: 0, lineHeight: "1.6" }}>Your generated masterpiece will render here. Choose options on the left to start!</p>
+                <h4 className="img-gen-empty-title">Output Workspace</h4>
+                <p className="img-gen-empty-subtitle">Your generated masterpiece will render here. Choose options on the left to start!</p>
               </div>
             </div>
           )}
@@ -477,11 +475,11 @@ export default function ImageGeneratorPro() {
                 <img src={imageUrl} alt="AI Generated Output" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>
 
-              <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(6, 182, 212, 0.15)", borderRadius: "16px", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div className="img-gen-result-box">
                 <div className="img-gen-action-row">
                   <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4", textTransform: "uppercase", letterSpacing: "0.5px" }}>✨ Generated Design</span>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    <button onClick={() => navigator.clipboard.writeText(imageUrl).then(() => showToast("Direct URL copied to clipboard! 📋")).catch(() => showToast("Failed to copy URL.", "error"))} style={{ background: "rgba(255,255,255,0.03)", color: "#22d3ee", border: "1px solid rgba(6, 182, 212, 0.25)", padding: "8px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <button onClick={() => navigator.clipboard.writeText(imageUrl).then(() => showToast("Direct URL copied to clipboard! 📋")).catch(() => showToast("Failed to copy URL.", "error"))} className="img-gen-link-btn">
                       <Copy size={13} /> Copy Link
                     </button>
                     <button onClick={() => handleDownload(imageUrl)} style={{ background: "linear-gradient(135deg, #6366f1, #06b6d4)", color: "white", border: "none", padding: "8px 18px", borderRadius: "10px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
@@ -490,8 +488,8 @@ export default function ImageGeneratorPro() {
                   </div>
                 </div>
 
-                <div style={{ fontSize: "12px", color: "#9ca3af", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "10px", lineHeight: "1.5" }}>
-                  <strong style={{ color: "#d1d5db" }}>Prompt:</strong> "<em>{activeResult?.prompt || history[0]?.prompt}</em>"
+                <div className="img-gen-result-prompt">
+                  <strong>Prompt:</strong> "<em>{activeResult?.prompt || history[0]?.prompt}</em>"
                   <div className="img-gen-meta-row">
                     <span>Model: {MODELS.find(m => m.id === (activeResult?.model || history[0]?.model))?.label.split(" (")[0] || "Flux"}</span>
                     <span>Ratio: {activeResult?.ratio || history[0]?.ratio || "1:1"}</span>
@@ -508,17 +506,17 @@ export default function ImageGeneratorPro() {
         <div className="img-gen-history-panel">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#d1d5db", margin: 0 }}>📚 Creation History ({history.length})</h3>
+              <h3 className="img-gen-history-title">📚 Creation History ({history.length})</h3>
               <span className="img-gen-swipe-hint" style={{ fontSize: "11px", color: "#06b6d4", background: "rgba(6, 182, 212, 0.08)", padding: "4px 8px", borderRadius: "8px", fontWeight: "600" }}>← Swipe to browse →</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="img-gen-history-badge">
                 <Sparkles size={13} color="#22d3ee" />
-                <span style={{ fontSize: "12px", color: "#e5e7eb", fontWeight: "600" }}>{new Set(history.map(item => item.model).filter(Boolean)).size} models used</span>
+                <span>{new Set(history.map(item => item.model).filter(Boolean)).size} models used</span>
               </div>
-              <input value={historyQuery} onChange={e => setHistoryQuery(e.target.value)} placeholder="Search history by prompt, model, ratio" aria-label="Search generation history" style={{ minWidth: "240px", background: "rgba(0, 0, 0, 0.28)", border: "1px solid rgba(6, 182, 212, 0.16)", borderRadius: "10px", padding: "9px 12px", color: "#f3f4f6", fontSize: "12px", outline: "none" }} />
+              <input value={historyQuery} onChange={e => setHistoryQuery(e.target.value)} placeholder="Search history by prompt, model, ratio" aria-label="Search generation history" className="img-gen-history-search" />
             </div>
-            <button onClick={clearHistory} style={{ background: "rgba(239, 68, 68, 0.1)", color: "#f87171", border: "1px solid rgba(239, 68, 68, 0.2)", padding: "8px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.2s" }}>
+            <button onClick={clearHistory} className="img-gen-clear-btn">
               <Trash2 size={13} /> Clear History
             </button>
           </div>
@@ -529,7 +527,7 @@ export default function ImageGeneratorPro() {
 
           <div className="img-gen-history-grid">
             {filteredHistory.map(item => (
-              <div key={item.id} onClick={() => openHistoryItem(item)} style={{ borderRadius: "16px", overflow: "hidden", border: imageUrl === item.url ? "1px solid rgba(6, 182, 212, 0.9)" : "1px solid rgba(255, 255, 255, 0.05)", background: imageUrl === item.url ? "rgba(6, 182, 212, 0.08)" : "rgba(0, 0, 0, 0.2)", cursor: "pointer", transition: "transform 0.2s, box-shadow 0.2s", position: "relative", aspectRatio: "1/1", flexShrink: 0 }}>
+              <div key={item.id} onClick={() => openHistoryItem(item)} className={`img-gen-history-card ${imageUrl === item.url ? "active" : ""}`}>
                 <img src={item.url} alt={item.prompt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0, 0, 0, 0.9))", padding: "20px 10px 8px 10px", fontSize: "11px", color: "#d1d5db", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {item.prompt}
@@ -570,6 +568,10 @@ export default function ImageGeneratorPro() {
           filter: drop-shadow(0 2px 10px rgba(6, 182, 212, 0.25));
         }
         .img-gen-subtitle { color: #4ade80; font-size: 14px; font-weight: 600; margin: 0; }
+        .img-gen-label { font-size: 12px; font-weight: 800; color: #22d3ee; text-transform: uppercase; letter-spacing: 0.8px; }
+        .img-gen-counter-badge { font-size: 11px; color: #9ca3af; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 999px; padding: 4px 10px; }
+        .img-gen-clear-btn { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; border-radius: 10px; padding: 6px 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+
         .img-gen-workspace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 40px; }
         .img-gen-panel {
           background: rgba(11, 14, 26, 0.45); backdrop-filter: blur(24px);
@@ -578,12 +580,112 @@ export default function ImageGeneratorPro() {
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(6, 182, 212, 0.05);
         }
         .img-gen-output-panel { align-items: center; justify-content: center; min-height: 480px; position: relative; }
+
+        .img-gen-textarea {
+          width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(6, 182, 212, 0.25);
+          border-radius: 16px; padding: 14px 16px; color: #f3f4f6; font-size: 15px; line-height: 1.6;
+          resize: vertical; outline: none; font-family: Outfit, Inter, sans-serif; transition: all 0.2s;
+        }
+        .img-gen-textarea:focus { border-color: rgba(6, 182, 212, 0.7); }
+        .img-gen-textarea::placeholder { color: #9ca3af; }
+
+        .img-gen-chip {
+          background: rgba(6, 182, 212, 0.06); border: 1px solid rgba(6, 182, 212, 0.18); border-radius: 999px;
+          padding: 6px 10px; font-size: 11px; color: #22d3ee; cursor: pointer; transition: all 0.2s; font-weight: 600;
+        }
+        .img-gen-chip:hover { background: rgba(6, 182, 212, 0.15); }
+
+        .img-gen-chip-copy {
+          background: rgba(255,255,255,0.04); border: 1px solid rgba(6, 182, 212, 0.18); color: #d1d5db;
+          border-radius: 10px; padding: 7px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
+          display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+
+        .img-gen-suggestion {
+          background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 20px;
+          padding: 5px 12px; font-size: 11px; color: #22d3ee; cursor: pointer; transition: all 0.2s; font-weight: 500;
+        }
+        .img-gen-suggestion:hover { background: rgba(6, 182, 212, 0.12); }
+
+        .img-gen-tip-box {
+          display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+          padding: 10px 12px; border-radius: 12px; background: rgba(6, 182, 212, 0.06); border: 1px solid rgba(6, 182, 212, 0.14);
+        }
+        .img-gen-tip-text { font-size: 11px; color: #9ca3af; line-height: 1.4; }
+        .img-gen-tip-text strong { color: #e5e7eb; }
+
+        .img-gen-adv-toggle {
+          display: flex; align-items: center; justify-content: space-between; width: 100%;
+          background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 14px; padding: 12px 16px; color: #e5e7eb; font-size: 13px; font-weight: 700;
+          cursor: pointer; transition: all 0.2s; marginTop: 6px; outline: none;
+        }
+        .img-gen-adv-panel {
+          display: flex; flex-direction: column; gap: 18px; padding: 16px;
+          background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px;
+        }
+
         .img-gen-model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .img-gen-model-btn {
+          padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: left;
+          background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .img-gen-model-btn.active {
+          background: rgba(6, 182, 212, 0.12); border: 2px solid rgba(6, 182, 212, 0.75);
+          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
+        }
+        .img-gen-model-label { font-size: 12px; font-weight: 700; color: #d1d5db; }
+        .img-gen-model-btn.active .img-gen-model-label { color: #22d3ee; }
+        .img-gen-model-desc { font-size: 9px; color: #9ca3af; margin-top: 2px; line-height: 1.3; }
+
         .img-gen-ratio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .img-gen-ratio-btn {
+          padding: 8px 6px; border-radius: 10px; cursor: pointer; transition: all 0.2s; text-align: center;
+          background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .img-gen-ratio-btn.active {
+          background: rgba(6, 182, 212, 0.12); border: 2px solid rgba(6, 182, 212, 0.75);
+        }
+        .img-gen-ratio-label { font-size: 10px; font-weight: 700; color: #e5e7eb; }
+        .img-gen-ratio-desc { font-size: 8px; color: #9ca3af; margin-top: 1px; }
+
+        .img-gen-enhance-row { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); paddingTop: 14px; }
+        .img-gen-enhance-title { font-size: 13px; font-weight: 600; color: #e5e7eb; display: block; }
+        .img-gen-enhance-desc { font-size: 10px; color: #9ca3af; }
+
+        .img-gen-empty-title { color: #e5e7eb; font-size: 18px; font-weight: 700; margin: 0 0 6px 0; }
+        .img-gen-empty-subtitle { color: #9ca3af; font-size: 13px; max-width: 320px; margin: 0; line-height: 1.6; }
+
+        .img-gen-result-box {
+          background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(6, 182, 212, 0.15);
+          border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+        }
         .img-gen-action-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .img-gen-link-btn {
+          background: rgba(255,255,255,0.03); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.25);
+          padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+          display: flex; align-items: center; gap: 5px; transition: all 0.2s;
+        }
+        .img-gen-result-prompt { font-size: 12px; color: #9ca3af; border-top: 1px solid rgba(255,255,255,0.05); paddingTop: 10px; line-height: 1.5; }
+        .img-gen-result-prompt strong { color: #d1d5db; }
         .img-gen-meta-row { margin-top: 6px; display: flex; gap: 12px; color: #8a94a6; font-size: 11px; flex-wrap: wrap; }
+
         .img-gen-history-panel { background: rgba(11, 14, 26, 0.25); border: 1px solid rgba(6, 182, 212, 0.1); border-radius: 24px; padding: 28px; }
+        .img-gen-history-title { font-size: 18px; font-weight: 700; color: #d1d5db; margin: 0; }
+        .img-gen-history-badge { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+        .img-gen-history-badge span { font-size: 12px; color: #e5e7eb; font-weight: 600; }
+        .img-gen-history-search { min-width: 240px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(6, 182, 212, 0.16); border-radius: 10px; padding: 9px 12px; color: #f3f4f6; font-size: 12px; outline: none; transition: all 0.2s; }
+        .img-gen-clear-btn { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+
         .img-gen-history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; }
+        .img-gen-history-card {
+          border-radius: 16px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05);
+          background: rgba(0, 0, 0, 0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; position: relative; aspect-ratio: 1/1; flex-shrink: 0;
+        }
+        .img-gen-history-card.active {
+          border: 1px solid rgba(6, 182, 212, 0.9); background: rgba(6, 182, 212, 0.08);
+        }
+
         .img-gen-swipe-hint { display: none; }
         .img-gen-history-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 10; }
         .img-gen-history-action-btn { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); border: none; border-radius: 8px; padding: 6px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
@@ -591,6 +693,193 @@ export default function ImageGeneratorPro() {
         .img-gen-history-action-btn.delete { background: rgba(239, 68, 68, 0.8); }
         .img-gen-history-action-btn.delete:hover { background: rgba(239, 68, 68, 0.95); }
         .img-gen-history-icon { width: 12px; height: 12px; display: block; }
+
+
+        /* ── LIGHT MODE OVERRIDES ── */
+        .light-mode .img-gen-page {
+          background-color: #f0f4f8 !important;
+          background-image: radial-gradient(rgba(6, 182, 212, 0.12) 1.5px, transparent 1.5px) !important;
+        }
+
+        .light-mode .img-gen-subtitle {
+          color: #15803d !important;
+        }
+
+        .light-mode .img-gen-panel,
+        .light-mode .img-gen-history-panel {
+          background: #ffffff !important;
+          border-color: #d1dae6 !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        }
+
+        .light-mode .img-gen-label {
+          color: #0284c7 !important;
+        }
+
+        .light-mode .img-gen-counter-badge {
+          background: #f1f5f9 !important;
+          border-color: #e2e8f0 !important;
+          color: #475569 !important;
+        }
+
+        .light-mode .img-gen-textarea {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+        .light-mode .img-gen-textarea::placeholder {
+          color: #94a3b8 !important;
+        }
+        .light-mode .img-gen-textarea:focus {
+          border-color: #0284c7 !important;
+          box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15) !important;
+        }
+
+        .light-mode .img-gen-chip {
+          background: #f0f9ff !important;
+          border-color: rgba(6, 182, 212, 0.3) !important;
+          color: #0284c7 !important;
+        }
+        .light-mode .img-gen-chip:hover {
+          background: rgba(6, 182, 212, 0.15) !important;
+        }
+
+        .light-mode .img-gen-chip-copy {
+          background: #ffffff !important;
+          border-color: #bae6fd !important;
+          color: #0284c7 !important;
+        }
+
+        .light-mode .img-gen-suggestion {
+          background: #f0fdf4 !important;
+          border-color: rgba(16, 185, 129, 0.3) !important;
+          color: #047857 !important;
+        }
+        .light-mode .img-gen-suggestion:hover {
+          background: rgba(16, 185, 129, 0.15) !important;
+        }
+
+        .light-mode .img-gen-tip-box {
+          background: #f0f9ff !important;
+          border-color: #bae6fd !important;
+        }
+        .light-mode .img-gen-tip-text {
+          color: #0369a1 !important;
+        }
+        .light-mode .img-gen-tip-text strong {
+          color: #0c4a6e !important;
+        }
+
+        .light-mode .img-gen-adv-toggle {
+          background: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+          color: #1e293b !important;
+        }
+        .light-mode .img-gen-adv-panel {
+          background: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+
+        .light-mode .img-gen-model-btn {
+          background: #ffffff !important;
+          border-color: #e2e8f0 !important;
+        }
+        .light-mode .img-gen-model-btn.active {
+          background: rgba(6, 182, 212, 0.08) !important;
+          border: 2px solid #0284c7 !important;
+          box-shadow: 0 4px 12px rgba(6, 182, 212, 0.12) !important;
+        }
+        .light-mode .img-gen-model-label {
+          color: #1e293b !important;
+        }
+        .light-mode .img-gen-model-btn.active .img-gen-model-label {
+          color: #0284c7 !important;
+        }
+        .light-mode .img-gen-model-desc {
+          color: #64748b !important;
+        }
+
+        .light-mode .img-gen-ratio-btn {
+          background: #ffffff !important;
+          border-color: #e2e8f0 !important;
+        }
+        .light-mode .img-gen-ratio-btn.active {
+          background: rgba(6, 182, 212, 0.08) !important;
+          border: 2px solid #0284c7 !important;
+        }
+        .light-mode .img-gen-ratio-label {
+          color: #1e293b !important;
+        }
+        .light-mode .img-gen-ratio-btn.active .img-gen-ratio-label {
+          color: #0284c7 !important;
+        }
+        .light-mode .img-gen-ratio-desc {
+          color: #64748b !important;
+        }
+
+        .light-mode .img-gen-enhance-row {
+          border-top-color: #e2e8f0 !important;
+        }
+        .light-mode .img-gen-enhance-title {
+          color: #1e293b !important;
+        }
+        .light-mode .img-gen-enhance-desc {
+          color: #64748b !important;
+        }
+
+        .light-mode .img-gen-empty-title {
+          color: #0f172a !important;
+        }
+        .light-mode .img-gen-empty-subtitle {
+          color: #64748b !important;
+        }
+
+        .light-mode .img-gen-result-box {
+          background: #f8fafc !important;
+          border-color: #e2e8f0 !important;
+        }
+        .light-mode .img-gen-link-btn {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0284c7 !important;
+        }
+        .light-mode .img-gen-result-prompt {
+          color: #475569 !important;
+          border-top-color: #e2e8f0 !important;
+        }
+        .light-mode .img-gen-result-prompt strong {
+          color: #0f172a !important;
+        }
+
+        .light-mode .img-gen-history-title {
+          color: #0f172a !important;
+        }
+        .light-mode .img-gen-history-badge {
+          background: #f1f5f9 !important;
+          border-color: #e2e8f0 !important;
+        }
+        .light-mode .img-gen-history-badge span {
+          color: #1e293b !important;
+        }
+        .light-mode .img-gen-history-search {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          color: #0f172a !important;
+        }
+        .light-mode .img-gen-history-search::placeholder {
+          color: #94a3b8 !important;
+        }
+        .light-mode .img-gen-history-card {
+          background: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        .light-mode .img-gen-history-card.active {
+          border-color: #0284c7 !important;
+          box-shadow: 0 4px 14px rgba(6, 182, 212, 0.2) !important;
+        }
+
 
         @media (max-width: 768px) {
           .img-gen-page { padding: 16px 12px !important; }
