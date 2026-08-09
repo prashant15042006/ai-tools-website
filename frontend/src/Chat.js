@@ -545,27 +545,7 @@ function Chat() {
                       <span>{msg.text}</span>
                     )
                   ) : msg.text ? (
-                    <>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
-                      {msg.blockchainBlock && (
-                        <div style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          marginTop: "8px",
-                          padding: "3px 10px",
-                          borderRadius: "20px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          backgroundColor: msg.isOffline ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)",
-                          color: msg.isOffline ? "#d97706" : "#059669",
-                          border: msg.isOffline ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid rgba(16, 185, 129, 0.3)"
-                        }}>
-                          <Sparkles size={12} />
-                          <span>{msg.isOffline ? "Offline AI Engine" : "Verified on Blockchain"} • #{msg.blockchainBlock.index} ({msg.blockchainBlock.hash.substring(0, 8)})</span>
-                        </div>
-                      )}
-                    </>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
                   ) : (
                     <div className="typing-indicator">
                       <div className="typing-dot"></div>

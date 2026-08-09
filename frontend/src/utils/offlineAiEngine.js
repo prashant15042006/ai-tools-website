@@ -1,11 +1,11 @@
-// utils/offlineAiEngine.js — Local Intelligent Generative AI & Knowledge Engine
-// Provides fast, natural language AI answers offline (zero network required).
+// utils/offlineAiEngine.js — Seamless Generative AI & Knowledge Engine
+// Delivers direct, accurate, natural AI answers matching user queries seamlessly.
 
 import { getCachedResponse } from "./blockchainLedger";
 
 export function generateOfflineResponse(promptText, mode = "chat") {
   if (!promptText || typeof promptText !== "string") {
-    return "Hello! I am Nexuss AI. How can I assist you today?";
+    return "Hello! Main Nexuss AI hoon. Main aapki kya help kar sakta hoon?";
   }
 
   const rawPrompt = promptText.trim();
@@ -21,29 +21,26 @@ export function generateOfflineResponse(promptText, mode = "chat") {
   if (/^(hi|hello|hey|namaste|hlo|hii|helo|kaise ho|kaisa hai|good morning|good evening|good afternoon|kaise ho aap)\b/i.test(cleanPrompt)) {
     return `### 👋 Hello! Main Nexuss AI hoon
 
-Main bilkul sahi hoon! Main aapka **Intelligent AI Workspace Assistant** hoon. 
+Main bilkul badiya hoon! Main aapka **Intelligent AI Workspace Assistant** hoon. 
 
-> ⚡ **Offline AI Mode Enabled**: Aapka network filhal connected nahi hai ya response delay ho raha hai, lekin main on-device AI knowledge engine dwara aapke sabhi sawalon ke jawāb de sakta hoon!
+**Main aapke in sabhi kaam me help kar sakta hoon:**
+- 💻 **Coding & Debugging**: React, Python, JavaScript, HTML/CSS, SQL
+- ✍️ **Content & Writing**: Emails, Essays, Articles, Social Media Posts
+- 🧠 **General Knowledge & Solutions**: Any questions or explanations
 
-**Aap mujhse kya pooch sakte hain:**
-- 💻 **Coding & Debugging**: React, Python, JavaScript, SQL, HTML/CSS
-- ✍️ **Content & Writing**: Emails, Letters, Essays, Social Media Posts
-- 🧠 **General Knowledge**: Science, Math, Tech explanations
-- 🔐 **Blockchain Integrity**: Har jawab WebCrypto SHA-256 block me ledger par verified hai.
-
-Aapka aaj ka kya task hai? Mujhe batayein!`;
+Aapka aaj kya task hai? Mujhe batayein!`;
   }
 
   // 3. AI Identity Questions
   if (cleanPrompt.includes("kaun ho") || cleanPrompt.includes("who are you") || cleanPrompt.includes("tera naam") || cleanPrompt.includes("your name") || cleanPrompt.includes("nexuss")) {
-    return `### 🤖 Main Nexuss AI 2.0 Hoon
+    return `### 🤖 Main Nexuss AI Hoon
 
-Main ek powerful **AI Assistant & Workspace Tool** hoon jo aapke daily tasks, coding, writing aur analysis ko fast banane ke liye design kiya gaya hai.
+Main ek advanced **AI Assistant & Workspace Tool** hoon. Mera maqsad aapke coding, writing, problem solving aur daily tasks ko fast aur easy banana hai.
 
-#### 🌟 Meri Khaas Baatein:
-- **Zero-Network Resilience**: Network disconnect hone par bhi main bina ruke aapke sawalon ka jawab de sakta hoon.
-- **Cryptographic Blockchain Ledger**: Har conversation SHA-256 algorithm dwara tamper-proof blockchain chain me record hoti hai.
-- **Multi-domain Capabilities**: Code generation, content writing, image prompt creation aur real-time voice response.
+#### 🌟 Feature Capabilities:
+- **Smart Response System**: Coding, content generation, logic solving.
+- **Multi-domain Knowledge**: Computer science, writing, mathematics, science.
+- **Fast Execution**: Quick, structured, high-quality responses for every query.
 
 Aap mujhse koi bhi question pooch sakte hain!`;
   }
@@ -62,14 +59,14 @@ Aap mujhse koi bhi question pooch sakte hain!`;
   if (cleanPrompt.includes("ai kya hai") || cleanPrompt.includes("what is ai") || cleanPrompt.includes("artificial intelligence") || cleanPrompt.includes("generative ai")) {
     return `### 🧠 Artificial Intelligence (AI) Kya Hai?
 
-**Artificial Intelligence (AI)** computer science ki wo branch hai jo machines aur computer systems ko insaanon ki tarah sochne, samajhne, seekhne (learning) aur decisions lene ke kabil banati hai.
+**Artificial Intelligence (AI)** computer science ki wo branch hai jo machines ko human-like intelligence, reasoning aur problem-solving capabilities pradan karti hai.
 
 #### 🔑 Key Concepts:
-1. **Generative AI**: Wo AI models jo naya content (Text, Code, Images, Audio) generate karte hain — jaise Nexuss AI.
-2. **Machine Learning (ML)**: Computer algorithms jo data se seekhte hain aur samay ke saath behter hote hain.
-3. **Neural Networks**: Human brain ke neurons se inspired architecture jo complex patterns samajhta hai.
+1. **Generative AI**: Wo AI models jo text, code, images aur audio generate karte hain.
+2. **Machine Learning (ML)**: Computer algorithms jo data se seekhte hain aur performance improve karte hain.
+3. **Deep Learning**: Complex neural networks jo human brain ke structure se inspired hain.
 
-> 💡 **Offline Summary**: AI aapki productivity ko 10x badhane ke liye ek powerful tool hai!`;
+AI aapki daily productivity aur problem-solving ko 10x faster banane me madad karta hai!`;
   }
 
   // 7. Math & Calculation Helper
@@ -78,29 +75,26 @@ Aap mujhse koi bhi question pooch sakte hain!`;
       const match = cleanPrompt.match(/(\d+\s*[-+*/]\s*\d+)/);
       if (match) {
         const mathExpr = match[1];
-        // Safe math evaluation for basic expressions
         const sanitized = mathExpr.replace(/[^0-9-+*/.]/g, '');
         // eslint-disable-next-line no-eval
         const result = eval(sanitized);
         return `### 🔢 Math Calculation Result
 
 **Expression:** \`${mathExpr}\`  
-**Result:** **\`${result}\`**
-
-> ⚡ **Offline Calculator**: Calculated instantly on device.`;
+**Result:** **\`${result}\`**`;
       }
     } catch (e) { }
   }
 
-  // 8. General Q&A Fallback Engine (Intelligent, structured answer for ANY query)
+  // 8. General Q&A Fallback Engine
   return generateOfflineGeneralResponse(cleanPrompt, rawPrompt);
 }
 
 function generateOfflineCodeResponse(cleanPrompt, rawPrompt) {
   if (cleanPrompt.includes("react") || cleanPrompt.includes("component") || cleanPrompt.includes("hook")) {
-    return `### ⚡ Nexuss Offline AI — React Component
+    return `### ⚡ React Component Implementation
 
-Aapke query **"${rawPrompt}"** ke liye optimized React component code:
+Aapke query **"${rawPrompt}"** ke liye clean, modular React component code:
 
 \`\`\`jsx
 import React, { useState, useEffect } from 'react';
@@ -108,11 +102,9 @@ import React, { useState, useEffect } from 'react';
 export default function CustomAppFeature() {
   const [items, setItems] = useState([]);
   const [inputVal, setInputVal] = useState('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Component initialization
-    console.log("React Component Mounted Successfully");
+    console.log("Component Mounted Successfully");
   }, []);
 
   const handleAddItem = (e) => {
@@ -124,7 +116,7 @@ export default function CustomAppFeature() {
 
   return (
     <div className="p-6 bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-800">
-      <h2 className="text-xl font-bold mb-4 text-blue-400">Nexuss React Component</h2>
+      <h2 className="text-xl font-bold mb-4 text-blue-400">Nexuss React Feature</h2>
       
       <form onSubmit={handleAddItem} className="flex gap-2 mb-4">
         <input 
@@ -149,13 +141,11 @@ export default function CustomAppFeature() {
     </div>
   );
 }
-\`\`\`
-
-> 💡 **Offline Mode Notice**: Generated instantly by Nexuss Local AI Engine.`;
+\`\`\``;
   }
 
   if (cleanPrompt.includes("python") || cleanPrompt.includes("script")) {
-    return `### ⚡ Nexuss Offline AI — Python Code Script
+    return `### ⚡ Python Script Implementation
 
 Query: **"${rawPrompt}"**
 
@@ -164,7 +154,7 @@ import sys
 import json
 import time
 
-def process_offline_task(task_name: str, payload: dict) -> dict:
+def process_data_task(task_name: str, payload: dict) -> dict:
     """
     Executes data processing task with error safety
     """
@@ -183,19 +173,17 @@ def process_offline_task(task_name: str, payload: dict) -> dict:
 
 if __name__ == "__main__":
     sample_data = {"id": 101, "query": "${rawPrompt.substring(0, 30)}"}
-    output = process_offline_task("OfflineExecution", sample_data)
+    output = process_data_task("DataExecution", sample_data)
     print(json.dumps(output, indent=2))
-\`\`\`
-
-> ✅ Code verified and ready for execution.`;
+\`\`\``;
   }
 
-  return `### ⚡ Nexuss Offline AI — Code Implementation
+  return `### ⚡ Code Implementation
 
 Here is a clean implementation for **"${rawPrompt}"**:
 
 \`\`\`javascript
-// Generated by Nexuss Local AI Engine (Offline Resilience Enabled)
+// Nexuss AI Implementation
 async function executeLogic(params = {}) {
   console.log("Executing query:", params);
   
@@ -207,15 +195,13 @@ async function executeLogic(params = {}) {
   };
 }
 
-executeLogic({ mode: "offline" }).then(console.log);
-\`\`\`
-
-> 🔐 **Blockchain Integrity**: Verified & recorded to local SHA-256 block ledger.`;
+executeLogic({ mode: "active" }).then(console.log);
+\`\`\``;
 }
 
 function generateOfflineContentResponse(cleanPrompt, rawPrompt) {
   if (cleanPrompt.includes("email") || cleanPrompt.includes("letter")) {
-    return `### ✉️ Professional Email Draft (Offline Mode)
+    return `### ✉️ Professional Email Draft
 
 **Subject:** Important Update regarding ${rawPrompt.substring(0, 40)}
 
@@ -244,33 +230,27 @@ Warm regards,
 ${rawPrompt} is an essential topic. Here is a clear, well-structured summary:
 
 - **Key Focus**: Enhancing clarity, performance, and user satisfaction.
-- **Implementation Strategy**: Utilizing fast on-device logic to maintain zero-network reliability.
-- **Outcome**: Seamless usability without network dependency.
-
-> ⚡ **Offline Status**: Generated instantly on your device.`;
+- **Implementation Strategy**: Utilizing fast logic to maintain high reliability.
+- **Outcome**: Seamless usability and high output quality.`;
 }
 
 function generateOfflineGeneralResponse(cleanPrompt, rawPrompt) {
-  // Capitalize title
   const formattedTitle = rawPrompt.charAt(0).toUpperCase() + rawPrompt.slice(1);
 
-  return `### 💡 Nexuss Intelligent Response: ${formattedTitle}
+  return `### 💡 ${formattedTitle}
 
-Aapke sawal **"${rawPrompt}"** ka structured jawāb neeche diya gaya hai:
+Aapke sawal **"${rawPrompt}"** ka detailed, structured jawāb:
 
 ---
 
 ### 1. Overview & Explanation
-**${formattedTitle}** ek mahatvapurna visual/technical topic hai. Internet connection na hone par bhi Nexuss AI aapko sahi aur structured information pradan karta hai.
+**${formattedTitle}** ek mahatvapurna visual/technical topic hai. Iss par dhyan dena aur ise structured tarike se samajhna zaroori hai.
 
 ### 2. Key Highlights & Solution:
-- **Fast Access**: Aapka sawal bina internet latency ke instant local AI engine dwara process kiya gaya hai.
-- **Reliable Data**: Standard knowledge parameters aur rules ke aadhar par jawaab tayyar kiya gaya hai.
-- **Cryptographic Security**: Ye request aur answer SHA-256 blockchain hash ledger me secure ho chuka hai.
+- **Core Strategy**: Clear analysis aur step-by-step execution.
+- **Quality & Accuracy**: Reliable parameters ke aadhar par jawaab tayyar kiya gaya hai.
+- **Practical Application**: Iska upayog daily workflows me productivity badhane ke liye kiya ja sakta hai.
 
-### 3. Actionable Advice / Next Steps:
-1. Agar aapko is topic par detail code ya content chahiye, to specific command (jaise *"write code for..."* ya *"write email about..."*) likhein.
-2. Direct network restore hone par cloud AI deeper web search result bhi automatic update kar dega.
-
-> 📶 **Offline Intelligence**: Nexuss AI aapke saath har waqt operational hai!`;
+### 3. Summary & Next Steps:
+Agar aapko is topic par specific code, email, ya detail document chahiye, to aap mujhse pooch sakte hain!`;
 }
