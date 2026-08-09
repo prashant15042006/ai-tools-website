@@ -461,9 +461,22 @@ function App() {
     const saved = localStorage.getItem('tts_voice');
     return saved === 'ironman_hi' ? 'ironman_hi' : 'ironman_en';
   });
-  const [customVoiceUrl, setCustomVoiceUrl] = useState(() => localStorage.getItem('tts_custom_url') || '');
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    const mockEmail = localStorage.getItem("nexus_mock_user");
+    const mockName = localStorage.getItem("nexus_user_name");
+    if (mockEmail) {
+      return {
+        email: mockEmail,
+        displayName: mockName || mockEmail.split('@')[0],
+        photoURL: null,
+        isMock: true
+      };
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    return !localStorage.getItem("nexus_mock_user");
+  });
   const [recentChats, setRecentChats] = useState(() => {
     const saved = localStorage.getItem("nexus_chats");
     return saved ? JSON.parse(saved) : [];

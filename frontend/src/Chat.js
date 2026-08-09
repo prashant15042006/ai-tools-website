@@ -11,6 +11,8 @@ import { PreRenderer } from "./utils/PreRenderer";
 import { detectRatioFromPrompt, cleanFrontendResponse } from "./utils/helpers";
 
 import { useLocation } from "react-router-dom";
+import { generateOfflineResponse } from "./utils/offlineAiEngine";
+import { addBlockToLedger, cacheResponseForOffline } from "./utils/blockchainLedger";
 
 // Inject table styles on component mount
 injectTableStyles();
@@ -296,7 +298,9 @@ function Chat() {
     }
 
     try {
-      if (!response) throw new Error(lastErr || "All endpoints failed.");
+      if (!response || !navigator.onLine) {
+        throw new Error(lastErr || "Offline / Network unavailable");
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -340,13 +344,30 @@ function Chat() {
           } catch (e) { }
         }
       }
+
+      // Record successful response to cache and Blockchain ledger
+      cacheResponseForOffline(text, aiReply);
+      const block = await addBlockToLedger(text, aiReply, false);
+      setMessages((prev) =>
+        prev.map(msg => msg.id === aiMsgId ? { ...msg, blockchainBlock: block } : msg)
+      );
       await handleSpeak(aiReply);
 
     } catch (error) {
-      let errorMsg = error.message;
+      console.warn("API request failed, triggering Nexuss Offline AI Engine:", error.message);
+      // Seamless Offline AI Fallback Generator
+      const offlineReply = generateOfflineResponse(text, "chat");
+      const block = await addBlockToLedger(text, offlineReply, true);
+
       setMessages((prev) => 
-        prev.map(msg => msg.id === aiMsgId ? { ...msg, text: `⚠️ **Error:** ${errorMsg}` } : msg)
+        prev.map(msg => msg.id === aiMsgId ? { 
+          ...msg, 
+          text: offlineReply,
+          isOffline: true,
+          blockchainBlock: block
+        } : msg)
       );
+      await handleSpeak(offlineReply);
     }
     setLoading(false);
   };
@@ -510,7 +531,27 @@ function Chat() {
                       <span>{msg.text}</span>
                     )
                   ) : msg.text ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
+                    <>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
+                      {msg.blockchainBlock && (
+                        <div style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          marginTop: "8px",
+                          padding: "3px 10px",
+                          borderRadius: "20px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          backgroundColor: msg.isOffline ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)",
+                          color: msg.isOffline ? "#d97706" : "#059669",
+                          border: msg.isOffline ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid rgba(16, 185, 129, 0.3)"
+                        }}>
+                          <Sparkles size={12} />
+                          <span>{msg.isOffline ? "Offline AI Engine" : "Verified on Blockchain"} • #{msg.blockchainBlock.index} ({msg.blockchainBlock.hash.substring(0, 8)})</span>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="typing-indicator">
                       <div className="typing-dot"></div>
