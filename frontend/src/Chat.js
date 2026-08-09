@@ -271,14 +271,32 @@ function Chat() {
       }
     }
 
+    // ── Instant Offline Check ──
+    if (!navigator.onLine) {
+      console.log("Device is offline. Triggering instant Nexuss Offline AI Engine.");
+      const offlineReply = generateOfflineResponse(text, "chat");
+      const block = await addBlockToLedger(text, offlineReply, true);
+      setMessages((prev) =>
+        prev.map(msg => msg.id === aiMsgId ? {
+          ...msg,
+          text: offlineReply,
+          isOffline: true,
+          blockchainBlock: block
+        } : msg)
+      );
+      setLoading(false);
+      await handleSpeak(offlineReply);
+      return;
+    }
+
     let response = null;
     let lastErr = "";
 
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        // Mobile gets 40s timeout, desktop 30s, image sends get 90s
-        const timeoutMs = imageToBeSent ? 90000 : 40000;
+        // Fast 6s timeout when online, 60s for images
+        const timeoutMs = imageToBeSent ? 60000 : 6000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, {
           method: "POST",
@@ -289,7 +307,6 @@ function Chat() {
         clearTimeout(timer);
         if (r.ok) { response = r; break; }
         lastErr = `${endpoint} failed (${r.status})`;
-        // Don't try more endpoints for server errors (4xx)
         if (r.status >= 400 && r.status < 500) break;
       } catch (e) {
         lastErr = e.message;
@@ -298,8 +315,8 @@ function Chat() {
     }
 
     try {
-      if (!response || !navigator.onLine) {
-        throw new Error(lastErr || "Offline / Network unavailable");
+      if (!response) {
+        throw new Error(lastErr || "All endpoints failed.");
       }
 
       const reader = response.body.getReader();
@@ -326,7 +343,6 @@ function Chat() {
             const data = JSON.parse(dataStr);
             if (data.error) throw new Error(data.error);
             if (data.replace) {
-              // Backend sent a cleaned replacement (safety labels stripped)
               const cleaned = cleanFrontendResponse(data.replace);
               aiReply = cleaned;
               setMessages((prev) =>
@@ -335,7 +351,6 @@ function Chat() {
             } else if (data.content) {
                 const content = data.content;
                 aiReply += content;
-                // Clean safety labels from the accumulated reply before displaying
                 const displayText = cleanFrontendResponse(aiReply);
                 setMessages((prev) => 
                   prev.map(msg => msg.id === aiMsgId ? { ...msg, text: displayText } : msg)
@@ -355,7 +370,6 @@ function Chat() {
 
     } catch (error) {
       console.warn("API request failed, triggering Nexuss Offline AI Engine:", error.message);
-      // Seamless Offline AI Fallback Generator
       const offlineReply = generateOfflineResponse(text, "chat");
       const block = await addBlockToLedger(text, offlineReply, true);
 

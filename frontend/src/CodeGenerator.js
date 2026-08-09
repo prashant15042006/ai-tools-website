@@ -82,13 +82,29 @@ function CodeGenerator() {
       if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/chat`);
     }
 
+    // ── Instant Offline Check ──
+    if (!navigator.onLine) {
+      const offlineReply = generateOfflineResponse(text, "code");
+      const block = await addBlockToLedger(text, offlineReply, true);
+      setMessages((prev) =>
+        prev.map(msg => msg.id === aiMsgId ? {
+          ...msg,
+          text: offlineReply,
+          isOffline: true,
+          blockchainBlock: block
+        } : msg)
+      );
+      setLoading(false);
+      handleSpeak(offlineReply);
+      return;
+    }
+
     let response = null;
     let lastErr = "";
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        // Increase timeout to 90s when image is attached (image pre-processing takes extra time)
-        const timeoutMs = imageToBeSent ? 90000 : 25000;
+        const timeoutMs = imageToBeSent ? 60000 : 6000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
         clearTimeout(timer);
