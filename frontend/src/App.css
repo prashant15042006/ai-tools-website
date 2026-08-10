@@ -1916,11 +1916,14 @@ body {
     box-shadow: 4px 0 40px rgba(0, 0, 0, 0.4) !important;
   }
 
-  .sidebar.mobile-open {
-    transform: translateX(0);
+  /* mobile-open always wins — use !important to beat .collapsed */
+  .sidebar.mobile-open,
+  .sidebar.collapsed.mobile-open {
+    transform: translateX(0) !important;
+    width: 280px !important;
   }
 
-  /* Never show collapsed width on mobile */
+  /* Never show collapsed width on mobile, only hide via transform */
   .sidebar.collapsed {
     width: 280px !important;
     transform: translateX(-100%);
@@ -1931,13 +1934,12 @@ body {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.55);
+    /* Removed backdrop-filter blur — it was causing the blurred/glitchy look */
     z-index: 999;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s ease;
   }
   .sidebar-overlay.visible {
     opacity: 1;
