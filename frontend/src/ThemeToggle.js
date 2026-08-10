@@ -1,13 +1,13 @@
 // ThemeToggle.js
-import React from "react";
-import { useUIStore } from "./uiStore";
+import React, { useContext } from "react";
+import { AppContext } from "./App";
 
 export default function ThemeToggle() {
-  const { darkMode, toggleDarkMode } = useUIStore();
+  const { darkMode, setDarkMode } = useContext(AppContext);
 
   return (
     <button
-      onClick={toggleDarkMode}
+      onClick={() => setDarkMode(!darkMode)}
       style={{
         width: "36px",
         height: "36px",
@@ -22,8 +22,9 @@ export default function ThemeToggle() {
         justifyContent: "center",
         transition: "all 0.3s ease",
       }}
-      onMouseEnter={(e) => (e.target.style.transform = "scale(1.1)")}
-      onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
+      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+      title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
     >
       {darkMode ? "🌙" : "☀️"}
     </button>

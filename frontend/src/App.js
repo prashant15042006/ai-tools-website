@@ -454,7 +454,7 @@ const PwaInstallBanner = () => {
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("nexus_theme");
-    return saved ? saved === "dark" : false; // Defaults to Light mode
+    return saved !== null ? saved === "dark" : true; // Defaults to Dark mode
   });
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [voicePreset, setVoicePreset] = useState(() => {
