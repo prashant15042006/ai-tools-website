@@ -4,13 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Menu, Image, Download, X } from "lucide-react";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import Login from "./Login";
 import API_BASE_URL from "./apiConfig";
 import "./App.css";
 import { useUIStore } from "./uiStore";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // ── Lazy-loaded components for optimal initial bundle & mobile performance ───
+const Login            = lazy(() => import("./Login"));
 const Dashboard        = lazy(() => import("./Dashboard"));
 const Chat             = lazy(() => import("./Chat"));
 const CodeGenerator    = lazy(() => import("./CodeGenerator"));
@@ -560,10 +560,12 @@ function App() {
   return (
     <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, loading, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
       <Router>
-        <Routes>
-          <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-          <Route path="/*" element={user ? <AppContent /> : <Navigate to="/login" replace />} />
-        </Routes>
+        <Suspense fallback={<SuspenseFallback />}>
+          <Routes>
+            <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+            <Route path="/*" element={user ? <AppContent /> : <Navigate to="/login" replace />} />
+          </Routes>
+        </Suspense>
       </Router>
     </AppContext.Provider>
   );
