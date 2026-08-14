@@ -471,9 +471,7 @@ function App() {
     }
     return null;
   });
-  const [loading, setLoading] = useState(() => {
-    return !localStorage.getItem("nexus_mock_user");
-  });
+  const [loading, setLoading] = useState(false);
   const [recentChats, setRecentChats] = useState(() => {
     const saved = localStorage.getItem("nexus_chats");
     return saved ? JSON.parse(saved) : [];

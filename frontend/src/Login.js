@@ -69,7 +69,6 @@ export default function Login() {
   const [name, setName]             = useState("");
   const [googleLoading, setGoogleLoading] = useState(false); // only for Google button
   const [emailLoading, setEmailLoading]   = useState(false); // only for email button
-  const [checkingRedirect, setCheckingRedirect] = useState(true); // initial redirect check
   const [error, setError]           = useState("");
   const [step, setStep]             = useState("auth"); // "auth" | "confirm-name"
   const navigate = useNavigate();
@@ -88,9 +87,6 @@ export default function Login() {
           const msg = getErrorMessage(err.code);
           if (msg) setError(msg);
         }
-      })
-      .finally(() => {
-        setCheckingRedirect(false); // always unblock the UI
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -210,19 +206,6 @@ export default function Login() {
   };
 
   // ── Screens ───────────────────────────────────────────────────────────────────
-
-  // Initial redirect check — show full-screen loader only for first 3 seconds max
-  if (checkingRedirect) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0f1e] gap-4">
-        <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-2">
-          <Sparkles size={34} className="text-white" />
-        </div>
-        <Loader size={28} className="animate-spin text-indigo-400" />
-        <p className="text-slate-400 text-sm">Loading...</p>
-      </div>
-    );
-  }
 
   // Confirm name step
   if (step === "confirm-name") {
