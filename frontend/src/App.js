@@ -168,7 +168,7 @@ const PwaInstallBanner = () => {
   function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, loading } = useContext(AppContext);
+  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
   const isSidebarOpen = !sidebarCollapsed;
@@ -266,7 +266,8 @@ const PwaInstallBanner = () => {
     };
   }, []);
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>Loading Nexuss...</div>;
+  // Remove redundant loading check inside AppContent as it is already handled in App
+
 
   return (
     <div className={`app-container ${darkMode ? '' : 'light-mode'}`}>
@@ -350,6 +351,7 @@ const PwaInstallBanner = () => {
               onClick={() => {
                 localStorage.removeItem("nexus_mock_user");
                 localStorage.removeItem("nexus_user_name");
+                localStorage.removeItem("nexus_user");
                 signOut(auth).finally(() => window.location.reload());
               }} 
               style={{ width: '100%', padding: '8px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
@@ -469,9 +471,24 @@ function App() {
         isMock: true
       };
     }
+    const cachedUser = localStorage.getItem("nexus_user");
+    if (cachedUser) {
+      try {
+        return JSON.parse(cachedUser);
+      } catch (e) {
+        console.warn("Failed to parse cached user:", e);
+      }
+    }
     return null;
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => {
+    const mockEmail = localStorage.getItem("nexus_mock_user");
+    const cachedUser = localStorage.getItem("nexus_user");
+    if (mockEmail || cachedUser) {
+      return false; // Show dashboard immediately from cache
+    }
+    return true; // Wait for initial auth check if no session cache exists
+  });
   const [recentChats, setRecentChats] = useState(() => {
     const saved = localStorage.getItem("nexus_chats");
     return saved ? JSON.parse(saved) : [];
@@ -484,7 +501,15 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       if (u) {
-        setUser(u);
+        const userData = {
+          email: u.email,
+          displayName: u.displayName || u.email.split('@')[0],
+          photoURL: u.photoURL,
+          uid: u.uid
+        };
+        localStorage.setItem("nexus_user", JSON.stringify(userData));
+        localStorage.setItem("nexus_user_name", userData.displayName);
+        setUser(userData);
         setLoading(false);
       } else {
         const mockEmail = localStorage.getItem("nexus_mock_user");
@@ -497,6 +522,7 @@ function App() {
             isMock: true
           });
         } else {
+          localStorage.removeItem("nexus_user");
           setUser(null);
         }
         setLoading(false);
@@ -556,7 +582,7 @@ function App() {
   }
 
   return (
-    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, loading, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
+    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, setUser, loading, setLoading, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
       <Router>
         <Suspense fallback={<SuspenseFallback />}>
           <Routes>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { auth, googleProvider, db } from "./firebase";
 import {
   signInWithPopup,
@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { AppContext } from "./App";
 import {
   Sparkles,
   Mail,
@@ -19,9 +20,18 @@ import {
 } from "lucide-react";
 
 // ── Save Google user → Firestore + localStorage → navigate to dashboard ──────
-async function finalizeGoogleUser(user, navigateFn) {
+async function finalizeGoogleUser(user, setUser, navigateFn) {
   const userName = user.displayName || user.email?.split("@")[0] || "User";
   localStorage.setItem("nexus_user_name", userName);
+  
+  const userData = {
+    email: user.email,
+    displayName: userName,
+    photoURL: user.photoURL,
+    uid: user.uid
+  };
+  localStorage.setItem("nexus_user", JSON.stringify(userData));
+
   if (user?.email) {
     try {
       setDoc(
@@ -38,6 +48,7 @@ async function finalizeGoogleUser(user, navigateFn) {
       console.warn("Firestore error:", e);
     }
   }
+  setUser(userData);
   navigateFn("/", { replace: true });
 }
 
@@ -72,13 +83,14 @@ export default function Login() {
   const [error, setError]           = useState("");
   const [step, setStep]             = useState("auth"); // "auth" | "confirm-name"
   const navigate = useNavigate();
+  const { setUser } = useContext(AppContext);
 
   // ── 1. Check if returning from Google redirect (runs once on mount) ─────────
   useEffect(() => {
     getRedirectResult(auth)
       .then(async (result) => {
         if (result?.user) {
-          await finalizeGoogleUser(result.user, navigate);
+          await finalizeGoogleUser(result.user, setUser, navigate);
         }
       })
       .catch((err) => {
@@ -118,7 +130,7 @@ export default function Login() {
       // 1. Try popup first (works directly upon user click/touch gesture)
       const result = await signInWithPopup(auth, googleProvider);
       if (result?.user) {
-        await finalizeGoogleUser(result.user, navigate);
+        await finalizeGoogleUser(result.user, setUser, navigate);
       } else {
         setGoogleLoading(false);
       }
@@ -197,8 +209,13 @@ export default function Login() {
       ).catch((e) => console.warn("Firestore:", e));
       localStorage.setItem("nexus_mock_user", email);
       localStorage.setItem("nexus_user_name", name);
-      await new Promise((r) => setTimeout(r, 500));
-      window.location.href = "/";
+      setUser({
+        email,
+        displayName: name,
+        photoURL: null,
+        isMock: true
+      });
+      navigate("/", { replace: true });
     } catch (err) {
       setError("Login failed. Please try again.");
       setEmailLoading(false);
