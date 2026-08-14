@@ -2,27 +2,23 @@ import React, { useState, useEffect, createContext, useContext, lazy, Suspense }
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { MessageSquare, Code, PenTool, FolderOpen, Settings, Layout, Plus, Search, Sparkles, PanelLeftClose, PanelLeft, Bell, Sun, Moon, Volume2, VolumeX, Menu, Image, Download, X } from "lucide-react";
-
-// â”€â”€ Eager-loaded (small / always needed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-import Chat from "./Chat";
-import Dashboard from "./Dashboard";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Login from "./Login";
 import API_BASE_URL from "./apiConfig";
 import "./App.css";
 import { useUIStore } from "./uiStore";
-
-// â”€â”€ Split components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import ErrorBoundary from "./components/ErrorBoundary";
-import ProjectsView from "./components/ProjectsView";
-import SettingsView from "./components/SettingsView";
 
-// â”€â”€ Lazy-loaded (heavy components) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Lazy-loaded components for optimal initial bundle & mobile performance ───
+const Dashboard        = lazy(() => import("./Dashboard"));
+const Chat             = lazy(() => import("./Chat"));
 const CodeGenerator    = lazy(() => import("./CodeGenerator"));
 const ContentGenerator = lazy(() => import("./ContentGenerator"));
 const ImageGenerator   = lazy(() => import("./ImageGeneratorPro"));
 const PromptManager    = lazy(() => import("./PromptManager"));
+const ProjectsView     = lazy(() => import("./components/ProjectsView"));
+const SettingsView     = lazy(() => import("./components/SettingsView"));
 
 // Global context for dark mode & TTS
 export const AppContext = createContext();

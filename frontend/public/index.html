@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="google-site-verification" content="pC1UivGrdmi2FLcmB_xYyyY7gQYbf7T71Ahi7532fqU" />
-    <!-- Responsive viewport for mobile -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <!-- Responsive viewport for mobile (Accessible & high performance) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     
     <!-- PWA Theme -->
     <meta name="theme-color" content="#0b0e1a" />
@@ -13,9 +13,11 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    <!-- SEO -->
-    <meta name="description" content="Nexuss Ai — Your all-in-one AI workspace for chat, code generation, and content writing." />
-    <meta name="keywords" content="AI, chat, code generator, content writer, Nexuss Ai" />
+    <!-- SEO & Metadata -->
+    <title>Nexuss Ai | Intelligent Workspace for Chat, Code & Content</title>
+    <meta name="description" content="Nexuss Ai — Your high-performance all-in-one AI workspace for intelligent chat, code generation, content writing, and image creation." />
+    <meta name="keywords" content="AI, chat, code generator, content writer, image studio, Nexuss Ai, artificial intelligence" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 
     <!-- PWA iOS Support -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -28,37 +30,60 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
 
-    <!-- Open Graph (for sharing) -->
-    <meta property="og:title" content="Nexuss Ai — Intelligent Workspace" />
-    <meta property="og:description" content="Your all-in-one AI workspace for chat, code, and content." />
+    <!-- Open Graph (for sharing & Search Engine Rich Previews) -->
+    <meta property="og:title" content="Nexuss Ai — Intelligent AI Workspace" />
+    <meta property="og:description" content="Your all-in-one AI workspace for chat, code generation, and creative content." />
     <meta property="og:image" content="https://ai-tools-website-psi.vercel.app/icon-512.png" />
     <meta property="og:url" content="https://ai-tools-website-psi.vercel.app/" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Nexuss Ai" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Nexuss Ai — Intelligent Workspace" />
+    <meta name="twitter:title" content="Nexuss Ai — Intelligent AI Workspace" />
     <meta name="twitter:description" content="Your all-in-one AI workspace for chat, code, and content." />
     <meta name="twitter:image" content="https://ai-tools-website-psi.vercel.app/icon-512.png" />
 
     <!-- Canonical URL -->
     <link rel="canonical" href="https://ai-tools-website-psi.vercel.app/" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Fast Resource Hints -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
+    <!-- Non-render-blocking font loading -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" />
+    </noscript>
 
+    <!-- Structured Data (JSON-LD) for Search Console & Rich Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Nexuss Ai",
+      "url": "https://ai-tools-website-psi.vercel.app/",
+      "description": "All-in-one AI workspace for chat, code generation, and content creation.",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
 
-    <title>Nexuss Ai | Intelligent Workspace</title>
-
-    <!-- Prevent flash of unstyled content on mobile -->
+    <!-- Prevent flash of unstyled content -->
     <style>
-      html, body, #root { height: 100%; background: #06080f; }
+      html, body, #root { height: 100%; background: #06080f; margin: 0; padding: 0; }
     </style>
 
-    <!-- Register PWA Service Worker Inline for PWA Builder Static Analyzer -->
+    <!-- Register PWA Service Worker Inline -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
@@ -69,20 +94,6 @@
           });
         });
       }
-    </script>
-    <script>
-      // Try to lock orientation to portrait on supported browsers (may require PWA install/secure context)
-      (function() {
-        try {
-          const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-          const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-          if (isMobile && isStandalone && screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('portrait').catch(() => {});
-          }
-        } catch (e) {
-          // ignore
-        }
-      })();
     </script>
   </head>
   <body>
