@@ -17,7 +17,7 @@
 
 /* ===== LIGHT MODE OVERRIDES ===== */
 .light-mode {
-  --bg-main: #e2e8f0;
+  --bg-main: #ffffff;
   --bg-sidebar: #f8fafc;
   --bg-hover: #dbe2ef;
   --bg-bubble-user: linear-gradient(135deg, #1d4ed8, #2563eb);
@@ -32,13 +32,30 @@
 
 /* ── Body & App Container ── */
 .light-mode {
-  background: #e2e8f0 !important;
+  background: #ffffff !important;
 }
 
 .light-mode .app-container {
-  background-color: #e2e8f0 !important;
-  background-image: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.08), transparent 60%),
-                    radial-gradient(circle at 100% 100%, rgba(147, 51, 234, 0.05), transparent 50%) !important;
+  background-color: #ffffff !important;
+  background-image:
+    /* Scattered small blue circles using radial-gradient dots */
+    radial-gradient(circle 28px at 5% 10%,  rgba(37, 99, 235, 0.07)  0%, transparent 100%),
+    radial-gradient(circle 18px at 15% 35%, rgba(59, 130, 246, 0.06) 0%, transparent 100%),
+    radial-gradient(circle 22px at 28% 65%, rgba(37, 99, 235, 0.05)  0%, transparent 100%),
+    radial-gradient(circle 14px at 8%  80%, rgba(96, 165, 250, 0.07) 0%, transparent 100%),
+    radial-gradient(circle 20px at 45% 12%, rgba(37, 99, 235, 0.06)  0%, transparent 100%),
+    radial-gradient(circle 30px at 60% 40%, rgba(59, 130, 246, 0.05) 0%, transparent 100%),
+    radial-gradient(circle 16px at 75% 18%, rgba(37, 99, 235, 0.07)  0%, transparent 100%),
+    radial-gradient(circle 24px at 88% 55%, rgba(96, 165, 250, 0.06) 0%, transparent 100%),
+    radial-gradient(circle 18px at 92% 28%, rgba(59, 130, 246, 0.05) 0%, transparent 100%),
+    radial-gradient(circle 26px at 70% 80%, rgba(37, 99, 235, 0.06)  0%, transparent 100%),
+    radial-gradient(circle 14px at 50% 90%, rgba(96, 165, 250, 0.07) 0%, transparent 100%),
+    radial-gradient(circle 20px at 35% 45%, rgba(59, 130, 246, 0.04) 0%, transparent 100%),
+    radial-gradient(circle 16px at 82% 92%, rgba(37, 99, 235, 0.05)  0%, transparent 100%),
+    radial-gradient(circle 12px at 22% 88%, rgba(96, 165, 250, 0.06) 0%, transparent 100%),
+    /* Larger soft ambient glows */
+    radial-gradient(circle at 50% 0%,   rgba(37, 99, 235, 0.06), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(147, 51, 234, 0.04), transparent 50%) !important;
 }
 
 /* ── Sidebar ── */
@@ -133,7 +150,7 @@
 
 /* ── Main Content Background ── */
 .light-mode .main-content {
-  background-color: #e2e8f0 !important;
+  background-color: transparent !important;
 }
 
 /* ── Chat Scroll Background ── */
