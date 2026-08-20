@@ -17,7 +17,7 @@
 
 /* ===== LIGHT MODE OVERRIDES ===== */
 .light-mode {
-  --bg-main: #ffffff;
+  --bg-main: #eef3ff;
   --bg-sidebar: #f8fafc;
   --bg-hover: #dbe2ef;
   --bg-bubble-user: linear-gradient(135deg, #1d4ed8, #2563eb);
@@ -32,57 +32,57 @@
 
 /* ── Body & App Container ── */
 .light-mode {
-  background: #ffffff !important;
+  background: #f0f5ff !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GLOBAL LIGHT MODE DOTS BACKGROUND — applies to EVERY page
-   light-mode class is on .app-container, so ::before works on it
+   WALLPAPER-STYLE DOT PATTERN — light mode background
+   Uses repeating radial-gradient tiling for even dot distribution
    ═══════════════════════════════════════════════════════════════ */
-
-/* The ::before covers the full app-container as a bg layer */
 .light-mode::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  background-color: #ffffff;
+
+  /* Base: soft blue-white gradient */
+  background-color: #eef3ff;
+
   background-image:
-    /* Row 1 — top strip */
-    radial-gradient(circle 50px at 5%   8%,  rgba(37, 99, 235, 0.18) 0%, transparent 70%),
-    radial-gradient(circle 35px at 18%  12%, rgba(59, 130, 246, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 45px at 35%  6%,  rgba(96, 165, 250, 0.16) 0%, transparent 70%),
-    radial-gradient(circle 30px at 55%  10%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 50px at 72%  5%,  rgba(59, 130, 246, 0.16) 0%, transparent 70%),
-    radial-gradient(circle 38px at 88%  9%,  rgba(96, 165, 250, 0.14) 0%, transparent 70%),
-    /* Row 2 */
-    radial-gradient(circle 40px at 10%  28%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 55px at 28%  32%, rgba(59, 130, 246, 0.12) 0%, transparent 70%),
-    radial-gradient(circle 35px at 48%  25%, rgba(96, 165, 250, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 48px at 65%  30%, rgba(37, 99, 235, 0.12) 0%, transparent 70%),
-    radial-gradient(circle 36px at 82%  26%, rgba(59, 130, 246, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 42px at 96%  30%, rgba(96, 165, 250, 0.13) 0%, transparent 70%),
-    /* Row 3 — middle */
-    radial-gradient(circle 45px at 3%   50%, rgba(37, 99, 235, 0.15) 0%, transparent 70%),
-    radial-gradient(circle 38px at 20%  48%, rgba(59, 130, 246, 0.12) 0%, transparent 70%),
-    radial-gradient(circle 52px at 40%  52%, rgba(96, 165, 250, 0.13) 0%, transparent 70%),
-    radial-gradient(circle 36px at 60%  47%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 48px at 78%  50%, rgba(59, 130, 246, 0.12) 0%, transparent 70%),
-    radial-gradient(circle 40px at 94%  52%, rgba(96, 165, 250, 0.14) 0%, transparent 70%),
-    /* Row 4 */
-    radial-gradient(circle 44px at 12%  70%, rgba(37, 99, 235, 0.13) 0%, transparent 70%),
-    radial-gradient(circle 34px at 30%  68%, rgba(59, 130, 246, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 50px at 50%  72%, rgba(96, 165, 250, 0.12) 0%, transparent 70%),
-    radial-gradient(circle 38px at 68%  69%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 45px at 85%  70%, rgba(59, 130, 246, 0.13) 0%, transparent 70%),
-    /* Row 5 — bottom strip */
-    radial-gradient(circle 40px at 8%   88%, rgba(96, 165, 250, 0.16) 0%, transparent 70%),
-    radial-gradient(circle 48px at 25%  92%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 35px at 45%  90%, rgba(59, 130, 246, 0.15) 0%, transparent 70%),
-    radial-gradient(circle 50px at 65%  94%, rgba(96, 165, 250, 0.14) 0%, transparent 70%),
-    radial-gradient(circle 40px at 82%  88%, rgba(37, 99, 235, 0.15) 0%, transparent 70%),
-    radial-gradient(circle 36px at 97%  92%, rgba(59, 130, 246, 0.14) 0%, transparent 70%);
+    /* ── Layer 1: Main repeating dot grid (blue, evenly tiled) ── */
+    radial-gradient(circle 5px at center, rgba(37, 99, 235, 0.30) 0%, transparent 100%),
+
+    /* ── Layer 2: Offset dot grid (indigo, half-step offset for richness) ── */
+    radial-gradient(circle 4px at center, rgba(99, 102, 241, 0.22) 0%, transparent 100%),
+
+    /* ── Layer 3: Small sky-blue accent dots (quarter offset) ── */
+    radial-gradient(circle 3px at center, rgba(56, 189, 248, 0.20) 0%, transparent 100%),
+
+    /* ── Large soft accent glows for depth ── */
+    radial-gradient(ellipse 55% 35% at 15%  20%, rgba(59,  130, 246, 0.10), transparent),
+    radial-gradient(ellipse 45% 40% at 80%  10%, rgba(99,  102, 241, 0.09), transparent),
+    radial-gradient(ellipse 40% 35% at 90%  70%, rgba(139, 92,  246, 0.08), transparent),
+    radial-gradient(ellipse 50% 30% at 10%  80%, rgba(56,  189, 248, 0.08), transparent),
+    radial-gradient(ellipse 35% 25% at 50%  50%, rgba(37,  99,  235, 0.06), transparent);
+
+  /* Tile each dot layer at different spacings for staggered wallpaper look */
+  background-size:
+    36px 36px,      /* Layer 1: main blue dots  */
+    36px 36px,      /* Layer 2: indigo dots (same grid, different position) */
+    36px 36px,      /* Layer 3: sky dots */
+    100% 100%,      /* Glow 1 */
+    100% 100%,      /* Glow 2 */
+    100% 100%,      /* Glow 3 */
+    100% 100%,      /* Glow 4 */
+    100% 100%;      /* Glow 5 */
+
+  /* Offset each dot layer so they don't overlap — staggered grid */
+  background-position:
+    0px 0px,        /* Layer 1: top-left origin */
+    18px 18px,      /* Layer 2: shifted half-step diagonally */
+    9px  9px,       /* Layer 3: shifted quarter-step */
+    0 0, 0 0, 0 0, 0 0, 0 0; /* Glows full-cover */
 }
 
 .light-mode .app-container {
@@ -90,6 +90,7 @@
   background-image: none !important;
   position: relative;
 }
+
 
 
 /* ── Sidebar ── */
