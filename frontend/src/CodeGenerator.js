@@ -104,7 +104,7 @@ function CodeGenerator() {
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        const timeoutMs = imageToBeSent ? 60000 : 6000;
+        const timeoutMs = imageToBeSent ? 60000 : 2000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
         clearTimeout(timer);

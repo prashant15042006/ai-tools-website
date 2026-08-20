@@ -295,8 +295,8 @@ function Chat() {
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        // Fast 6s timeout when online, 60s for images
-        const timeoutMs = imageToBeSent ? 60000 : 6000;
+        // Fast 2s timeout when online, 60s for images
+        const timeoutMs = imageToBeSent ? 60000 : 2000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, {
           method: "POST",

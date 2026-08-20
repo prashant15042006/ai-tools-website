@@ -213,14 +213,16 @@ const PwaInstallBanner = () => {
     if (isMobile) setIsMobileSidebarOpen(false);
   };
 
-  const checkConnectionHealth = async () => {
+  const checkConnectionHealth = async (isInitial = false) => {
     if (!navigator.onLine) {
       setConnectionState('offline');
       return;
     }
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 2200);
+    // Give Render up to 50 seconds to wake up initially; use 2.2s for periodic heartbeats
+    const timeoutMs = isInitial ? 50000 : 2200;
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
     const start = performance.now();
 
     try {
@@ -241,18 +243,23 @@ const PwaInstallBanner = () => {
         setConnectionState('online');
       }
     } catch (err) {
-      setConnectionState('offline');
+      if (navigator.onLine) {
+        // Device is online, but Render backend is asleep/connecting
+        setConnectionState('slow');
+      } else {
+        setConnectionState('offline');
+      }
     } finally {
       window.clearTimeout(timeoutId);
     }
   };
 
   useEffect(() => {
-    checkConnectionHealth();
-    const interval = window.setInterval(checkConnectionHealth, 15000);
+    checkConnectionHealth(true);
+    const interval = window.setInterval(() => checkConnectionHealth(false), 15000);
 
     const handleOnline = () => {
-      checkConnectionHealth();
+      checkConnectionHealth(true);
     };
     const handleOffline = () => setConnectionState('offline');
 
@@ -393,7 +400,7 @@ const PwaInstallBanner = () => {
             <div className="network-status-chip" data-status={connectionState} aria-live="polite" aria-label={`Internet status ${connectionState}`}>
               <span className="network-status-dot" />
               <span>
-                {user?.displayName || 'Nexuss'} {connectionState === 'online' ? 'Online' : connectionState === 'slow' ? 'Slow' : 'Offline'}
+                {user?.displayName || 'Nexuss'} {connectionState === 'online' ? 'Online' : connectionState === 'slow' ? 'Connecting...' : 'Offline'}
               </span>
             </div>
             <div className="search-box">
