@@ -32,12 +32,15 @@
 
 /* ── Body & App Container ── */
 .light-mode {
-  background: #f0f5ff !important;
+  background: #ffffff !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   WALLPAPER-STYLE DOT PATTERN — light mode background
-   Uses repeating radial-gradient tiling for even dot distribution
+   ORGANIC SCATTERED BLUE DOTS — LIGHT MODE WALLPAPER
+   - Pure white background (#ffffff)
+   - Spaced out dots (door door)
+   - Mixed sizes (bada & chhota mix)
+   - Non-sequence organic layout
    ═══════════════════════════════════════════════════════════════ */
 .light-mode::before {
   content: '';
@@ -46,43 +49,37 @@
   pointer-events: none;
   z-index: -1;
 
-  /* Base: soft blue-white gradient */
-  background-color: #eef3ff;
+  /* Base: Pure White */
+  background-color: #ffffff;
 
   background-image:
-    /* ── Layer 1: Main repeating dot grid (blue, evenly tiled) ── */
-    radial-gradient(circle 5px at center, rgba(37, 99, 235, 0.30) 0%, transparent 100%),
+    /* Bada Blue Dots (18px - 24px) - Spaced out */
+    radial-gradient(circle 12px at 8%   12%, rgba(37,  99, 235, 0.20) 0%, transparent 100%),
+    radial-gradient(circle 14px at 82%  15%, rgba(29,  78, 216, 0.18) 0%, transparent 100%),
+    radial-gradient(circle 10px at 25%  45%, rgba(59, 130, 246, 0.18) 0%, transparent 100%),
+    radial-gradient(circle 13px at 75%  65%, rgba(37,  99, 235, 0.22) 0%, transparent 100%),
+    radial-gradient(circle 11px at 15%  85%, rgba(29,  78, 216, 0.20) 0%, transparent 100%),
+    radial-gradient(circle 12px at 90%  88%, rgba(59, 130, 246, 0.18) 0%, transparent 100%),
 
-    /* ── Layer 2: Offset dot grid (indigo, half-step offset for richness) ── */
-    radial-gradient(circle 4px at center, rgba(99, 102, 241, 0.22) 0%, transparent 100%),
+    /* Medium Sky & Indigo Dots (10px - 14px) - Organic placement */
+    radial-gradient(circle 7px at 38%  18%, rgba(99, 102, 241, 0.22) 0%, transparent 100%),
+    radial-gradient(circle 6px at 60%  28%, rgba(56, 189, 248, 0.25) 0%, transparent 100%),
+    radial-gradient(circle 7px at 92%  42%, rgba(37,  99, 235, 0.20) 0%, transparent 100%),
+    radial-gradient(circle 6px at 45%  78%, rgba(99, 102, 241, 0.22) 0%, transparent 100%),
+    radial-gradient(circle 7px at 62%  92%, rgba(56, 189, 248, 0.24) 0%, transparent 100%),
 
-    /* ── Layer 3: Small sky-blue accent dots (quarter offset) ── */
-    radial-gradient(circle 3px at center, rgba(56, 189, 248, 0.20) 0%, transparent 100%),
+    /* Chhote Accent Dots (4px - 8px) - Scattered around */
+    radial-gradient(circle 4px at 18%  30%, rgba(37,  99, 235, 0.25) 0%, transparent 100%),
+    radial-gradient(circle 3px at 50%  10%, rgba(29,  78, 216, 0.22) 0%, transparent 100%),
+    radial-gradient(circle 4px at 70%  10%, rgba(56, 189, 248, 0.28) 0%, transparent 100%),
+    radial-gradient(circle 3px at 32%  62%, rgba(99, 102, 241, 0.25) 0%, transparent 100%),
+    radial-gradient(circle 4px at 85%  48%, rgba(37,  99, 235, 0.22) 0%, transparent 100%),
+    radial-gradient(circle 3px at 5%   60%, rgba(56, 189, 248, 0.25) 0%, transparent 100%),
+    radial-gradient(circle 4px at 35%  92%, rgba(29,  78, 216, 0.22) 0%, transparent 100%),
 
-    /* ── Large soft accent glows for depth ── */
-    radial-gradient(ellipse 55% 35% at 15%  20%, rgba(59,  130, 246, 0.10), transparent),
-    radial-gradient(ellipse 45% 40% at 80%  10%, rgba(99,  102, 241, 0.09), transparent),
-    radial-gradient(ellipse 40% 35% at 90%  70%, rgba(139, 92,  246, 0.08), transparent),
-    radial-gradient(ellipse 50% 30% at 10%  80%, rgba(56,  189, 248, 0.08), transparent),
-    radial-gradient(ellipse 35% 25% at 50%  50%, rgba(37,  99,  235, 0.06), transparent);
-
-  /* Tile each dot layer at different spacings for staggered wallpaper look */
-  background-size:
-    36px 36px,      /* Layer 1: main blue dots  */
-    36px 36px,      /* Layer 2: indigo dots (same grid, different position) */
-    36px 36px,      /* Layer 3: sky dots */
-    100% 100%,      /* Glow 1 */
-    100% 100%,      /* Glow 2 */
-    100% 100%,      /* Glow 3 */
-    100% 100%,      /* Glow 4 */
-    100% 100%;      /* Glow 5 */
-
-  /* Offset each dot layer so they don't overlap — staggered grid */
-  background-position:
-    0px 0px,        /* Layer 1: top-left origin */
-    18px 18px,      /* Layer 2: shifted half-step diagonally */
-    9px  9px,       /* Layer 3: shifted quarter-step */
-    0 0, 0 0, 0 0, 0 0, 0 0; /* Glows full-cover */
+    /* Soft ambient blue glow in corners for high-end aesthetic */
+    radial-gradient(circle 250px at 0%   0%,   rgba(59, 130, 246, 0.04), transparent 100%),
+    radial-gradient(circle 300px at 100% 100%, rgba(37, 99, 235,  0.05), transparent 100%);
 }
 
 .light-mode .app-container {
@@ -90,6 +87,7 @@
   background-image: none !important;
   position: relative;
 }
+
 
 
 
