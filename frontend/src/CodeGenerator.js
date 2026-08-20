@@ -15,7 +15,7 @@ import { addBlockToLedger, cacheResponseForOffline } from "./utils/blockchainLed
 injectTableStyles();
 
 function CodeGenerator() {
-  const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user, connectionState, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
@@ -76,10 +76,14 @@ function CodeGenerator() {
     };
     const endpoints = [];
     if (IS_PROD) {
-      if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/chat`);
+      if (API_BASE_URL && connectionState === 'online') {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
       endpoints.push("/api/chat");
     } else {
-      if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/chat`);
+      if (API_BASE_URL) {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
     }
 
     // ── Instant Offline Check ──
@@ -104,7 +108,7 @@ function CodeGenerator() {
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        const timeoutMs = imageToBeSent ? 60000 : 2000;
+        const timeoutMs = imageToBeSent ? 60000 : 6000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
         clearTimeout(timer);

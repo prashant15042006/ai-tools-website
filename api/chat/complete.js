@@ -139,6 +139,39 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   throw new Error(`OpenRouter all models failed: ${lastErr}`);
 }
 
+// ──────────────────────────────────────────────
+// Pollinations AI — keyless fallback
+// ──────────────────────────────────────────────
+async function callPollinationsFallback(messages) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const resp = await fetch("https://text.pollinations.ai/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai-large",
+        messages,
+        stream: false,
+        seed: Math.floor(Math.random() * 99999),
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) throw new Error(`Pollinations HTTP ${resp.status}`);
+    const text = await resp.text();
+    if (!text?.trim()) throw new Error("Pollinations returned empty response");
+    console.log("✅ [FALLBACK] Pollinations replied. Length:", text.trim().length);
+    return text.trim()
+      .replace(/^\s*(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety|Safe|Safety)\s*:\s*\S+.*$/gim, "")
+      .replace(/^\s*[\r\n]/gm, "")
+      .trim();
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
 function fallbackReply(message) {
   return `Mujhe abhi AI providers se connect karne mein problem aa rahi hai, lekin main yahan hoon! Aapne kaha: "${message}". Thodi der baad try karein ya admin se contact karein.`;
 }
@@ -187,8 +220,20 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // Gemini disabled by user
-
+  // 3. Try Pollinations AI — keyless fallback
+  if (!reply) {
+    try {
+      const msgs = [
+        { role: "system", content: SYSTEM_PROMPT(userName) },
+        ...(Array.isArray(history) ? history : []),
+        { role: "user", content: message },
+      ];
+      reply = await callPollinationsFallback(msgs);
+      usedProvider = "Pollinations";
+    } catch (e) {
+      console.warn("Pollinations fallback failed:", e.message);
+    }
+  }
 
   // 4. Static fallback — always respond
   if (!reply) {

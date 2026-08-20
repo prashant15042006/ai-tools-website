@@ -168,7 +168,7 @@ const PwaInstallBanner = () => {
   function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user } = useContext(AppContext);
+  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, connectionState, setConnectionState } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
   const isSidebarOpen = !sidebarCollapsed;
@@ -177,7 +177,6 @@ const PwaInstallBanner = () => {
   const [chatKey, setChatKey] = useState(0);
   const isMobile = useIsMobile();
   
-  const [connectionState, setConnectionState] = useState('online'); // 'online' | 'slow' | 'offline'
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
@@ -271,6 +270,7 @@ const PwaInstallBanner = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Remove redundant loading check inside AppContent as it is already handled in App
@@ -462,6 +462,7 @@ function App() {
     return saved !== null ? saved === "dark" : true; // Defaults to Dark mode
   });
   const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [connectionState, setConnectionState] = useState('online');
   const [voicePreset, setVoicePreset] = useState(() => {
     const saved = localStorage.getItem('tts_voice');
     return saved === 'ironman_hi' ? 'ironman_hi' : 'ironman_en';
@@ -589,7 +590,7 @@ function App() {
   }
 
   return (
-    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, setUser, loading, setLoading, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
+    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, setUser, loading, setLoading, connectionState, setConnectionState, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
       <Router>
         <Suspense fallback={<SuspenseFallback />}>
           <Routes>

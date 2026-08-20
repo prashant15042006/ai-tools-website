@@ -45,7 +45,7 @@ function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const imageInputRef = useRef(null);
-  const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user, connectionState, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
@@ -258,8 +258,8 @@ function Chat() {
     // ── Dual-endpoint fallback ──
     const endpoints = [];
     if (IS_PROD) {
-      // 1st try: Render backend (API_BASE_URL)
-      if (API_BASE_URL) {
+      // 1st try: Render backend (API_BASE_URL) - only if it is actually ONLINE
+      if (API_BASE_URL && connectionState === 'online') {
         endpoints.push(`${API_BASE_URL}/api/chat`);
       }
       // 2nd try: Vercel same-origin /api/chat (always available)
@@ -295,8 +295,8 @@ function Chat() {
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        // Fast 2s timeout when online, 60s for images
-        const timeoutMs = imageToBeSent ? 60000 : 2000;
+        // Fast 6s timeout when online, 60s for images
+        const timeoutMs = imageToBeSent ? 60000 : 6000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, {
           method: "POST",
