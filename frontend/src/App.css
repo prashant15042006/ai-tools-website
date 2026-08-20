@@ -37,73 +37,60 @@
 
 /* ═══════════════════════════════════════════════════════════════
    GLOBAL LIGHT MODE DOTS BACKGROUND — applies to EVERY page
-   Uses a fixed ::before layer on body so it shows everywhere
+   light-mode class is on .app-container, so ::before works on it
    ═══════════════════════════════════════════════════════════════ */
 
-/* Make body a stacking context */
-.light-mode body,
-body.light-mode {
-  position: relative;
-}
-
-/* Fixed dot layer — covers full viewport on ALL pages */
+/* The ::before covers the full app-container as a bg layer */
 .light-mode::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   background-color: #ffffff;
   background-image:
-    /* Top-left cluster */
-    radial-gradient(circle 26px at 3%  8%,  rgba(37, 99, 235, 0.09) 0%, transparent 100%),
-    radial-gradient(circle 14px at 10% 22%, rgba(59, 130, 246, 0.07) 0%, transparent 100%),
-    radial-gradient(circle 18px at 6%  45%, rgba(96, 165, 250, 0.08) 0%, transparent 100%),
-    radial-gradient(circle 10px at 16% 60%, rgba(37, 99, 235, 0.06) 0%, transparent 100%),
-    radial-gradient(circle 22px at 2%  75%, rgba(59, 130, 246, 0.07) 0%, transparent 100%),
-    radial-gradient(circle 12px at 12% 88%, rgba(96, 165, 250, 0.08) 0%, transparent 100%),
-    /* Top-center cluster */
-    radial-gradient(circle 16px at 32% 5%,  rgba(37, 99, 235, 0.07) 0%, transparent 100%),
-    radial-gradient(circle 24px at 48% 14%, rgba(59, 130, 246, 0.06) 0%, transparent 100%),
-    radial-gradient(circle 12px at 55% 3%,  rgba(96, 165, 250, 0.07) 0%, transparent 100%),
-    /* Center cluster */
-    radial-gradient(circle 20px at 38% 38%, rgba(37, 99, 235, 0.05) 0%, transparent 100%),
-    radial-gradient(circle 14px at 52% 55%, rgba(59, 130, 246, 0.06) 0%, transparent 100%),
-    radial-gradient(circle 28px at 42% 70%, rgba(96, 165, 250, 0.05) 0%, transparent 100%),
-    radial-gradient(circle 10px at 60% 82%, rgba(37, 99, 235, 0.06) 0%, transparent 100%),
-    /* Top-right cluster */
-    radial-gradient(circle 18px at 72% 7%,  rgba(59, 130, 246, 0.08) 0%, transparent 100%),
-    radial-gradient(circle 14px at 82% 18%, rgba(37, 99, 235, 0.07) 0%, transparent 100%),
-    radial-gradient(circle 24px at 90% 5%,  rgba(96, 165, 250, 0.06) 0%, transparent 100%),
-    /* Right cluster */
-    radial-gradient(circle 16px at 96% 32%, rgba(37, 99, 235, 0.08) 0%, transparent 100%),
-    radial-gradient(circle 22px at 88% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 100%),
-    radial-gradient(circle 12px at 94% 62%, rgba(96, 165, 250, 0.07) 0%, transparent 100%),
-    radial-gradient(circle 18px at 85% 78%, rgba(37, 99, 235, 0.06) 0%, transparent 100%),
-    radial-gradient(circle 26px at 92% 90%, rgba(59, 130, 246, 0.07) 0%, transparent 100%),
-    /* Bottom cluster */
-    radial-gradient(circle 14px at 28% 92%, rgba(96, 165, 250, 0.08) 0%, transparent 100%),
-    radial-gradient(circle 20px at 48% 96%, rgba(37, 99, 235, 0.06) 0%, transparent 100%),
-    radial-gradient(circle 16px at 68% 94%, rgba(59, 130, 246, 0.07) 0%, transparent 100%),
-    /* Soft ambient glows */
-    radial-gradient(ellipse 60% 40% at 50% 0%,   rgba(37, 99, 235, 0.05), transparent),
-    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(147, 51, 234, 0.04), transparent),
-    radial-gradient(ellipse 40% 30% at 0% 100%,   rgba(59, 130, 246, 0.04), transparent);
-}
-
-/* Ensure all page content sits ABOVE the dot layer */
-.light-mode .app-container,
-.light-mode .main-content,
-.light-mode .sidebar,
-.light-mode .top-bar {
-  position: relative;
-  z-index: 1;
+    /* Row 1 — top strip */
+    radial-gradient(circle 50px at 5%   8%,  rgba(37, 99, 235, 0.18) 0%, transparent 70%),
+    radial-gradient(circle 35px at 18%  12%, rgba(59, 130, 246, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 45px at 35%  6%,  rgba(96, 165, 250, 0.16) 0%, transparent 70%),
+    radial-gradient(circle 30px at 55%  10%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 50px at 72%  5%,  rgba(59, 130, 246, 0.16) 0%, transparent 70%),
+    radial-gradient(circle 38px at 88%  9%,  rgba(96, 165, 250, 0.14) 0%, transparent 70%),
+    /* Row 2 */
+    radial-gradient(circle 40px at 10%  28%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 55px at 28%  32%, rgba(59, 130, 246, 0.12) 0%, transparent 70%),
+    radial-gradient(circle 35px at 48%  25%, rgba(96, 165, 250, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 48px at 65%  30%, rgba(37, 99, 235, 0.12) 0%, transparent 70%),
+    radial-gradient(circle 36px at 82%  26%, rgba(59, 130, 246, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 42px at 96%  30%, rgba(96, 165, 250, 0.13) 0%, transparent 70%),
+    /* Row 3 — middle */
+    radial-gradient(circle 45px at 3%   50%, rgba(37, 99, 235, 0.15) 0%, transparent 70%),
+    radial-gradient(circle 38px at 20%  48%, rgba(59, 130, 246, 0.12) 0%, transparent 70%),
+    radial-gradient(circle 52px at 40%  52%, rgba(96, 165, 250, 0.13) 0%, transparent 70%),
+    radial-gradient(circle 36px at 60%  47%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 48px at 78%  50%, rgba(59, 130, 246, 0.12) 0%, transparent 70%),
+    radial-gradient(circle 40px at 94%  52%, rgba(96, 165, 250, 0.14) 0%, transparent 70%),
+    /* Row 4 */
+    radial-gradient(circle 44px at 12%  70%, rgba(37, 99, 235, 0.13) 0%, transparent 70%),
+    radial-gradient(circle 34px at 30%  68%, rgba(59, 130, 246, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 50px at 50%  72%, rgba(96, 165, 250, 0.12) 0%, transparent 70%),
+    radial-gradient(circle 38px at 68%  69%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 45px at 85%  70%, rgba(59, 130, 246, 0.13) 0%, transparent 70%),
+    /* Row 5 — bottom strip */
+    radial-gradient(circle 40px at 8%   88%, rgba(96, 165, 250, 0.16) 0%, transparent 70%),
+    radial-gradient(circle 48px at 25%  92%, rgba(37, 99, 235, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 35px at 45%  90%, rgba(59, 130, 246, 0.15) 0%, transparent 70%),
+    radial-gradient(circle 50px at 65%  94%, rgba(96, 165, 250, 0.14) 0%, transparent 70%),
+    radial-gradient(circle 40px at 82%  88%, rgba(37, 99, 235, 0.15) 0%, transparent 70%),
+    radial-gradient(circle 36px at 97%  92%, rgba(59, 130, 246, 0.14) 0%, transparent 70%);
 }
 
 .light-mode .app-container {
   background-color: transparent !important;
   background-image: none !important;
+  position: relative;
 }
+
 
 /* ── Sidebar ── */
 .light-mode .sidebar {
