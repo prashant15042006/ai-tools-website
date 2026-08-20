@@ -113,37 +113,37 @@ const Dashboard = () => {
         
         {/* ── Hero Banner ── */}
         <div className="dashboard-hero">
-          {/* Ambient glow spheres for glossy glassmorphic depth */}
+          {/* Ambient glowing spheres for glossy glassmorphic depth */}
           <div style={{
             position: 'absolute',
-            top: '-40%',
-            right: '-10%',
-            width: '600px',
-            height: '600px',
-            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.28) 0%, transparent 70%)',
-            filter: 'blur(70px)',
+            top: '-35%',
+            right: '-5%',
+            width: '550px',
+            height: '550px',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(99, 102, 241, 0.2) 40%, transparent 70%)',
+            filter: 'blur(60px)',
             zIndex: 1,
             pointerEvents: 'none'
           }}></div>
           <div style={{
             position: 'absolute',
-            bottom: '-20%',
-            left: '-10%',
+            bottom: '-25%',
+            left: '-5%',
             width: '450px',
             height: '450px',
-            background: 'radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, transparent 70%)',
-            filter: 'blur(60px)',
+            background: 'radial-gradient(circle, rgba(168, 85, 247, 0.30) 0%, rgba(236, 72, 153, 0.15) 50%, transparent 75%)',
+            filter: 'blur(55px)',
             zIndex: 1,
             pointerEvents: 'none'
           }}></div>
           <div style={{
             position: 'absolute',
-            top: '15%',
-            right: '25%',
-            width: '400px',
-            height: '400px',
-            background: 'radial-gradient(circle, rgba(236, 72, 153, 0.18) 0%, transparent 70%)',
-            filter: 'blur(60px)',
+            top: '20%',
+            right: '30%',
+            width: '350px',
+            height: '350px',
+            background: 'radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, transparent 70%)',
+            filter: 'blur(50px)',
             zIndex: 1,
             pointerEvents: 'none'
           }}></div>
@@ -153,7 +153,7 @@ const Dashboard = () => {
               <Sparkles size={14} className="sparkle-icon" />
               <span>v2.0 Intelligent Workspace</span>
             </div>
-            <h1>Welcome, {localStorage.getItem("nexus_user_name") || "User"}!</h1>
+            <h1 className="welcome-heading">Welcome, {localStorage.getItem("nexus_user_name") || "User"}!</h1>
             <p>Your all-in-one creative companion for code, content, and conversation.</p>
           </div>
         </div>
