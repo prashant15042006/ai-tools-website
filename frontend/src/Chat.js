@@ -370,7 +370,53 @@ function Chat() {
       await handleSpeak(aiReply);
 
     } catch (error) {
-      console.warn("API request failed, triggering Nexuss Offline AI Engine:", error.message);
+      console.warn("API request failed — trying client-side Pollinations before offline engine:", error.message);
+
+      // ── Client-side Pollinations fallback (keyless, direct browser call) ──
+      try {
+        const pController = new AbortController();
+        const pTimer = setTimeout(() => pController.abort(), 15000);
+        const pollinationsMsgs = [
+          {
+            role: "system",
+            content: `You are Nexuss AI, an intelligent AI companion for ${displayName}. Be warm, friendly, and helpful. Respond naturally in Hinglish (mix of Hindi and English). Address the user as ${displayName}. Keep responses concise and relevant to what the user asked.`
+          },
+          ...history.slice(-6),
+          { role: "user", content: text }
+        ];
+        const pRes = await fetch("https://text.pollinations.ai/openai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "openai-large",
+            messages: pollinationsMsgs,
+            seed: Math.floor(Math.random() * 99999),
+          }),
+          signal: pController.signal,
+        });
+        clearTimeout(pTimer);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          const pReply = pData.choices?.[0]?.message?.content;
+          if (pReply?.trim()) {
+            const cleanReply = cleanFrontendResponse(
+              pReply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim()
+            );
+            cacheResponseForOffline(text, cleanReply);
+            const block = await addBlockToLedger(text, cleanReply, false);
+            setMessages((prev) =>
+              prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply, blockchainBlock: block } : msg)
+            );
+            setLoading(false);
+            await handleSpeak(cleanReply);
+            return;
+          }
+        }
+      } catch (pErr) {
+        console.warn("Client-side Pollinations also failed:", pErr.message);
+      }
+
+      // ── Final fallback: Nexuss Offline AI Engine ──
       const offlineReply = generateOfflineResponse(text, "chat");
       const block = await addBlockToLedger(text, offlineReply, true);
 

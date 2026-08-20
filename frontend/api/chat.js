@@ -290,11 +290,6 @@ module.exports = async function handler(req, res) {
   const { message, userName = "User", history = [], image } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
 
-  // Set SSE headers
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-
   let reply = null;
   let usedProvider = "";
 
@@ -329,7 +324,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 4. Try Pollinations AI (keyless)
+  // 4. Try Pollinations AI (keyless - no API key needed)
   if (!reply) {
     try {
       const msgs = [
@@ -344,12 +339,17 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 5. Intelligent friendly fallback
+  // 5. All providers failed — return 503 so the client can fall through to next endpoint
   if (!reply) {
-    reply = `Hello ${userName}! Main abhi available hoon. Aap mujhse koi bhi sawal pooch sakte hain ya coding/content generation me madad le sakte hain!`;
-    usedProvider = "fallback";
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "All AI providers are currently unavailable. Please try again." }));
+    return;
   }
 
+  // ── Send successful SSE response ──────────────────────────────────────────
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
   console.log(`✅ /api/chat responded via ${usedProvider}`);
   sseWrite(res, { content: cleanAIResponse(reply) });
   res.write("data: [DONE]\n\n");
