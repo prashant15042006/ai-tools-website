@@ -21,14 +21,14 @@ function jsHashFallback(str) {
 // SHA-256 Hash calculation with automatic fallback
 async function calculateSHA256(message) {
   try {
-    if (window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === "function") {
+    if (typeof window !== "undefined" && window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === "function") {
       const msgUint8 = new TextEncoder().encode(message);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
+      const hashBuffer = await window.crypto.subtle.digest("SHA-256", msgUint8);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     }
   } catch (e) {
-    // Fallback if crypto.subtle throws
+    // Fallback if window.crypto.subtle throws
   }
   return jsHashFallback(message);
 }

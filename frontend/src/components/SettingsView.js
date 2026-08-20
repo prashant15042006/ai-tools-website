@@ -1,14 +1,22 @@
 // components/SettingsView.js
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { User, Settings, Shield } from "lucide-react";
 import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
 import { AppContext } from "../App";
 import Toggle from "./Toggle";
+import { getBlockchain, verifyBlockchainIntegrity } from "../utils/blockchainLedger";
 
 const SettingsView = () => {
   const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user, voicePreset, setVoicePreset } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split("@")[0] : "User");
+  const [chainStatus, setChainStatus] = useState({ isValid: true, count: 1 });
+
+  useEffect(() => {
+    verifyBlockchainIntegrity().then((status) => {
+      if (status) setChainStatus(status);
+    });
+  }, []);
 
   const handleTestVoice = (preset) => {
     import("../utils/voiceEngine").then(({ testVoice }) => testVoice(preset));
@@ -112,8 +120,19 @@ const SettingsView = () => {
                 <div style={{ fontWeight: "700", fontSize: "15px", color: "var(--text-primary)" }}>Cryptographic SHA-256 Blockchain Ledger</div>
                 <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>Every AI response is hashed into an immutable block chain.</div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(16, 185, 129, 0.12)", color: "#059669", padding: "6px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: "700", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
-                <span>✓ Chain Valid & Intact</span>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                background: chainStatus.isValid ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                color: chainStatus.isValid ? "#059669" : "#ef4444",
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: "700",
+                border: chainStatus.isValid ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(239, 68, 68, 0.3)"
+              }}>
+                <span>{chainStatus.isValid ? "✓ Chain Valid & Intact" : "⚠ Integrity Tampered"}</span>
               </div>
             </div>
 
@@ -121,12 +140,7 @@ const SettingsView = () => {
               <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid var(--border-color)", padding: "12px 16px", borderRadius: "12px" }}>
                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--text-secondary)", fontWeight: "700" }}>Total Blocks</div>
                 <div style={{ fontSize: "22px", fontWeight: "800", color: "#3b82f6", marginTop: "4px" }}>
-                  {(() => {
-                    try {
-                      const chain = JSON.parse(localStorage.getItem("nexus_blockchain_ledger") || "[]");
-                      return chain.length || 1;
-                    } catch { return 1; }
-                  })()} Blocks
+                  {chainStatus.count || getBlockchain().length} Blocks
                 </div>
               </div>
 
