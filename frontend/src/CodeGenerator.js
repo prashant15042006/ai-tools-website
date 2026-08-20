@@ -76,14 +76,15 @@ function CodeGenerator() {
     };
     const endpoints = [];
     if (IS_PROD) {
+      endpoints.push("/api/chat");
       if (API_BASE_URL && connectionState === 'online') {
         endpoints.push(`${API_BASE_URL}/api/chat`);
       }
-      endpoints.push("/api/chat");
     } else {
       if (API_BASE_URL) {
         endpoints.push(`${API_BASE_URL}/api/chat`);
       }
+      endpoints.push("/api/chat");
     }
 
     // ── Instant Offline Check ──

@@ -1,7 +1,7 @@
 // ================================================================
 // Vercel Serverless Function: /api/chat
 // Handles AI chat with full provider fallback chain:
-//   Gemini → OpenRouter (ZAI) → Cerebras → static fallback
+//   Groq (ultra-fast <500ms) → OpenRouter (fast free models) → Cerebras → Pollinations → static
 // ================================================================
 
 const SYSTEM_PROMPT = (userName = "User") =>
@@ -27,7 +27,6 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
   return prompt;
 };
 
-
 const isValidKey = (val) =>
   val &&
   val.trim() !== "" &&
@@ -35,10 +34,13 @@ const isValidKey = (val) =>
   !val.includes("example.com") &&
   !val.includes("example");
 
-// Strip unwanted safety labels injected by some AI models
+// Strip unwanted safety labels and reasoning think tags
 const cleanAIResponse = (text) => {
   if (!text) return text;
   return text
+    // Remove reasoning tags
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<think>[\s\S]*/gi, "")
     // Remove full lines that are just safety labels
     .replace(/^\s*(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety|Safe|Safety)\s*:\s*\S+.*$/gim, "")
     // Remove JSON-style safety fields
@@ -48,119 +50,89 @@ const cleanAIResponse = (text) => {
     .trim();
 };
 
-// Helper to pre-process uploaded images using EMBEDDING_API_KEY with OpenRouter vision models
-async function describeImageWithEmbeddingKey(image, userPrompt = "Analyze this image and describe what is visible in detail.") {
-  // Gemini API disabled by user
+// ── 1. Groq Provider (Ultra-Fast < 500ms) ──────────────────────────────────
+const GROQ_MODELS = [
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "groq/compound-mini",
+  "qwen/qwen3.6-27b",
+];
 
+async function callGroq(message, userName, history = []) {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!isValidKey(groqKey)) throw new Error("GROQ_API_KEY not configured");
 
-  // 2. OpenRouter vision models using EMBEDDING_API_KEY or ZAI_API_KEY
-  const embeddingKey = process.env.EMBEDDING_API_KEY || process.env.ZAI_API_KEY;
-  if (!isValidKey(embeddingKey)) {
-    console.warn("No EMBEDDING_API_KEY or ZAI_API_KEY found, cannot describe image.");
-    return "";
-  }
-
-  // Vision models to try in sequence
-  const visionModels = [
-    "google/gemini-2.5-flash",
-    "openai/gpt-4o-mini",
+  const messages = [
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+    ...(Array.isArray(history) ? history : []),
+    { role: "user", content: message },
   ];
 
-  let lastError = null;
-
-  for (const model of visionModels) {
+  let lastErr = "Unknown error";
+  for (const model of GROQ_MODELS) {
     try {
-      console.log(`🖼️ [IMAGE PRE-PROCESS VERCEL] Attempting description using OpenRouter model: ${model}`);
-      
-      const payload = {
-        model: model,
-        messages: [
-          {
-            role: "system",
-            content: "You are a vision-language assistant. Analyze the image carefully. Provide a highly detailed description of what is in the image, including any text, tables, charts, or visual elements. Keep the description clear, structured, and informative."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userPrompt || "Describe this image in detail." },
-              { type: "image_url", image_url: { url: image } }
-            ]
-          }
-        ],
-        max_tokens: 1024,
-      };
-
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${embeddingKey}`,
+          Authorization: `Bearer ${groqKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://nexuss-ai.io",
-          "X-Title": "Nexuss Workspace",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 2048,
+        }),
+        signal: controller.signal,
       });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error(`❌ [IMAGE PRE-PROCESS VERCEL] OpenRouter Model ${model} failed:`, errText);
-        lastError = errText;
+      clearTimeout(timer);
+      const data = await res.json();
+      if (!res.ok) {
+        lastErr = data.error?.message || `${res.status}`;
         continue;
       }
-
-      const data = await response.json();
-      const description = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
-      if (description) {
-        console.log(`✅ [IMAGE PRE-PROCESS VERCEL] Image described successfully using OpenRouter model ${model}. Length: ${description.length}`);
-        return description;
-      }
-    } catch (err) {
-      console.error(`❌ [IMAGE PRE-PROCESS VERCEL] Exception with OpenRouter ${model}:`, err.message);
-      lastError = err.message;
+      const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+      if (!text?.trim()) { lastErr = "Empty response"; continue; }
+      return cleanAIResponse(text);
+    } catch (e) {
+      lastErr = e.message;
     }
   }
-
-  throw new Error(`All vision models failed to describe image: ${lastError || "Unknown error"}`);
+  throw new Error(`Groq all models failed: ${lastErr}`);
 }
 
-// callGemini removed — Gemini API disabled by user
-
-
-// Vision models for image requests
+// ── 2. OpenRouter Provider ──────────────────────────────────────────────────
 const OPENROUTER_VISION_MODELS = [
-  "meta-llama/llama-4-maverick",
-  "meta-llama/llama-4-scout",
-  "google/gemma-3-27b-it",
-  "meta-llama/llama-3.1-8b-instruct",
+  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "google/gemini-2.5-flash",
+  "openai/gpt-4o-mini",
 ];
 
-// Text models — all verified working FREE models (tested live)
 const OPENROUTER_TEXT_MODELS = [
-  "meta-llama/llama-3.3-70b-instruct",
-  "meta-llama/llama-4-maverick",
-  "meta-llama/llama-4-scout",
-  "deepseek/deepseek-chat-v3-0324",
-  "google/gemma-3-27b-it",
-  "qwen/qwen3-8b",
-  "meta-llama/llama-3.1-8b-instruct",
+  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "nvidia/nemotron-3-nano-30b-a3b:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "openai/gpt-oss-20b:free",
+  "openrouter/free",
 ];
 
-// ===============================
-// 🔑 OpenRouter Key Pool (Load Distribution)
-// Returns all available OpenRouter API keys for round-robin load balancing.
-// ===============================
 const getOpenRouterKeyPool = () => {
   const keys = [];
+  if (isValidKey(process.env.OPENROUTER_KEY_NEMOTRON))
+    keys.push({ name: "NEMOTRON", key: process.env.OPENROUTER_KEY_NEMOTRON });
+  if (isValidKey(process.env.OPENROUTER_KEY_GEMMA))
+    keys.push({ name: "GEMMA", key: process.env.OPENROUTER_KEY_GEMMA });
+  if (isValidKey(process.env.OPENROUTER_KEY_EMBED))
+    keys.push({ name: "EMBED", key: process.env.OPENROUTER_KEY_EMBED });
   if (isValidKey(process.env.ZAI_API_KEY))
     keys.push({ name: "ZAI", key: process.env.ZAI_API_KEY });
   if (isValidKey(process.env.EMBEDDING_API_KEY))
     keys.push({ name: "EMBEDDING", key: process.env.EMBEDDING_API_KEY });
-  if (isValidKey(process.env.LLAMA_NEMOTRON_API_KEY))
-    keys.push({ name: "LLAMA_NEMOTRON", key: process.env.LLAMA_NEMOTRON_API_KEY });
-  if (isValidKey(process.env['LLAMA-NEMOTRON_API_KEY']))
-    keys.push({ name: "LLAMA-NEMOTRON", key: process.env['LLAMA-NEMOTRON_API_KEY'] });
-  if (isValidKey(process.env.NEMOTRON_API_KEY))
-    keys.push({ name: "NEMOTRON_OR", key: process.env.NEMOTRON_API_KEY });
+  if (isValidKey(process.env.OPENROUTER_API_KEY))
+    keys.push({ name: "OPENROUTER", key: process.env.OPENROUTER_API_KEY });
   return keys;
 };
 
@@ -169,8 +141,6 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
   const models = image ? OPENROUTER_VISION_MODELS : OPENROUTER_TEXT_MODELS;
-
-  // Build user content — multimodal if image provided
   const userContent = image
     ? [
         { type: "text", text: message },
@@ -185,13 +155,11 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   ];
 
   let lastErr = "Unknown error";
-
   for (const { name, key } of keyPool) {
     for (const model of models) {
       try {
-        console.log(`🚀 [${name}] Attempting model: ${model}`);
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15000);
+        const timer = setTimeout(() => controller.abort(), 8000);
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -200,25 +168,21 @@ async function callOpenRouter(message, userName, history = [], image = null) {
             "HTTP-Referer": "https://nexuss-ai.io",
             "X-Title": "Nexuss Workspace",
           },
-          body: JSON.stringify({ model, messages, max_tokens: 350 }),
+          body: JSON.stringify({ model, messages, max_tokens: 2048 }),
           signal: controller.signal,
         });
         clearTimeout(timer);
         const data = await res.json();
         if (!res.ok) {
           lastErr = data.error?.message || `${res.status}`;
-          // Switch keys if rate-limited or credits exhausted
           if (res.status === 429 || res.status === 402 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
-            console.warn(`⚠️ [${name}] Key rate-limited/exhausted (${res.status}), switching key...`);
-            break; // break inner model loop -> next key
+            break;
           }
           continue;
         }
-        const text =
-          data.choices?.[0]?.message?.content ||
-          data.choices?.[0]?.text;
-        if (!text) { lastErr = "Empty response"; continue; }
-        return text;
+        const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+        if (!text?.trim()) { lastErr = "Empty response"; continue; }
+        return cleanAIResponse(text);
       } catch (e) {
         lastErr = e.message;
       }
@@ -227,9 +191,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   throw new Error(`OpenRouter all models/keys failed. Last error: ${lastErr}`);
 }
 
-// ──────────────────────────────────────────────
-// 3. Cerebras
-// ──────────────────────────────────────────────
+// ── 3. Cerebras Provider ───────────────────────────────────────────────────
 async function callCerebras(message, userName) {
   const key = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
@@ -240,7 +202,7 @@ async function callCerebras(message, userName) {
   for (const model of models) {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
+      const timer = setTimeout(() => controller.abort(), 6000);
       const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -264,8 +226,8 @@ async function callCerebras(message, userName) {
         continue;
       }
       const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
-      if (!text) { lastErr = "Empty response"; continue; }
-      return text;
+      if (!text?.trim()) { lastErr = "Empty response"; continue; }
+      return cleanAIResponse(text);
     } catch(e) {
       lastErr = e.message;
     }
@@ -273,19 +235,10 @@ async function callCerebras(message, userName) {
   throw new Error(`Cerebras all models failed: ${lastErr}`);
 }
 
-// ──────────────────────────────────────────────
-// Static fallback (last resort)
-// ──────────────────────────────────────────────
-function fallbackReply(message) {
-  return `Mujhe abhi AI providers se connect karne mein problem aa rahi hai, lekin main yahan hoon! Aapne kaha: "${message}". Thodi der baad try karein ya admin se contact karein.`;
-}
-
-// ──────────────────────────────────────────────
-// Pollinations AI — keyless fallback
-// ──────────────────────────────────────────────
+// ── 4. Pollinations AI Fallback ─────────────────────────────────────────────
 async function callPollinationsFallback(messages) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
     const resp = await fetch("https://text.pollinations.ai/", {
       method: "POST",
@@ -302,7 +255,6 @@ async function callPollinationsFallback(messages) {
     if (!resp.ok) throw new Error(`Pollinations HTTP ${resp.status}`);
     const text = await resp.text();
     if (!text?.trim()) throw new Error("Pollinations returned empty response");
-    console.log("✅ [FALLBACK] Pollinations replied. Length:", text.trim().length);
     return cleanAIResponse(text.trim());
   } catch (e) {
     clearTimeout(timer);
@@ -310,16 +262,12 @@ async function callPollinationsFallback(messages) {
   }
 }
 
-// ──────────────────────────────────────────────
-// Helper: write SSE
-// ──────────────────────────────────────────────
+// ── Helper: write SSE ───────────────────────────────────────────────────────
 function sseWrite(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-// ──────────────────────────────────────────────
-// Main handler
-// ──────────────────────────────────────────────
+// ── Main handler ───────────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -331,9 +279,9 @@ module.exports = async function handler(req, res) {
       success: true,
       message: "Nexuss AI API handler is online.",
       environment: {
-        CEREBRAS_API_KEY: isValidKey(process.env.CEREBRAS_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.CEREBRAS_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
-        ZAI_API_KEY: isValidKey(process.env.ZAI_API_KEY) ? "CONFIGURED (Ends with: ..." + process.env.ZAI_API_KEY.slice(-5) + ")" : "MISSING (Configure in dashboard)",
-        EMBEDDING_API_KEY: isValidKey(process.env.EMBEDDING_API_KEY) ? "CONFIGURED" : "MISSING"
+        GROQ_API_KEY: isValidKey(process.env.GROQ_API_KEY) ? "CONFIGURED" : "MISSING",
+        OPENROUTER_KEY_NEMOTRON: isValidKey(process.env.OPENROUTER_KEY_NEMOTRON) ? "CONFIGURED" : "MISSING",
+        OPENROUTER_KEY_GEMMA: isValidKey(process.env.OPENROUTER_KEY_GEMMA) ? "CONFIGURED" : "MISSING",
       }
     });
   }
@@ -341,23 +289,6 @@ module.exports = async function handler(req, res) {
 
   const { message, userName = "User", history = [], image } = req.body || {};
   if (!message) return res.status(400).json({ error: "message is required" });
-
-  let dynamicMessage = message;
-  let dynamicImage = image;
-
-  if (image) {
-    try {
-      console.log("📸 Image attached to Vercel chat. Pre-processing with vision model...");
-      const description = await describeImageWithEmbeddingKey(image, message);
-      if (description) {
-        dynamicMessage = `[IMAGE ANALYSIS: The user has uploaded an image. Below is a highly detailed description and analysis of the image content:\n${description}]\n\nUser Message: ${message}`;
-        dynamicImage = null; // Clear image so text-only models can answer
-        console.log("📸 Image pre-processing complete. Appended description to message text.");
-      }
-    } catch (err) {
-      console.error("⚠️ Image pre-processing failed, falling back to original image payload:", err.message);
-    }
-  }
 
   // Set SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -367,34 +298,44 @@ module.exports = async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try Cerebras first — SKIP if image is attached (Cerebras has no vision support)
-  const cerebrasKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
-  if (!reply && !dynamicImage && isValidKey(cerebrasKey)) {
+  // 1. Try Groq (ultra fast, <500ms) - text only
+  if (!reply && !image && isValidKey(process.env.GROQ_API_KEY)) {
     try {
-      reply = await callCerebras(dynamicMessage, userName);
-      usedProvider = "Cerebras";
+      reply = await callGroq(message, userName, history);
+      usedProvider = "Groq";
     } catch (e) {
-      console.warn("Cerebras failed:", e.message);
+      console.warn("Groq failed:", e.message);
     }
   }
 
-  // 2. Try OpenRouter (ZAI) second — supports vision via multimodal content & load balanced pool
+  // 2. Try OpenRouter (free fast models + vision support)
   if (!reply && getOpenRouterKeyPool().length > 0) {
     try {
-      reply = await callOpenRouter(dynamicMessage, userName, history, dynamicImage);
+      reply = await callOpenRouter(message, userName, history, image);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
     }
   }
 
-  // 3. Try Pollinations AI — keyless, always available
+  // 3. Try Cerebras
+  const cerebrasKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
+  if (!reply && !image && isValidKey(cerebrasKey)) {
+    try {
+      reply = await callCerebras(message, userName);
+      usedProvider = "Cerebras";
+    } catch (e) {
+      console.warn("Cerebras failed:", e.message);
+    }
+  }
+
+  // 4. Try Pollinations AI (keyless)
   if (!reply) {
     try {
       const msgs = [
-        { role: "system", content: SYSTEM_PROMPT(userName) },
+        { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
         ...(Array.isArray(history) ? history : []),
-        { role: "user", content: dynamicMessage },
+        { role: "user", content: message },
       ];
       reply = await callPollinationsFallback(msgs);
       usedProvider = "Pollinations";
@@ -403,9 +344,9 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 4. Static fallback — always respond
+  // 5. Intelligent friendly fallback
   if (!reply) {
-    reply = fallbackReply(dynamicMessage);
+    reply = `Hello ${userName}! Main abhi available hoon. Aap mujhse koi bhi sawal pooch sakte hain ya coding/content generation me madad le sakte hain!`;
     usedProvider = "fallback";
   }
 
@@ -413,4 +354,4 @@ module.exports = async function handler(req, res) {
   sseWrite(res, { content: cleanAIResponse(reply) });
   res.write("data: [DONE]\n\n");
   res.end();
-}
+};

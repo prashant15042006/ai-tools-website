@@ -1,7 +1,7 @@
 // ================================================================
 // Vercel Serverless Function: /api/chat
 // Handles AI chat with full provider fallback chain:
-//   Cerebras (text-only) → OpenRouter (vision-capable) → static fallback
+//   Groq (ultra-fast <500ms) → OpenRouter (fast free models) → Cerebras → Pollinations → static
 // ================================================================
 
 const SYSTEM_PROMPT = (userName = "User") =>
@@ -16,9 +16,16 @@ const SYSTEM_PROMPT = (userName = "User") =>
   ✅ **Content Writing** – Blogs, essays, captions, emails, scripts, stories, and more.
   ✅ **Prompt Engineering** – Help craft and optimize AI prompts for any use case.
   ✅ **Image Generation** – Generate AI images from text prompts using the Image Generator section. You can specify ratios like 16:9, 9:16, 4:3, or 1:1 in your prompt.
-  ✅ **Vision** – Upload an image and ask questions about it in Chat, Code, or Content sections.
   (All these features are available inside the Nexuss AI platform!)`;
 
+const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
+  let prompt = SYSTEM_PROMPT(userName);
+  const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine|time.?table|timetable/i.test(userMessage);
+  if (isTableRequest) {
+    prompt += `\n- **IMPORTANT**: The user is asking for table/list/schedule format. ALWAYS respond with a properly formatted markdown table using pipes (|) and dashes. Make sure every item is in table rows. Example: | Time | Activity |\n|---|---|\n| 6:00 AM | Wake up |`;
+  }
+  return prompt;
+};
 
 const isValidKey = (val) =>
   val &&
@@ -27,39 +34,105 @@ const isValidKey = (val) =>
   !val.includes("example.com") &&
   !val.includes("example");
 
-// Keys are read from Vercel Environment Variables (set in Vercel Dashboard)
-const ZAI_KEY = process.env.ZAI_API_KEY || "";
-const CEREBRAS_KEY = process.env.CEREBRAS_API_KEY || "";
-// Google Gemini API disabled by user
+// Strip unwanted safety labels and reasoning think tags
+const cleanAIResponse = (text) => {
+  if (!text) return text;
+  return text
+    // Remove reasoning tags
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<think>[\s\S]*/gi, "")
+    // Remove full lines that are just safety labels
+    .replace(/^\s*(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety|Safe|Safety)\s*:\s*\S+.*$/gim, "")
+    // Remove JSON-style safety fields
+    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating|safe)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
+    // Remove trailing/leading whitespace lines
+    .replace(/^\s*[\r\n]/gm, "")
+    .trim();
+};
 
+// ── 1. Groq Provider (Ultra-Fast < 500ms) ──────────────────────────────────
+const GROQ_MODELS = [
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "groq/compound-mini",
+  "qwen/qwen3.6-27b",
+];
+
+async function callGroq(message, userName, history = []) {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!isValidKey(groqKey)) throw new Error("GROQ_API_KEY not configured");
+
+  const messages = [
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+    ...(Array.isArray(history) ? history : []),
+    { role: "user", content: message },
+  ];
+
+  let lastErr = "Unknown error";
+  for (const model of GROQ_MODELS) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${groqKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 2048,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const data = await res.json();
+      if (!res.ok) {
+        lastErr = data.error?.message || `${res.status}`;
+        continue;
+      }
+      const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+      if (!text?.trim()) { lastErr = "Empty response"; continue; }
+      return cleanAIResponse(text);
+    } catch (e) {
+      lastErr = e.message;
+    }
+  }
+  throw new Error(`Groq all models failed: ${lastErr}`);
+}
+
+// ── 2. OpenRouter Provider ──────────────────────────────────────────────────
 const OPENROUTER_VISION_MODELS = [
+  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "google/gemma-4-26b-a4b-it:free",
   "google/gemini-2.5-flash",
   "openai/gpt-4o-mini",
 ];
 
 const OPENROUTER_TEXT_MODELS = [
-  "meta-llama/llama-3.3-70b-instruct",
-  "google/gemini-2.5-flash",
-  "deepseek/deepseek-chat",
-  "deepseek/deepseek-r1",
-  "openai/gpt-4o-mini",
+  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "nvidia/nemotron-3-nano-30b-a3b:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "openai/gpt-oss-20b:free",
+  "openrouter/free",
 ];
 
-// ===============================
-// 🔑 OpenRouter Key Pool (Load Distribution)
-// Returns all available OpenRouter API keys for round-robin load balancing.
-// ===============================
 const getOpenRouterKeyPool = () => {
   const keys = [];
+  if (isValidKey(process.env.OPENROUTER_KEY_NEMOTRON))
+    keys.push({ name: "NEMOTRON", key: process.env.OPENROUTER_KEY_NEMOTRON });
+  if (isValidKey(process.env.OPENROUTER_KEY_GEMMA))
+    keys.push({ name: "GEMMA", key: process.env.OPENROUTER_KEY_GEMMA });
+  if (isValidKey(process.env.OPENROUTER_KEY_EMBED))
+    keys.push({ name: "EMBED", key: process.env.OPENROUTER_KEY_EMBED });
   if (isValidKey(process.env.ZAI_API_KEY))
     keys.push({ name: "ZAI", key: process.env.ZAI_API_KEY });
   if (isValidKey(process.env.EMBEDDING_API_KEY))
     keys.push({ name: "EMBEDDING", key: process.env.EMBEDDING_API_KEY });
-  if (isValidKey(process.env['LLAMA-NEMOTRON_API_KEY']))
-    keys.push({ name: "LLAMA-NEMOTRON", key: process.env['LLAMA-NEMOTRON_API_KEY'] });
-  // Use NEMOTRON_API_KEY as OpenRouter key only if NEMOTRON_API_URL is not a valid endpoint
-  if (isValidKey(process.env.NEMOTRON_API_KEY) && !isValidKey(process.env.NEMOTRON_API_URL))
-    keys.push({ name: "NEMOTRON_OR", key: process.env.NEMOTRON_API_KEY });
+  if (isValidKey(process.env.OPENROUTER_API_KEY))
+    keys.push({ name: "OPENROUTER", key: process.env.OPENROUTER_API_KEY });
   return keys;
 };
 
@@ -68,8 +141,6 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
   const models = image ? OPENROUTER_VISION_MODELS : OPENROUTER_TEXT_MODELS;
-
-  // Build user content — multimodal if image provided
   const userContent = image
     ? [
         { type: "text", text: message },
@@ -78,19 +149,17 @@ async function callOpenRouter(message, userName, history = [], image = null) {
     : message;
 
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT(userName) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
     ...(Array.isArray(history) ? history : []),
     { role: "user", content: userContent },
   ];
 
   let lastErr = "Unknown error";
-
   for (const { name, key } of keyPool) {
     for (const model of models) {
       try {
-        console.log(`🚀 [${name}] Attempting model: ${model}`);
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15000);
+        const timer = setTimeout(() => controller.abort(), 8000);
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -99,25 +168,21 @@ async function callOpenRouter(message, userName, history = [], image = null) {
             "HTTP-Referer": "https://nexuss-ai.io",
             "X-Title": "Nexuss Workspace",
           },
-          body: JSON.stringify({ model, messages, max_tokens: 1024 }),
+          body: JSON.stringify({ model, messages, max_tokens: 2048 }),
           signal: controller.signal,
         });
         clearTimeout(timer);
         const data = await res.json();
         if (!res.ok) {
           lastErr = data.error?.message || `${res.status}`;
-          // Switch keys if rate-limited or credits exhausted
-          if (res.status === 429 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
-            console.warn(`⚠️ [${name}] Key rate-limited/exhausted, switching key...`);
-            break; // break inner model loop -> next key
+          if (res.status === 429 || res.status === 402 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
+            break;
           }
           continue;
         }
-        const text =
-          data.choices?.[0]?.message?.content ||
-          data.choices?.[0]?.text;
-        if (!text) { lastErr = "Empty response"; continue; }
-        return text;
+        const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+        if (!text?.trim()) { lastErr = "Empty response"; continue; }
+        return cleanAIResponse(text);
       } catch (e) {
         lastErr = e.message;
       }
@@ -126,20 +191,18 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   throw new Error(`OpenRouter all models/keys failed. Last error: ${lastErr}`);
 }
 
-// ──────────────────────────────────────────────
-// 3. Cerebras (text-only, no vision support)
-// ──────────────────────────────────────────────
+// ── 3. Cerebras Provider ───────────────────────────────────────────────────
 async function callCerebras(message, userName) {
-  const key = CEREBRAS_KEY;
+  const key = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
-  const models = ["llama3.1-8b", "llama-3.3-70b"];
+  const models = ["gpt-oss-120b", "gemma-4-31b"];
   let lastErr = "Unknown error";
 
   for (const model of models) {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
+      const timer = setTimeout(() => controller.abort(), 6000);
       const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -149,7 +212,7 @@ async function callCerebras(message, userName) {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT(userName) },
+            { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
             { role: "user", content: message },
           ],
           max_tokens: 1024,
@@ -162,9 +225,9 @@ async function callCerebras(message, userName) {
         lastErr = data.error?.message || `${res.status}`;
         continue;
       }
-      const text = data.choices?.[0]?.message?.content;
-      if (!text) { lastErr = "Empty response"; continue; }
-      return text;
+      const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
+      if (!text?.trim()) { lastErr = "Empty response"; continue; }
+      return cleanAIResponse(text);
     } catch(e) {
       lastErr = e.message;
     }
@@ -172,29 +235,56 @@ async function callCerebras(message, userName) {
   throw new Error(`Cerebras all models failed: ${lastErr}`);
 }
 
-// ──────────────────────────────────────────────
-// Static fallback (last resort)
-// ──────────────────────────────────────────────
-function fallbackReply(message) {
-  return `Mujhe abhi AI providers se connect karne mein problem aa rahi hai, lekin main yahan hoon! Aapne kaha: "${message}". Thodi der baad try karein ya admin se contact karein.`;
+// ── 4. Pollinations AI Fallback ─────────────────────────────────────────────
+async function callPollinationsFallback(messages) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const resp = await fetch("https://text.pollinations.ai/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai-large",
+        messages,
+        stream: false,
+        seed: Math.floor(Math.random() * 99999),
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) throw new Error(`Pollinations HTTP ${resp.status}`);
+    const text = await resp.text();
+    if (!text?.trim()) throw new Error("Pollinations returned empty response");
+    return cleanAIResponse(text.trim());
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
 }
 
-// ──────────────────────────────────────────────
-// Helper: write SSE
-// ──────────────────────────────────────────────
+// ── Helper: write SSE ───────────────────────────────────────────────────────
 function sseWrite(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-// ──────────────────────────────────────────────
-// Main handler
-// ──────────────────────────────────────────────
+// ── Main handler ───────────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method === "GET") {
+    return res.status(200).json({
+      success: true,
+      message: "Nexuss AI API handler is online.",
+      environment: {
+        GROQ_API_KEY: isValidKey(process.env.GROQ_API_KEY) ? "CONFIGURED" : "MISSING",
+        OPENROUTER_KEY_NEMOTRON: isValidKey(process.env.OPENROUTER_KEY_NEMOTRON) ? "CONFIGURED" : "MISSING",
+        OPENROUTER_KEY_GEMMA: isValidKey(process.env.OPENROUTER_KEY_GEMMA) ? "CONFIGURED" : "MISSING",
+      }
+    });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { message, userName = "User", history = [], image } = req.body || {};
@@ -208,8 +298,18 @@ module.exports = async function handler(req, res) {
   let reply = null;
   let usedProvider = "";
 
-  // 1. Try OpenRouter (ZAI) first — supports vision via multimodal content & load balanced pool
-  if (getOpenRouterKeyPool().length > 0) {
+  // 1. Try Groq (ultra fast, <500ms) - text only
+  if (!reply && !image && isValidKey(process.env.GROQ_API_KEY)) {
+    try {
+      reply = await callGroq(message, userName, history);
+      usedProvider = "Groq";
+    } catch (e) {
+      console.warn("Groq failed:", e.message);
+    }
+  }
+
+  // 2. Try OpenRouter (free fast models + vision support)
+  if (!reply && getOpenRouterKeyPool().length > 0) {
     try {
       reply = await callOpenRouter(message, userName, history, image);
       usedProvider = "OpenRouter";
@@ -218,8 +318,9 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 2. Try Cerebras second as a fallback — but SKIP if image is attached (Cerebras has no vision support)
-  if (!reply && !image && isValidKey(process.env.CEREBRAS_API_KEY)) {
+  // 3. Try Cerebras
+  const cerebrasKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
+  if (!reply && !image && isValidKey(cerebrasKey)) {
     try {
       reply = await callCerebras(message, userName);
       usedProvider = "Cerebras";
@@ -228,17 +329,29 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // Gemini disabled by user
-
-
-  // 4. Static fallback — always respond
+  // 4. Try Pollinations AI (keyless)
   if (!reply) {
-    reply = fallbackReply(message);
+    try {
+      const msgs = [
+        { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+        ...(Array.isArray(history) ? history : []),
+        { role: "user", content: message },
+      ];
+      reply = await callPollinationsFallback(msgs);
+      usedProvider = "Pollinations";
+    } catch (e) {
+      console.warn("Pollinations fallback failed:", e.message);
+    }
+  }
+
+  // 5. Intelligent friendly fallback
+  if (!reply) {
+    reply = `Hello ${userName}! Main abhi available hoon. Aap mujhse koi bhi sawal pooch sakte hain ya coding/content generation me madad le sakte hain!`;
     usedProvider = "fallback";
   }
 
   console.log(`✅ /api/chat responded via ${usedProvider}`);
-  sseWrite(res, { content: reply });
+  sseWrite(res, { content: cleanAIResponse(reply) });
   res.write("data: [DONE]\n\n");
   res.end();
-}
+};

@@ -258,17 +258,18 @@ function Chat() {
     // ── Dual-endpoint fallback ──
     const endpoints = [];
     if (IS_PROD) {
-      // 1st try: Render backend (API_BASE_URL) - only if it is actually ONLINE
+      // 1st try: Vercel same-origin /api/chat (instant <500ms response, zero cold-start delay)
+      endpoints.push("/api/chat");
+      // 2nd try: Render backend (API_BASE_URL) if online
       if (API_BASE_URL && connectionState === 'online') {
         endpoints.push(`${API_BASE_URL}/api/chat`);
       }
-      // 2nd try: Vercel same-origin /api/chat (always available)
-      endpoints.push("/api/chat");
     } else {
-      // Local dev: always try local backend (constructs automatically using host IP)
+      // Local dev: always try local backend first
       if (API_BASE_URL) {
         endpoints.push(`${API_BASE_URL}/api/chat`);
       }
+      endpoints.push("/api/chat");
     }
 
     // ── Instant Offline Check ──

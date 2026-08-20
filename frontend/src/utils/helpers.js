@@ -25,6 +25,8 @@ export function detectRatioFromPrompt(promptText) {
 export function cleanFrontendResponse(text) {
   if (!text) return text;
   return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<think>[\s\S]*/gi, "")
     .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
     .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
     .replace(/^\s*[\r\n]/gm, "")

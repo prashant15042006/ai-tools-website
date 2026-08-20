@@ -464,6 +464,9 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
 const cleanAIResponse = (text) => {
   if (!text) return text;
   return text
+    // Remove reasoning / thinking tags from reasoning models
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<think>[\s\S]*/gi, "")
     // Remove full lines like "User Safety: safe", "Response Safety: safe"
     .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
     // Remove JSON-style safety objects e.g. {"safety":"safe"}
@@ -477,7 +480,7 @@ const cleanAIResponse = (text) => {
 
 // ===============================
 // 🔗 UNIFIED AI PROVIDER CHAIN
-// Priority: Groq (fastest) → OpenRouter NEMOTRON → OpenRouter GEMMA
+// Priority: Groq (ultra-fast, <800ms) → OpenRouter NEMOTRON → OpenRouter GEMMA
 // Emergency: Pollinations AI (no key needed — always available)
 // ===============================
 const PROVIDER_CHAIN = [
@@ -486,10 +489,10 @@ const PROVIDER_CHAIN = [
     envKey: "GROQ_API_KEY",
     baseUrl: "https://api.groq.com/openai/v1/chat/completions",
     models: [
-      "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant",
-      "gemma2-9b-it",
-      "mixtral-8x7b-32768",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b",
+      "groq/compound-mini",
+      "qwen/qwen3.6-27b",
     ],
     getHeaders: (key) => ({
       "Authorization": `Bearer ${key}`,
@@ -501,9 +504,10 @@ const PROVIDER_CHAIN = [
     envKey: "OPENROUTER_KEY_NEMOTRON",
     baseUrl: "https://openrouter.ai/api/v1/chat/completions",
     models: [
-      "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
       "nvidia/nemotron-nano-12b-v2-vl:free",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "nvidia/nemotron-3.5-lightning:free",
     ],
     getHeaders: (key) => ({
       "Authorization": `Bearer ${key}`,
@@ -518,8 +522,8 @@ const PROVIDER_CHAIN = [
     baseUrl: "https://openrouter.ai/api/v1/chat/completions",
     models: [
       "google/gemma-4-26b-a4b-it:free",
-      "google/gemma-4-31b-it:free",
-      "google/gemma-3-27b-it:free",
+      "openai/gpt-oss-20b:free",
+      "openrouter/free",
     ],
     getHeaders: (key) => ({
       "Authorization": `Bearer ${key}`,
@@ -541,6 +545,8 @@ const getOpenRouterKeyPool = () => {
     keys.push({ name: "NEMOTRON", key: process.env.OPENROUTER_KEY_NEMOTRON });
   if (isValidKey(process.env.OPENROUTER_KEY_GEMMA))
     keys.push({ name: "GEMMA", key: process.env.OPENROUTER_KEY_GEMMA });
+  if (isValidKey(process.env.OPENROUTER_KEY_EMBED))
+    keys.push({ name: "EMBED", key: process.env.OPENROUTER_KEY_EMBED });
   return keys;
 };
 
@@ -879,13 +885,29 @@ app.post("/api/chat", async (req, res) => {
       }
     };
 
-    // Use OpenRouter only (NEMOTRON + GEMMA keys)
-    if (getOpenRouterKeyPool().length > 0) {
-      const reply = await tryStreamProvider("OpenRouter", async () => {
+    // Use unified providers (Groq -> OpenRouter -> Pollinations)
+    if (getActiveProviders().length > 0) {
+      const reply = await tryStreamProvider("AIProvider", async () => {
         await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
         return true;
       });
       if (reply) return;
+    }
+
+    // Fallback directly to Pollinations if no active keyed providers
+    try {
+      const apiMessages = [
+        { role: "system", content: SYSTEM_PROMPT(userName) },
+        ...(Array.isArray(history) ? history : []),
+        { role: "user", content: dynamicMessage }
+      ];
+      const fallbackReply = await callPollinationsFallback(apiMessages);
+      res.write(`data: ${JSON.stringify({ content: fallbackReply })}\n\n`);
+      res.write("data: [DONE]\n\n");
+      res.end();
+      return;
+    } catch (e) {
+      console.error("Pollinations final fallback failed:", e.message);
     }
 
     // No valid providers completed successfully
@@ -914,7 +936,7 @@ app.post("/api/chat", async (req, res) => {
 
 // ===============================
 // 💬 CHAT API (COMPLETE - non-streaming)
-// Uses Nemotron by default if configured (fast replies). Falls back to OpenRouter/ZAI.
+// Uses Groq/OpenRouter by default (fast replies). Falls back to Pollinations.
 // Body: { message, userName, history }
 // ===============================
 app.post("/api/chat/complete", async (req, res) => {
@@ -939,15 +961,26 @@ app.post("/api/chat/complete", async (req, res) => {
       }
     }
 
-    // Use OpenRouter only (NEMOTRON + GEMMA keys)
-    if (getOpenRouterKeyPool().length > 0) {
+    // Use unified providers
+    if (getActiveProviders().length > 0) {
       try {
         const reply = await callZAI(dynamicMessage, userName, dynamicImage);
-        await saveChatMetadata({ question: message, userName, userEmail, model: "openrouter", provider: "OpenRouter" });
-        return res.json({ success: true, model: 'openrouter', reply });
+        await saveChatMetadata({ question: message, userName, userEmail, model: "ai-unified", provider: "Nexuss" });
+        return res.json({ success: true, model: 'nexuss-ai', reply });
       } catch (err) {
-        console.error('OpenRouter call failed:', err.message);
+        console.error('Unified AI call failed:', err.message);
       }
+    }
+
+    // Emergency Pollinations fallback
+    try {
+      const fallbackReply = await callPollinationsFallback([
+        { role: "system", content: SYSTEM_PROMPT(userName) },
+        { role: "user", content: dynamicMessage }
+      ]);
+      return res.json({ success: true, model: 'pollinations', reply: fallbackReply });
+    } catch (err) {
+      console.error('Pollinations fallback failed:', err.message);
     }
 
     return res.status(503).json({ success: false, error: "No AI providers succeeded" });
