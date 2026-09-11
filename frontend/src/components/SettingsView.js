@@ -1,22 +1,14 @@
 // components/SettingsView.js
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext } from "react";
 import { User, Settings, Shield } from "lucide-react";
 import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
 import { AppContext } from "../App";
 import Toggle from "./Toggle";
-import { getBlockchain, verifyBlockchainIntegrity } from "../utils/blockchainLedger";
 
 const SettingsView = () => {
   const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, user, voicePreset, setVoicePreset } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split("@")[0] : "User");
-  const [chainStatus, setChainStatus] = useState({ isValid: true, count: 1 });
-
-  useEffect(() => {
-    verifyBlockchainIntegrity().then((status) => {
-      if (status) setChainStatus(status);
-    });
-  }, []);
 
   const handleTestVoice = (preset) => {
     import("../utils/voiceEngine").then(({ testVoice }) => testVoice(preset));
@@ -108,47 +100,38 @@ const SettingsView = () => {
           </div>
         </section>
 
-        {/* Blockchain & Offline AI Section */}
+        {/* Offline AI & Resilience Section */}
         <section>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px", color: "var(--accent)" }}>
             <Shield size={20} />
-            <h3 style={{ fontSize: "18px", fontWeight: "700", color: "var(--text-primary)" }}>Blockchain & Offline Intelligence</h3>
+            <h3 style={{ fontSize: "18px", fontWeight: "700", color: "var(--text-primary)" }}>Offline Intelligence</h3>
           </div>
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border-color)", padding: "20px", borderRadius: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
               <div>
-                <div style={{ fontWeight: "700", fontSize: "15px", color: "var(--text-primary)" }}>Cryptographic SHA-256 Blockchain Ledger</div>
-                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>Every AI response is hashed into an immutable block chain.</div>
+                <div style={{ fontWeight: "700", fontSize: "15px", color: "var(--text-primary)" }}>Offline AI Engine & Cache</div>
+                <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>Instant smart fallback when network connectivity is lost.</div>
               </div>
               <div style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                background: chainStatus.isValid ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                color: chainStatus.isValid ? "#059669" : "#ef4444",
+                background: "rgba(16, 185, 129, 0.12)",
+                color: "#059669",
                 padding: "6px 14px",
                 borderRadius: "20px",
                 fontSize: "12px",
                 fontWeight: "700",
-                border: chainStatus.isValid ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(239, 68, 68, 0.3)"
+                border: "1px solid rgba(16, 185, 129, 0.3)"
               }}>
-                <span>{chainStatus.isValid ? "✓ Chain Valid & Intact" : "⚠ Integrity Tampered"}</span>
+                <span>✓ Active & Ready</span>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-              <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid var(--border-color)", padding: "12px 16px", borderRadius: "12px" }}>
-                <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--text-secondary)", fontWeight: "700" }}>Total Blocks</div>
-                <div style={{ fontSize: "22px", fontWeight: "800", color: "#3b82f6", marginTop: "4px" }}>
-                  {chainStatus.count || getBlockchain().length} Blocks
-                </div>
-              </div>
-
-              <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid var(--border-color)", padding: "12px 16px", borderRadius: "12px" }}>
-                <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--text-secondary)", fontWeight: "700" }}>Offline AI Mode</div>
-                <div style={{ fontSize: "15px", fontWeight: "800", color: "#10b981", marginTop: "6px" }}>
-                  ⚡ Zero-Network Active
-                </div>
+            <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid var(--border-color)", padding: "12px 16px", borderRadius: "12px" }}>
+              <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--text-secondary)", fontWeight: "700" }}>Offline AI Mode</div>
+              <div style={{ fontSize: "15px", fontWeight: "800", color: "#10b981", marginTop: "6px" }}>
+                ⚡ Zero-Network Active
               </div>
             </div>
           </div>

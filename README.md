@@ -5,60 +5,12 @@
 ![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%26%20Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
-![Blockchain](https://img.shields.io/badge/Cryptography-SHA--256%20Ledger-6366F1?style=for-the-badge&logo=blockchaindotcom&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-100%2F100-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
 ![Deployment](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Render-000000?style=for-the-badge&logo=vercel&logoColor=white)
 
-**An intelligent, tamper-proof AI Workspace featuring Instant Dashboard Restoration, High-Performance Multi-Model AI Routing, Photorealistic Image Studio, and a Local Cryptographic SHA-256 Blockchain Ledger.**
+**An intelligent AI Workspace featuring Instant Dashboard Restoration, High-Performance Multi-Model AI Routing, Photorealistic Image Studio, and Seamless Offline Intelligence.**
 
 </div>
-
----
-
-## ⛓️ Blockchain Ledger & Cryptographic Verification Deep-Dive
-
-Nexuss AI incorporates a **client-side immutable cryptographic ledger** designed to secure, verify, and timestamp prompt-response transactions directly within browser memory and local storage.
-
-### 📐 Anatomy of a Nexuss Block
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                              BLOCK #N                                  │
-├────────────────────────────────────────────────────────────────────────┤
-│  index         : 12                                                    │
-│  timestamp     : 2026-08-20T12:00:00.000Z                              │
-│  prompt        : "Write a React Hook for responsive layout"            │
-│  responseHash  : e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca4... │
-│  previousHash  : 406307f4c2ddba99671dac1837b9570b568af9cdcf744c1d...  │
-│  nonce         : 0                                                     │
-│  isOffline     : false                                                 │
-├────────────────────────────────────────────────────────────────────────┤
-│  hash          : 1e4071c23343c3a3e1d99be9f493c75676baef97ae23309d...  │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ (Links to Block #N+1 previousHash)
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                             BLOCK #N+1                                 │
-├────────────────────────────────────────────────────────────────────────┤
-│  index         : 13                                                    │
-│  previousHash  : 1e4071c23343c3a3e1d99be9f493c75676baef97ae23309d...  │
-│  hash          : 8dcca20f188339ab42b109e9f493c75676baef97ae23309d...  │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-### 🛡️ Cryptographic Mechanism & Features
-1. **Dual Hashing Strategy**:
-   - **Primary Engine**: Web Cryptography API (`window.crypto.subtle.digest("SHA-256", buffer)`) producing standard 256-bit hexadecimal digests.
-   - **Fault-Tolerant Fallback**: Custom 64-character deterministic polynomial bitwise hash (`jsHashFallback`) for non-secure HTTP local contexts and older mobile webviews.
-2. **Immutable Chaining**:
-   - Block $N$ computes its hash as:
-     $$\text{Hash}_N = \text{SHA256}(\text{Index} + \text{Timestamp} + \text{Prompt} + \text{ResponseHash} + \text{Hash}_{N-1} + \text{Nonce})$$
-   - Any modification to past queries, timestamps, or AI responses immediately breaks the hash chain for all subsequent blocks.
-3. **Live Tamper Detection**:
-   - `verifyBlockchainIntegrity()` iterates across the entire ledger and asserts that $\text{Block}[i].\text{previousHash} \equiv \text{Block}[i-1].\text{hash}$.
-   - Live security status is surfaced in the Settings View (`✓ Chain Valid & Intact` vs `⚠ Integrity Tampered`).
-4. **Memory-Optimized Rolling Window**:
-   - Retains an active window of the latest **150 blocks**, ensuring zero storage bloat or browser performance lag.
 
 ---
 
@@ -145,7 +97,7 @@ Nexuss AI incorporates a **client-side immutable cryptographic ledger** designed
                 │                                                        │
                 ▼                                                        ▼
         ┌────────────────────────────────────────────────────────────────────────┐
-        │                 Record Response to SHA-256 Blockchain                  │
+        │                 Record Response to Offline AI Cache                    │
         │                    Render in Real-Time UI Bubble                       │
         └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -168,7 +120,7 @@ ai-tools-website/
 │   ├── public/             # PWA assets, icons, manifest.json, sw.js
 │   ├── src/
 │   │   ├── components/     # UI Views (Dashboard, Settings, Projects, ErrorBoundary)
-│   │   ├── utils/          # Blockchain ledger, Offline AI, Voice Engine, Table renderer
+│   │   ├── utils/          # Offline AI, Response Cache, Voice Engine, Table renderer
 │   │   ├── App.js          # App shell, context provider, and routing
 │   │   ├── Chat.js         # AI Chat interface
 │   │   ├── CodeGenerator.js# Code Generator

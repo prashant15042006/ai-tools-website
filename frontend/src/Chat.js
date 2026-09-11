@@ -12,7 +12,7 @@ import { detectRatioFromPrompt, cleanFrontendResponse } from "./utils/helpers";
 
 import { useLocation } from "react-router-dom";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
-import { addBlockToLedger, cacheResponseForOffline } from "./utils/blockchainLedger";
+import { cacheResponseForOffline } from "./utils/responseCache";
 
 // Inject table styles on component mount
 injectTableStyles();
@@ -276,13 +276,11 @@ function Chat() {
     if (!navigator.onLine) {
       console.log("Device is offline. Triggering instant Nexuss Offline AI Engine.");
       const offlineReply = generateOfflineResponse(text, "chat");
-      const block = await addBlockToLedger(text, offlineReply, true);
       setMessages((prev) =>
         prev.map(msg => msg.id === aiMsgId ? {
           ...msg,
           text: offlineReply,
-          isOffline: true,
-          blockchainBlock: block
+          isOffline: true
         } : msg)
       );
       setLoading(false);
@@ -361,12 +359,8 @@ function Chat() {
         }
       }
 
-      // Record successful response to cache and Blockchain ledger
+      // Record successful response to cache
       cacheResponseForOffline(text, aiReply);
-      const block = await addBlockToLedger(text, aiReply, false);
-      setMessages((prev) =>
-        prev.map(msg => msg.id === aiMsgId ? { ...msg, blockchainBlock: block } : msg)
-      );
       await handleSpeak(aiReply);
 
     } catch (error) {
@@ -403,9 +397,8 @@ function Chat() {
               pReply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim()
             );
             cacheResponseForOffline(text, cleanReply);
-            const block = await addBlockToLedger(text, cleanReply, false);
             setMessages((prev) =>
-              prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply, blockchainBlock: block } : msg)
+              prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply } : msg)
             );
             setLoading(false);
             await handleSpeak(cleanReply);
@@ -418,14 +411,12 @@ function Chat() {
 
       // ── Final fallback: Nexuss Offline AI Engine ──
       const offlineReply = generateOfflineResponse(text, "chat");
-      const block = await addBlockToLedger(text, offlineReply, true);
 
       setMessages((prev) => 
         prev.map(msg => msg.id === aiMsgId ? { 
           ...msg, 
           text: offlineReply,
-          isOffline: true,
-          blockchainBlock: block
+          isOffline: true
         } : msg)
       );
       await handleSpeak(offlineReply);

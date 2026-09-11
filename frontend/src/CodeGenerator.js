@@ -9,7 +9,7 @@ import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from
 import API_BASE_URL, { IS_PROD } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
-import { addBlockToLedger, cacheResponseForOffline } from "./utils/blockchainLedger";
+import { cacheResponseForOffline } from "./utils/responseCache";
 
 // Inject table styles on component mount
 injectTableStyles();
@@ -90,13 +90,11 @@ function CodeGenerator() {
     // ── Instant Offline Check ──
     if (!navigator.onLine) {
       const offlineReply = generateOfflineResponse(text, "code");
-      const block = await addBlockToLedger(text, offlineReply, true);
       setMessages((prev) =>
         prev.map(msg => msg.id === aiMsgId ? {
           ...msg,
           text: offlineReply,
-          isOffline: true,
-          blockchainBlock: block
+          isOffline: true
         } : msg)
       );
       setLoading(false);
@@ -165,10 +163,6 @@ function CodeGenerator() {
         }
       }
       cacheResponseForOffline(text, aiReply);
-      const block = await addBlockToLedger(text, aiReply, false);
-      setMessages((prev) =>
-        prev.map(msg => msg.id === aiMsgId ? { ...msg, blockchainBlock: block } : msg)
-      );
       handleSpeak(aiReply);
     } catch (error) {
       console.warn("Code Generator API failed — trying client-side Pollinations:", error.message);
@@ -198,9 +192,8 @@ function CodeGenerator() {
           if (pReply?.trim()) {
             const cleanReply = pReply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
             cacheResponseForOffline(text, cleanReply);
-            const block = await addBlockToLedger(text, cleanReply, false);
             setMessages((prev) =>
-              prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply, blockchainBlock: block } : msg)
+              prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply } : msg)
             );
             setLoading(false);
             handleSpeak(cleanReply);
@@ -213,14 +206,12 @@ function CodeGenerator() {
 
       // ── Final fallback: Nexuss Offline AI Engine ──
       const offlineReply = generateOfflineResponse(text, "code");
-      const block = await addBlockToLedger(text, offlineReply, true);
 
       setMessages((prev) => 
         prev.map(msg => msg.id === aiMsgId ? { 
           ...msg, 
           text: offlineReply,
-          isOffline: true,
-          blockchainBlock: block
+          isOffline: true
         } : msg)
       );
       handleSpeak(offlineReply);

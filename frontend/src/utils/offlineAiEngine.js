@@ -1,7 +1,7 @@
 // utils/offlineAiEngine.js — Seamless Generative AI & Knowledge Engine
 // Delivers direct, accurate, natural AI answers matching user queries seamlessly.
 
-import { getCachedResponse } from "./blockchainLedger";
+import { getCachedResponse } from "./responseCache";
 
 export function generateOfflineResponse(promptText, mode = "chat") {
   if (!promptText || typeof promptText !== "string") {
