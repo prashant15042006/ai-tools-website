@@ -6,7 +6,7 @@ import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
-import API_BASE_URL, { IS_MISCONFIGURED, IS_PROD } from "./apiConfig";
+import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 import { detectRatioFromPrompt, cleanFrontendResponse } from "./utils/helpers";
 
@@ -45,7 +45,7 @@ function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const imageInputRef = useRef(null);
-  const { ttsEnabled, addRecentChat, user, connectionState, voicePreset, customVoiceUrl } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
@@ -255,22 +255,12 @@ function Chat() {
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
 
-    // ── Dual-endpoint fallback ──
+    // ── Resilient Endpoint List (Handles both fast and slow networks) ──
     const endpoints = [];
-    if (IS_PROD) {
-      // 1st try: Vercel same-origin /api/chat (instant <500ms response, zero cold-start delay)
-      endpoints.push("/api/chat");
-      // 2nd try: Render backend (API_BASE_URL) if online
-      if (API_BASE_URL && connectionState === 'online') {
-        endpoints.push(`${API_BASE_URL}/api/chat`);
-      }
-    } else {
-      // Local dev: always try local backend first
-      if (API_BASE_URL) {
-        endpoints.push(`${API_BASE_URL}/api/chat`);
-      }
-      endpoints.push("/api/chat");
+    if (API_BASE_URL) {
+      endpoints.push(`${API_BASE_URL}/api/chat`);
     }
+    endpoints.push("/api/chat");
 
     // ── Instant Offline Check ──
     if (!navigator.onLine) {
@@ -290,12 +280,14 @@ function Chat() {
 
     let response = null;
     let lastErr = "";
+    let aiReply = "";
+
+    // High resilience timeout: 35s for text (slow network friendly), 90s for images
+    const timeoutMs = imageToBeSent ? 90000 : 35000;
 
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        // Fast 6s timeout when online, 60s for images
-        const timeoutMs = imageToBeSent ? 60000 : 6000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, {
           method: "POST",
@@ -315,12 +307,11 @@ function Chat() {
 
     try {
       if (!response) {
-        throw new Error(lastErr || "All endpoints failed.");
+        throw new Error(lastErr || "All streaming endpoints failed.");
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let aiReply = "";
       let buffer = "";
 
       while (true) {
@@ -359,54 +350,58 @@ function Chat() {
         }
       }
 
-      // Record successful response to cache
-      cacheResponseForOffline(text, aiReply);
-      await handleSpeak(aiReply);
+      if (aiReply && aiReply.trim()) {
+        cacheResponseForOffline(text, aiReply);
+        await handleSpeak(aiReply);
+        setLoading(false);
+        return;
+      }
+      throw new Error("Empty streaming response");
 
     } catch (error) {
-      console.warn("API request failed — trying client-side Pollinations before offline engine:", error.message);
+      console.warn("Streaming request failed or interrupted — attempting non-streaming complete endpoint:", error.message);
 
-      // ── Client-side Pollinations fallback (keyless, direct browser call) ──
-      try {
-        const pController = new AbortController();
-        const pTimer = setTimeout(() => pController.abort(), 15000);
-        const pollinationsMsgs = [
-          {
-            role: "system",
-            content: `You are Nexuss AI, an intelligent AI companion for ${displayName}. Be warm, friendly, and helpful. Respond naturally in Hinglish (mix of Hindi and English). Address the user as ${displayName}. Keep responses concise and relevant to what the user asked.`
-          },
-          ...history.slice(-6),
-          { role: "user", content: text }
-        ];
-        const pRes = await fetch("https://text.pollinations.ai/openai", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "openai-large",
-            messages: pollinationsMsgs,
-            seed: Math.floor(Math.random() * 99999),
-          }),
-          signal: pController.signal,
-        });
-        clearTimeout(pTimer);
-        if (pRes.ok) {
-          const pData = await pRes.json();
-          const pReply = pData.choices?.[0]?.message?.content;
-          if (pReply?.trim()) {
-            const cleanReply = cleanFrontendResponse(
-              pReply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim()
-            );
-            cacheResponseForOffline(text, cleanReply);
-            setMessages((prev) =>
-              prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply } : msg)
-            );
-            setLoading(false);
-            await handleSpeak(cleanReply);
-            return;
+      // ── Non-streaming complete fallback ──
+      const completeEndpoints = [];
+      if (API_BASE_URL) {
+        completeEndpoints.push(`${API_BASE_URL}/api/chat/complete`);
+      }
+      completeEndpoints.push("/api/chat/complete");
+
+      let completeSuccess = false;
+      for (const compEndpoint of completeEndpoints) {
+        try {
+          const compController = new AbortController();
+          const compTimer = setTimeout(() => compController.abort(), timeoutMs);
+          const compRes = await fetch(compEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: compController.signal,
+          });
+          clearTimeout(compTimer);
+          if (compRes.ok) {
+            const compData = await compRes.json();
+            const textReply = compData.reply || compData.content;
+            if (textReply && textReply.trim()) {
+              const cleanReply = cleanFrontendResponse(textReply);
+              setMessages((prev) =>
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply } : msg)
+              );
+              cacheResponseForOffline(text, cleanReply);
+              await handleSpeak(cleanReply);
+              completeSuccess = true;
+              break;
+            }
           }
+        } catch (cErr) {
+          console.warn(`Complete endpoint ${compEndpoint} failed:`, cErr.message);
         }
-      } catch (pErr) {
-        console.warn("Client-side Pollinations also failed:", pErr.message);
+      }
+
+      if (completeSuccess) {
+        setLoading(false);
+        return;
       }
 
       // ── Final fallback: Nexuss Offline AI Engine ──
@@ -416,7 +411,7 @@ function Chat() {
         prev.map(msg => msg.id === aiMsgId ? { 
           ...msg, 
           text: offlineReply,
-          isOffline: true
+          isOffline: !navigator.onLine
         } : msg)
       );
       await handleSpeak(offlineReply);

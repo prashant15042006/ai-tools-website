@@ -72,7 +72,7 @@ async function callGroq(message, userName, history = []) {
   for (const model of GROQ_MODELS) {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 6000);
+      const timer = setTimeout(() => controller.abort(), 15000);
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -159,7 +159,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
     for (const model of models) {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 8000);
+        const timer = setTimeout(() => controller.abort(), 18000);
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {

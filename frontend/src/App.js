@@ -219,8 +219,8 @@ const PwaInstallBanner = () => {
     }
 
     const controller = new AbortController();
-    // Give Render up to 50 seconds to wake up initially; use 2.2s for periodic heartbeats
-    const timeoutMs = isInitial ? 50000 : 2200;
+    // Give Render up to 50 seconds to wake up initially; use 8s for periodic heartbeats on slow networks
+    const timeoutMs = isInitial ? 50000 : 8000;
     const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
     const start = performance.now();
 
@@ -236,7 +236,7 @@ const PwaInstallBanner = () => {
         throw new Error('Health check failed');
       }
 
-      if (elapsed > 1500) {
+      if (elapsed > 3000) {
         setConnectionState('slow');
       } else {
         setConnectionState('online');

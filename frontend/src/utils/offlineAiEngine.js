@@ -86,7 +86,50 @@ AI aapki daily productivity aur problem-solving ko 10x faster banane me madad ka
     } catch (e) { }
   }
 
-  // 8. General Q&A Fallback Engine
+  // 8. Money & Earning Guidance
+  if (/\b(paisa|paise|pyase|kamane|earn|earning|income|money|freelance|freelancing|business)\b/i.test(cleanPrompt)) {
+    return `### 💡 Paise Kamane Ke Best Ideas (Online & Offline)
+
+Agar aap paise kamane ke real aur practical tareeqe dhoondh rahe hain, to yahan kuch top options hain jinhe aap aaj se shuru kar sakte hain:
+
+---
+
+#### 1. 💻 Freelancing & Digital Skills (Sabse Tez aur Reliable)
+Agar aapke paas koi specific digital skill hai, to aap clients ke liye kaam karke acchi income generate kar sakte hain:
+- **Web / App Development**: HTML, CSS, React, Python, ya WordPress par websites banana.
+- **Graphic Design & Video Editing**: YouTube thumbnails, Reels/Shorts editing, Canva, Premiere Pro, Photoshop.
+- **Content Writing & Copywriting**: Blogs, SEO articles, social media captions, email marketing.
+- **Platforms**: Upwork, Fiverr, Freelancer, LinkedIn.
+
+#### 2. 📱 Content Creation & Social Media
+- **YouTube & Instagram**: Niche chunein jaise Tech, Education, Motivation, Gaming, ya Coding. Consistent quality videos upload karein.
+- **Monetization**: AdSense, Sponsorships, Affiliate Marketing, Brand Deals.
+
+#### 3. 🛒 Affiliate Marketing & Digital Products
+- Amazon Associates, ClickBank ya hosting services ke products share karke commission kamayein.
+- E-books, Notion templates, ya courses banakar Gumroad par bechein.
+
+#### 4. 🧑‍🏫 Online Tutoring & Consulting
+- Agar aap kisi subject (Maths, English, Coding) me acche hain to students ko online padhayein (Preply, UrbanPro, ya direct private tuition).
+
+---
+
+> 🚀 **Quick Pro-Tip**: Shuruat me kisi ek skill ko master karein (jaise video editing ya coding) aur apna portfolio banayein. Consistent rehne par aap monthly acchi income bana sakte hain!`;
+  }
+
+  // 9. Career & Learning Guidance
+  if (/\b(career|job|interview|resume|study|padhai|future)\b/i.test(cleanPrompt)) {
+    return `### 🎯 Career & Learning Guidance
+
+Aapke career aur learning growth ke liye key recommendations:
+
+1. **High-Demand Skills Sikhein**: AI tools, Data Analysis, Software Engineering, Digital Marketing.
+2. **Projects & Portfolio**: Sirf certificates par dhyan na dein, real-world projects banayein aur GitHub/LinkedIn par showcase karein.
+3. **Networking**: LinkedIn par industry professionals ke sath connect karein aur relevant discussions me hissa lein.
+4. **Consistency**: Rozana 1-2 ghante nayi cheezein seekhne aur practice karne ke liye fix karein.`;
+  }
+
+  // 10. General Fallback
   return generateOfflineGeneralResponse(cleanPrompt, rawPrompt);
 }
 
@@ -227,30 +270,23 @@ Warm regards,
 **Topic:** ${rawPrompt}
 
 #### Summary Overview
-${rawPrompt} is an essential topic. Here is a clear, well-structured summary:
+${rawPrompt} ke liye structured guidance:
 
-- **Key Focus**: Enhancing clarity, performance, and user satisfaction.
-- **Implementation Strategy**: Utilizing fast logic to maintain high reliability.
-- **Outcome**: Seamless usability and high output quality.`;
+- **Key Focus**: Clear communication, step-by-step approach, aur quality outcome.
+- **Practical Application**: Iska use daily work aur projects ko behtar banane ke liye karein.
+- **Next Steps**: Specific requirement batayein taaki detailed draft generate kiya ja sake.`;
 }
 
 function generateOfflineGeneralResponse(cleanPrompt, rawPrompt) {
-  const formattedTitle = rawPrompt.charAt(0).toUpperCase() + rawPrompt.slice(1);
+  return `### 🌐 Internet Connection Offline Hai
 
-  return `### 💡 ${formattedTitle}
+Aapka sawal: **"${rawPrompt}"**
 
-Aapke sawal **"${rawPrompt}"** ka detailed, structured jawāb:
+Filhal aapka internet slow ya disconnected lag raha hai, is wajah se live cloud AI model se connect nahi ho paya.
 
----
+**Kripya ye check karein:**
+1. Apna internet ya Wi-Fi connection check karein.
+2. Jaise hi connection stable hoga, aapka sawal live AI model se turant detailed aur accurate answer layega.
 
-### 1. Overview & Explanation
-**${formattedTitle}** ek mahatvapurna visual/technical topic hai. Iss par dhyan dena aur ise structured tarike se samajhna zaroori hai.
-
-### 2. Key Highlights & Solution:
-- **Core Strategy**: Clear analysis aur step-by-step execution.
-- **Quality & Accuracy**: Reliable parameters ke aadhar par jawaab tayyar kiya gaya hai.
-- **Practical Application**: Iska upayog daily workflows me productivity badhane ke liye kiya ja sakta hai.
-
-### 3. Summary & Next Steps:
-Agar aapko is topic par specific code, email, ya detail document chahiye, to aap mujhse pooch sakte hain!`;
+*Tip: Aap mujhse offline bhi basic coding questions, math calculations (jaise \`25 * 4\`), ya greetings pooch sakte hain!*`;
 }

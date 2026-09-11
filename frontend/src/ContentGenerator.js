@@ -6,16 +6,17 @@ import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
-import API_BASE_URL, { IS_PROD } from "./apiConfig";
+import API_BASE_URL from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
 import { cacheResponseForOffline } from "./utils/responseCache";
+import { cleanFrontendResponse } from "./utils/helpers";
 
 // Inject table styles on component mount
 injectTableStyles();
 
 function ContentGenerator() {
-  const { ttsEnabled, addRecentChat, user, connectionState, voicePreset, customVoiceUrl } = useContext(AppContext);
+  const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
   useEffect(() => {
@@ -74,18 +75,12 @@ function ContentGenerator() {
       history: history,
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
+    // ── Resilient Endpoint List (Handles both fast and slow networks) ──
     const endpoints = [];
-    if (IS_PROD) {
-      endpoints.push("/api/chat");
-      if (API_BASE_URL && connectionState === 'online') {
-        endpoints.push(`${API_BASE_URL}/api/chat`);
-      }
-    } else {
-      if (API_BASE_URL) {
-        endpoints.push(`${API_BASE_URL}/api/chat`);
-      }
-      endpoints.push("/api/chat");
+    if (API_BASE_URL) {
+      endpoints.push(`${API_BASE_URL}/api/chat`);
     }
+    endpoints.push("/api/chat");
 
     // ── Instant Offline Check ──
     if (!navigator.onLine) {
@@ -104,26 +99,30 @@ function ContentGenerator() {
 
     let response = null;
     let lastErr = "";
+    let aiReply = "";
+
+    // High resilience timeout: 35s for text (slow network friendly), 90s for images
+    const timeoutMs = imageToBeSent ? 90000 : 35000;
+
     for (const endpoint of endpoints) {
       try {
         const controller = new AbortController();
-        const timeoutMs = imageToBeSent ? 60000 : 6000;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
         clearTimeout(timer);
         if (r.ok) { response = r; break; }
         lastErr = `${endpoint} failed (${r.status})`;
+        if (r.status >= 400 && r.status < 500) break;
       } catch (e) { lastErr = e.message; }
     }
 
     try {
-      if (!response || !navigator.onLine) {
-        throw new Error(lastErr || "Offline / Network unavailable");
+      if (!response) {
+        throw new Error(lastErr || "All streaming endpoints failed.");
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let aiReply = "";
       let buffer = "";
 
       while (true) {
@@ -144,64 +143,75 @@ function ContentGenerator() {
             const data = JSON.parse(dataStr);
             if (data.error) throw new Error(data.error);
             if (data.replace) {
-              // Backend sent a cleaned replacement (safety labels stripped)
-              aiReply = data.replace;
+              const cleaned = cleanFrontendResponse(data.replace);
+              aiReply = cleaned;
               setMessages((prev) =>
-                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: data.replace } : msg)
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleaned } : msg)
               );
             } else if (data.content) {
                 const content = data.content;
                 aiReply += content;
-                
+                const displayText = cleanFrontendResponse(aiReply);
                 setMessages((prev) => 
-                  prev.map(msg => msg.id === aiMsgId ? { ...msg, text: msg.text + content } : msg)
+                  prev.map(msg => msg.id === aiMsgId ? { ...msg, text: displayText } : msg)
                 );
               }
-
-
           } catch (e) { }
         }
       }
-      cacheResponseForOffline(text, aiReply);
-      handleSpeak(aiReply);
-    } catch (error) {
-      console.warn("Content Generator API failed — trying client-side Pollinations:", error.message);
 
-      // ── Client-side Pollinations fallback (keyless, direct browser call) ──
-      try {
-        const pController = new AbortController();
-        const pTimer = setTimeout(() => pController.abort(), 15000);
-        const pRes = await fetch("https://text.pollinations.ai/openai", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "openai-large",
-            messages: [
-              { role: "system", content: `You are Nexuss AI, a content writing expert for ${displayName}. Write high-quality, engaging content. Explain in Hinglish but write the content in the requested language.` },
-              ...history.slice(-4),
-              { role: "user", content: "Write: " + text }
-            ],
-            seed: Math.floor(Math.random() * 99999),
-          }),
-          signal: pController.signal,
-        });
-        clearTimeout(pTimer);
-        if (pRes.ok) {
-          const pData = await pRes.json();
-          const pReply = pData.choices?.[0]?.message?.content;
-          if (pReply?.trim()) {
-            const cleanReply = pReply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-            cacheResponseForOffline(text, cleanReply);
-            setMessages((prev) =>
-              prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply } : msg)
-            );
-            setLoading(false);
-            handleSpeak(cleanReply);
-            return;
+      if (aiReply && aiReply.trim()) {
+        cacheResponseForOffline(text, aiReply);
+        handleSpeak(aiReply);
+        setLoading(false);
+        return;
+      }
+      throw new Error("Empty streaming response");
+
+    } catch (error) {
+      console.warn("Content Generator streaming failed — attempting complete endpoint:", error.message);
+
+      // ── Non-streaming complete fallback ──
+      const completeEndpoints = [];
+      if (API_BASE_URL) {
+        completeEndpoints.push(`${API_BASE_URL}/api/chat/complete`);
+      }
+      completeEndpoints.push("/api/chat/complete");
+
+      let completeSuccess = false;
+      for (const compEndpoint of completeEndpoints) {
+        try {
+          const compController = new AbortController();
+          const compTimer = setTimeout(() => compController.abort(), timeoutMs);
+          const compRes = await fetch(compEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: compController.signal,
+          });
+          clearTimeout(compTimer);
+          if (compRes.ok) {
+            const compData = await compRes.json();
+            const textReply = compData.reply || compData.content;
+            if (textReply && textReply.trim()) {
+              const cleanReply = cleanFrontendResponse(textReply);
+              setMessages((prev) =>
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleanReply } : msg)
+              );
+              cacheResponseForOffline(text, cleanReply);
+              handleSpeak(cleanReply);
+              completeSuccess = true;
+              break;
+            }
           }
+        } catch (cErr) {
+          console.warn(`Complete endpoint ${compEndpoint} failed:`, cErr.message);
         }
-      } catch (pErr) {
-        console.warn("Client-side Pollinations also failed:", pErr.message);
+      }
+
+      if (completeSuccess) {
+        setLoading(false);
+        return;
       }
 
       // ── Final fallback: Nexuss Offline AI Engine ──
@@ -211,7 +221,7 @@ function ContentGenerator() {
         prev.map(msg => msg.id === aiMsgId ? { 
           ...msg, 
           text: offlineReply,
-          isOffline: true
+          isOffline: !navigator.onLine
         } : msg)
       );
       handleSpeak(offlineReply);
