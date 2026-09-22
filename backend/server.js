@@ -95,9 +95,12 @@ const describeImageWithEmbeddingKey = async (image, userPrompt = "Analyze this i
     return "";
   }
 
-  // Vision models to try in sequence (using our configured models)
+  // Vision models to try in sequence (tested working free models)
   const visionModels = [
-    "nvidia/nemotron-nano-12b-v2-vl:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "openrouter/free",
+    "inclusionai/ling-3.0-flash-vl:free",
+    "google/gemma-4-31b-it:free",
     "google/gemma-4-26b-a4b-it:free",
   ];
 
@@ -1055,6 +1058,81 @@ CRITICAL RULES:
   } catch (error) {
     console.error("Image Prompt Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// ===============================
+// 👁️ AI IMAGE ANALYZER & UNDERSTANDING
+// Analyzes uploaded image, extracts subject, colors, style, mood,
+// and generates matching prompts or edit instructions
+// ===============================
+app.post("/api/image-analyze", async (req, res) => {
+  try {
+    const { image, mode = "analyze", userPrompt = "" } = req.body;
+    if (!image) {
+      return res.status(400).json({ success: false, error: "Image data is required" });
+    }
+
+    console.log(`👁️ [IMAGE ANALYZE] Received request, mode: ${mode}`);
+    const imageDescription = await describeImageWithEmbeddingKey(
+      image,
+      "Analyze this image comprehensively. Describe the main subject, artistic medium/style (e.g. photorealistic, digital art, anime, oil painting, 3D render), lighting, colors, background details, mood, and camera composition."
+    );
+
+    if (!imageDescription) {
+      throw new Error("Unable to analyze image content");
+    }
+
+    // Now generate an immaculate recreation prompt or edit prompt using the description
+    let suggestedPrompt = "";
+    let editedPrompt = "";
+
+    try {
+      const promptGenSystem = `You are an expert AI Image Prompt Engineer.
+Based on the provided detailed description of an image, write an immaculate, highly detailed 8K English prompt for image generation models (like FLUX.1) that accurately captures and recreates the same subject, style, lighting, and aesthetic.
+Output ONLY the final English prompt (25 to 50 words). No commentary.`;
+
+      suggestedPrompt = await callZAI(
+        `${promptGenSystem}\n\nImage Description:\n${imageDescription}`,
+        "User",
+        null
+      );
+      suggestedPrompt = suggestedPrompt.replace(/^["']|["']$/g, "").replace(/^Here is (the|your) prompt:?/i, "").trim();
+    } catch (e) {
+      console.warn("AI recreation prompt generation fallback:", e.message);
+      suggestedPrompt = imageDescription.slice(0, 180) + ", photorealistic, 8k resolution, cinematic lighting, sharp focus";
+    }
+
+    if (userPrompt && userPrompt.trim()) {
+      try {
+        const editPromptSystem = `You are an expert AI Image Prompt Engineer.
+The user wants to modify an existing image.
+Existing image description:
+${imageDescription}
+
+User modification request: "${userPrompt}"
+
+Synthesize a complete new photographic scene description that retains the key identity/subject of the original image but applies all the user's requested modifications (e.g. style change, background change, color changes, adding/removing elements).
+Output ONLY the final English generation prompt (25 to 50 words). No commentary.`;
+
+        editedPrompt = await callZAI(editPromptSystem, "User", null);
+        editedPrompt = editedPrompt.replace(/^["']|["']$/g, "").replace(/^Here is (the|your) prompt:?/i, "").trim();
+      } catch (e) {
+        console.warn("AI edit prompt generation fallback:", e.message);
+        editedPrompt = `${userPrompt}, based on ${imageDescription.slice(0, 100)}, 8k resolution, detailed lighting`;
+      }
+    }
+
+    return res.json({
+      success: true,
+      description: imageDescription,
+      suggestedPrompt: suggestedPrompt || imageDescription.slice(0, 200),
+      editedPrompt: editedPrompt || null,
+    });
+  } catch (error) {
+    console.error("❌ Image Analyze Error:", error.message);
+    return res.status(500).json({ success: false, error: error.message || "Failed to analyze image" });
   }
 });
 

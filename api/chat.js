@@ -104,10 +104,11 @@ async function callGroq(message, userName, history = []) {
 
 // ── 2. OpenRouter Provider ──────────────────────────────────────────────────
 const OPENROUTER_VISION_MODELS = [
-  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "openrouter/free",
+  "inclusionai/ling-3.0-flash-vl:free",
+  "google/gemma-4-31b-it:free",
   "google/gemma-4-26b-a4b-it:free",
-  "google/gemini-2.5-flash",
-  "openai/gpt-4o-mini",
 ];
 
 const OPENROUTER_TEXT_MODELS = [
