@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -11,13 +11,8 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Upload,
-  Eye,
   Wand2,
-  X,
-  Camera,
   Palette,
-  Check
 } from "lucide-react";
 import API_BASE_URL from "./apiConfig";
 import { detectRatioFromPrompt } from "./utils/helpers";
@@ -103,17 +98,9 @@ export default function ImageGeneratorPro() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [toast, setToast] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  // ── Image Upload & AI Vision State ──
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [uploadFileName, setUploadFileName] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [imageAnalysis, setImageAnalysis] = useState(null);
-  const [suggestedPrompt, setSuggestedPrompt] = useState("");
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef(null);
 
+  // ── History State ──
   const [history, setHistory] = useState(() => {
     try {
       const saved = localStorage.getItem("nexus_image_history");
@@ -153,122 +140,12 @@ export default function ImageGeneratorPro() {
     showToast("Style preset added! 🎨");
   };
 
-  // ── Handle File Upload ──
-  const processImageFile = (file) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      showToast("Please upload an image file (PNG, JPG, WEBP).", "error");
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      showToast("Image size too large. Please upload under 8MB.", "error");
-      return;
-    }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setUploadedImage(e.target.result);
-      setUploadFileName(file.name);
-      setImageAnalysis(null);
-      setSuggestedPrompt("");
-      showToast("Image uploaded! Click 'Analyze Image' to understand it. 📷");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    processImageFile(file);
-    e.target.value = "";
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    processImageFile(file);
-  };
-
-  const handleRemoveUploadedImage = () => {
-    setUploadedImage(null);
-    setUploadFileName("");
-    setImageAnalysis(null);
-    setSuggestedPrompt("");
-    showToast("Uploaded image removed.");
-  };
-
-  // ── AI Vision: Understand & Analyze Image ──
-  const analyzeImage = async () => {
-    if (!uploadedImage) {
-      showToast("Please upload an image first!", "error");
-      return;
-    }
-
-    setIsAnalyzing(true);
-    const endpoints = [];
-    if (API_BASE_URL) {
-      endpoints.push(`${API_BASE_URL}/api/image-analyze`);
-    }
-    endpoints.push("/api/image-analyze");
-
-    let lastError = "";
-    let data = null;
-
-    for (const ep of endpoints) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 35000);
-        const res = await fetch(ep, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            image: uploadedImage,
-            mode: "analyze",
-            userPrompt: prompt.trim(),
-          }),
-          signal: controller.signal,
-        });
-        clearTimeout(timer);
-
-        if (res.ok) {
-          data = await res.json();
-          break;
-        } else {
-          lastError = `Status ${res.status}`;
-        }
-      } catch (err) {
-        lastError = err.message;
-      }
-    }
-
-    setIsAnalyzing(false);
-
-    if (data && data.success) {
-      setImageAnalysis(data.description);
-      if (data.suggestedPrompt) {
-        setSuggestedPrompt(data.suggestedPrompt);
-      }
-      showToast("Image analyzed & understood successfully! 🧠✨");
-    } else {
-      showToast("Could not analyze image. Please try again.", "error");
-      console.error("Image analysis failed:", lastError);
-    }
-  };
 
   // ── AI Magic Wand: Enhance / Translate Prompt ──
   const enhancePromptWithAI = async () => {
-    if (!prompt.trim() && !imageAnalysis) {
-      showToast("Please enter a prompt or analyze an image first!", "error");
+    if (!prompt.trim()) {
+      showToast("Please enter a prompt first!", "error");
       return;
     }
 
@@ -290,7 +167,7 @@ export default function ImageGeneratorPro() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             prompt: prompt.trim() || "Create a high quality image based on this",
-            imageContext: imageAnalysis || "",
+            imageContext: "",
           }),
           signal: controller.signal,
         });
@@ -321,16 +198,10 @@ export default function ImageGeneratorPro() {
 
   // ── Image Generation ──
   const generateImage = async () => {
-    let finalPrompt = prompt.trim();
-
-    // If prompt is empty but we have a suggested prompt from uploaded image, use it!
-    if (!finalPrompt && suggestedPrompt) {
-      finalPrompt = suggestedPrompt;
-      setPrompt(suggestedPrompt);
-    }
+    const finalPrompt = prompt.trim();
 
     if (!finalPrompt) {
-      showToast("Please enter a prompt or analyze an uploaded image first!", "error");
+      showToast("Please enter a prompt first!", "error");
       return;
     }
 
@@ -366,7 +237,7 @@ export default function ImageGeneratorPro() {
           ratio: finalRatioId,
           seed,
           id: Date.now(),
-          referenceImage: uploadedImage ? true : false,
+          referenceImage: false,
         };
         setImageUrl(genUrl);
         setActiveResult(result);
@@ -496,112 +367,6 @@ export default function ImageGeneratorPro() {
         {/* ── LEFT PANEL: CONTROLS & INPUTS ── */}
         <div className="img-gen-panel">
           
-          {/* 1. IMAGE UPLOAD & VISION RECOGNITION SECTION */}
-          <div className="img-gen-upload-container">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-              <label className="img-gen-label">
-                <Camera size={13} style={{ display: "inline", marginRight: "5px" }} />
-                Reference Image / Vision Upload
-              </label>
-              {uploadedImage && (
-                <button type="button" onClick={handleRemoveUploadedImage} className="img-gen-clear-btn" title="Remove image">
-                  <X size={12} /> Remove
-                </button>
-              )}
-            </div>
-
-            {!uploadedImage ? (
-              <div
-                className={`img-gen-dropzone ${isDragging ? "dragging" : ""}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/png, image/jpeg, image/webp"
-                  style={{ display: "none" }}
-                />
-                <Upload size={24} color="#06b6d4" style={{ marginBottom: "6px" }} />
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "#e5e7eb" }}>
-                  Upload image to analyze or recreate
-                </div>
-                <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
-                  Drag & drop or click to browse (PNG, JPG, WEBP)
-                </div>
-              </div>
-            ) : (
-              <div className="img-gen-uploaded-preview-box">
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  <img
-                    src={uploadedImage}
-                    alt="Upload Preview"
-                    style={{ width: "64px", height: "64px", borderRadius: "10px", objectFit: "cover", border: "1px solid rgba(6,182,212,0.4)" }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "13px", fontWeight: "700", color: "#f3f4f6", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {uploadFileName || "Uploaded Image"}
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
-                      Ready for AI Vision Analysis & Recreation
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    onClick={analyzeImage}
-                    disabled={isAnalyzing}
-                    className="img-gen-vision-btn"
-                  >
-                    {isAnalyzing ? (
-                      <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Analyzing Vision...</>
-                    ) : (
-                      <><Eye size={13} /> 🔍 Analyze Image (AI Vision)</>
-                    )}
-                  </button>
-
-                  {suggestedPrompt && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPrompt(suggestedPrompt);
-                        showToast("Recreation prompt copied to prompt box! ✨");
-                      }}
-                      className="img-gen-apply-prompt-btn"
-                    >
-                      <Sparkles size={13} /> Use As Prompt
-                    </button>
-                  )}
-                </div>
-
-                {/* AI Vision Results Display */}
-                {imageAnalysis && (
-                  <div className="img-gen-analysis-box">
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22d3ee", fontWeight: "700", fontSize: "12px", marginBottom: "4px" }}>
-                      <Check size={14} color="#4ade80" /> AI Visual Understanding:
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#d1d5db", lineHeight: "1.5" }}>
-                      {imageAnalysis}
-                    </div>
-
-                    {suggestedPrompt && (
-                      <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                        <span style={{ fontSize: "11px", fontWeight: "700", color: "#a5b4fc" }}>Generated Recreation Prompt:</span>
-                        <div style={{ fontSize: "11px", color: "#9ca3af", fontStyle: "italic", marginTop: "2px" }}>
-                          "{suggestedPrompt}"
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
           {/* 2. TEXT PROMPT AREA */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -621,7 +386,7 @@ export default function ImageGeneratorPro() {
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={uploadedImage ? "Describe how to modify this image or what to generate... e.g. Make it anime style, add neon sunset lighting..." : "Describe what you want to see... e.g. A majestic white tiger in a magical neon jungle, 8k cinematic lighting..."}
+                placeholder={"Describe what you want to see... e.g. A majestic white tiger in a magical neon jungle, 8k cinematic lighting..."}
                 rows={4}
                 className="img-gen-textarea"
               />
