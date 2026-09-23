@@ -459,7 +459,10 @@ const PwaInstallBanner = () => {
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("nexus_theme");
-    return saved !== null ? saved === "dark" : true; // Defaults to Dark mode
+    if (saved !== null) return saved === "dark"; // Respect saved preference
+    // First visit: light mode on mobile, dark mode on desktop
+    const isMobileDevice = window.innerWidth <= 768;
+    return !isMobileDevice; // mobile → false (light), desktop → true (dark)
   });
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [connectionState, setConnectionState] = useState('online');
