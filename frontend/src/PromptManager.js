@@ -1,33 +1,41 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Search, Copy, Check, Play, MessageSquare, Sparkles, BookOpen, ArrowLeft, Zap, Code2, Globe, Mail, FileText, Image, Layers, ChevronRight } from "lucide-react";
+import {
+  Plus, Trash2, Search, Copy, Check, Play, MessageSquare,
+  Sparkles, BookOpen, ArrowLeft, Zap, Code2, Globe, Mail,
+  FileText, Image, Layers, ChevronRight, Clock, CopyPlus,
+  Hash, Keyboard,
+} from "lucide-react";
 import API_BASE_URL from "./apiConfig";
 import './PromptManager.css';
 
+/* ─────────────────────────────────────────────
+   META & CONSTANTS
+───────────────────────────────────────────── */
 const CATEGORY_META = {
-  Coding:      { icon: Code2,    color: '#34d399', bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.2)'  },
-  Research:    { icon: Sparkles, color: '#a78bfa', bg: 'rgba(139,92,246,0.1)', border: 'rgba(139,92,246,0.2)' },
-  Translation: { icon: Globe,    color: '#f472b6', bg: 'rgba(236,72,153,0.1)', border: 'rgba(236,72,153,0.2)' },
-  Email:       { icon: Mail,     color: '#60a5fa', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.2)' },
-  Content:     { icon: FileText, color: '#fbbf24', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)' },
-  Image:       { icon: Image,    color: '#22d3ee', bg: 'rgba(6,182,212,0.1)',  border: 'rgba(6,182,212,0.2)'  },
-  Template:    { icon: Layers,   color: '#818cf8', bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.2)' },
+  Coding:      { icon: Code2,    color: '#34d399', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.25)'  },
+  Research:    { icon: Sparkles, color: '#a78bfa', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.25)' },
+  Translation: { icon: Globe,    color: '#f472b6', bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.25)' },
+  Email:       { icon: Mail,     color: '#60a5fa', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' },
+  Content:     { icon: FileText, color: '#fbbf24', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
+  Image:       { icon: Image,    color: '#22d3ee', bg: 'rgba(6,182,212,0.12)',  border: 'rgba(6,182,212,0.25)'  },
+  Template:    { icon: Layers,   color: '#818cf8', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.25)' },
 };
 
 const BUILT_IN_PROMPTS = [
-  { id: 'builtin-coding-1', category: 'Coding',      title: "Debug & Fix Workflow",        prompt: "Analyze the following code, identify any bugs, inefficiencies, or logical errors, and provide a corrected version along with a brief explanation:\n\n```js\n// paste code here\n```" },
-  { id: 'builtin-coding-2', category: 'Coding',      title: "Code Explanation",            prompt: "Break down the following code step-by-step, explaining the logic, performance impact, and key concepts in simple terms:\n\n```js\n// paste code here\n```" },
-  { id: 'builtin-research-1', category: 'Research',  title: "Quick Concept Explainer",     prompt: "Explain the following scientific concept or topic in a clear, concise manner suitable for a beginner, and provide 3 key real-world applications:\n\n[Topic]" },
-  { id: 'builtin-research-2', category: 'Research',  title: "Structured Deep Dive",        prompt: "Perform a comprehensive deep-dive into the following topic. Provide structured sections: 1) Executive Summary, 2) Historical Context, 3) Key Technical Pillars, 4) Current Challenges, and 5) Future Outlook:\n\n[Topic]" },
-  { id: 'builtin-translation-1', category: 'Translation', title: "Natural English to Hindi", prompt: "Translate the following English text into natural, culturally-aware Hindi. Ensure the tone is preserved and feels authentic rather than a literal word-for-word translation:\n\n" },
-  { id: 'builtin-email-1', category: 'Email',        title: "Professional Email Writer",   prompt: "Draft a professional email based on the following details. Ensure a polite, clear, and action-oriented tone:\n\n- Recipient: \n- Subject/Purpose: \n- Key Points to Include: \n- Call to Action: " },
-  { id: 'builtin-content-1', category: 'Content',    title: "SEO Blog Outline",            prompt: "Generate a detailed SEO-optimized blog outline for the topic below. Include target keywords, heading structures (H1, H2, H3), and a brief description of what should be covered under each heading:\n\n[Blog Topic]" },
-  { id: 'builtin-image-1', category: 'Image',        title: "AI Image Prompt Builder",     prompt: "Convert the following simple image idea into a detailed, descriptive text prompt for an AI image generator. Include specific art styles, lighting, camera angles, color grading, and descriptive modifiers:\n\n[Simple Idea]" },
-  { id: 'builtin-template-1', category: 'Template',  title: "4-Point Summary",             prompt: "Analyze the text below and generate: 1) A one-sentence high-level summary, 2) Four bullet points containing the most critical facts, and 3) A short list of recommended next steps:\n\n" },
+  { id: 'builtin-coding-1',      category: 'Coding',      title: "Debug & Fix Workflow",         prompt: "Analyze the following code, identify any bugs, inefficiencies, or logical errors, and provide a corrected version along with a brief explanation:\n\n```js\n// paste code here\n```" },
+  { id: 'builtin-coding-2',      category: 'Coding',      title: "Code Explanation",             prompt: "Break down the following code step-by-step, explaining the logic, performance impact, and key concepts in simple terms:\n\n```js\n// paste code here\n```" },
+  { id: 'builtin-research-1',    category: 'Research',    title: "Quick Concept Explainer",      prompt: "Explain the following scientific concept or topic in a clear, concise manner suitable for a beginner, and provide 3 key real-world applications:\n\n[Topic]" },
+  { id: 'builtin-research-2',    category: 'Research',    title: "Structured Deep Dive",         prompt: "Perform a comprehensive deep-dive into the following topic. Provide structured sections: 1) Executive Summary, 2) Historical Context, 3) Key Technical Pillars, 4) Current Challenges, and 5) Future Outlook:\n\n[Topic]" },
+  { id: 'builtin-translation-1', category: 'Translation', title: "Natural English to Hindi",     prompt: "Translate the following English text into natural, culturally-aware Hindi. Ensure the tone is preserved and feels authentic rather than a literal word-for-word translation:\n\n" },
+  { id: 'builtin-email-1',       category: 'Email',       title: "Professional Email Writer",    prompt: "Draft a professional email based on the following details. Ensure a polite, clear, and action-oriented tone:\n\n- Recipient: \n- Subject/Purpose: \n- Key Points to Include: \n- Call to Action: " },
+  { id: 'builtin-content-1',     category: 'Content',     title: "SEO Blog Outline",             prompt: "Generate a detailed SEO-optimized blog outline for the topic below. Include target keywords, heading structures (H1, H2, H3), and a brief description of what should be covered under each heading:\n\n[Blog Topic]" },
+  { id: 'builtin-image-1',       category: 'Image',       title: "AI Image Prompt Builder",      prompt: "Convert the following simple image idea into a detailed, descriptive text prompt for an AI image generator. Include specific art styles, lighting, camera angles, color grading, and descriptive modifiers:\n\n[Simple Idea]" },
+  { id: 'builtin-template-1',    category: 'Template',    title: "4-Point Summary",              prompt: "Analyze the text below and generate: 1) A one-sentence high-level summary, 2) Four bullet points containing the most critical facts, and 3) A short list of recommended next steps:\n\n" },
 ];
 
-const STORAGE_KEY = 'nexuss_prompts_v1';
-const CATEGORIES = ['All', 'Coding', 'Research', 'Translation', 'Email', 'Content', 'Image', 'Template'];
+const STORAGE_KEY   = 'nexuss_prompts_v1';
+const CATEGORIES    = ['All', 'Coding', 'Research', 'Translation', 'Email', 'Content', 'Image', 'Template'];
 const PERSONALIZATION_OPTIONS = [
   { value: 'Default',   label: 'Default Output' },
   { value: 'Hinglish',  label: 'Hinglish (Hindi + English)' },
@@ -36,25 +44,50 @@ const PERSONALIZATION_OPTIONS = [
   { value: 'Technical', label: 'Advanced Technical' },
 ];
 
+/* ─────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────── */
+function wordCount(str) {
+  return str.trim() ? str.trim().split(/\s+/).length : 0;
+}
+function estimateTokens(str) {
+  // rough: 1 token ≈ 4 chars
+  return Math.ceil(str.length / 4);
+}
+function relativeTime(ts) {
+  if (!ts) return '';
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60)  return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+/* ─────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────── */
 export default function PromptManager() {
   const navigate = useNavigate();
-  const [selected, setSelected]           = useState(null);
-  const [edited, setEdited]               = useState("");
-  const [title, setTitle]                 = useState('');
-  const [editCategory, setEditCategory]   = useState('Coding');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [personalization, setPersonalization] = useState('Default');
-  const [query, setQuery]                 = useState('');
-  const [prompts, setPrompts]             = useState([]);
-  const [generated, setGenerated]         = useState('');
-  const [generating, setGenerating]       = useState(false);
-  const [generateError, setGenerateError] = useState('');
-  const [copiedId, setCopiedId]           = useState(null);
-  const [toast, setToast]                 = useState(null);
-  const [isReranking, setIsReranking]     = useState(false);
-  const [rerankedOrder, setRerankedOrder] = useState(null); // null = no AI rerank yet
-  const rerankDebounce                    = React.useRef(null);
 
+  const [selected,         setSelected]         = useState(null);
+  const [edited,           setEdited]           = useState("");
+  const [title,            setTitle]            = useState('');
+  const [editCategory,     setEditCategory]     = useState('Coding');
+  const [categoryFilter,   setCategoryFilter]   = useState('All');
+  const [personalization,  setPersonalization]  = useState('Default');
+  const [query,            setQuery]            = useState('');
+  const [prompts,          setPrompts]          = useState([]);
+  const [generated,        setGenerated]        = useState('');
+  const [generating,       setGenerating]       = useState(false);
+  const [generateError,    setGenerateError]    = useState('');
+  const [copiedId,         setCopiedId]         = useState(null);
+  const [toast,            setToast]            = useState(null);
+  const [isReranking,      setIsReranking]      = useState(false);
+  const [rerankedOrder,    setRerankedOrder]    = useState(null);
+  const [showShortcuts,    setShowShortcuts]    = useState(false);
+  const rerankDebounce = React.useRef(null);
+
+  /* Load prompts */
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
     let userPrompts = [];
@@ -62,7 +95,8 @@ export default function PromptManager() {
     setPrompts([...userPrompts, ...BUILT_IN_PROMPTS]);
   }, []);
 
-  const saveToStorage = (userPrompts) => localStorage.setItem(STORAGE_KEY, JSON.stringify(userPrompts));
+  const saveToStorage = (userPrompts) =>
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userPrompts));
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -78,8 +112,15 @@ export default function PromptManager() {
     setGenerateError('');
   };
 
+  /* New prompt */
   const handleNew = () => {
-    const newPrompt = { id: `user-${Date.now()}`, title: 'New Prompt Template', prompt: 'Write your prompt instructions here...', category: 'Coding' };
+    const newPrompt = {
+      id: `user-${Date.now()}`,
+      title: 'New Prompt Template',
+      prompt: 'Write your prompt instructions here...',
+      category: 'Coding',
+      updatedAt: Date.now(),
+    };
     const updated = [newPrompt, ...prompts];
     setPrompts(updated);
     saveToStorage(updated.filter(p => String(p.id).startsWith('user-')));
@@ -87,17 +128,44 @@ export default function PromptManager() {
     showToast('New prompt created! 📝');
   };
 
-  const handleSave = () => {
+  /* Save */
+  const handleSave = useCallback(() => {
     if (!selected) return;
-    if (String(selected.id).startsWith('builtin')) { showToast('Built-in prompts are read-only. Create a new one!', 'error'); return; }
-    const updated = prompts.map(p => p.id === selected.id ? { ...p, title: title || 'Untitled', prompt: edited, category: editCategory } : p);
+    if (String(selected.id).startsWith('builtin')) {
+      showToast('Built-in prompts are read-only. Duplicate it first!', 'error');
+      return;
+    }
+    const now = Date.now();
+    const updated = prompts.map(p =>
+      p.id === selected.id
+        ? { ...p, title: title || 'Untitled', prompt: edited, category: editCategory, updatedAt: now }
+        : p
+    );
     setPrompts(updated);
     saveToStorage(updated.filter(p => String(p.id).startsWith('user-')));
-    setSelected(prev => ({ ...prev, title: title || 'Untitled', prompt: edited, category: editCategory }));
+    setSelected(prev => ({ ...prev, title: title || 'Untitled', prompt: edited, category: editCategory, updatedAt: now }));
     showToast('Saved! 💾');
+  }, [selected, title, edited, editCategory, prompts]);
+
+  /* Duplicate (builtin → custom) */
+  const handleDuplicate = () => {
+    if (!selected) return;
+    const copy = {
+      id: `user-${Date.now()}`,
+      title: `${selected.title} (Copy)`,
+      prompt: edited,
+      category: editCategory,
+      updatedAt: Date.now(),
+    };
+    const updated = [copy, ...prompts];
+    setPrompts(updated);
+    saveToStorage(updated.filter(p => String(p.id).startsWith('user-')));
+    openPrompt(copy);
+    showToast('Duplicated as custom! ✨');
   };
 
-  const handleGenerate = async () => {
+  /* Generate / Run */
+  const handleGenerate = useCallback(async () => {
     if (!selected || !edited.trim()) return;
     setGenerating(true); setGenerateError(''); setGenerated('');
     let finalMessage = edited;
@@ -118,8 +186,9 @@ export default function PromptManager() {
       setGenerateError(error.message || 'Error generating response.');
       showToast('Execution failed.', 'error');
     } finally { setGenerating(false); }
-  };
+  }, [selected, edited, personalization]);
 
+  /* Delete */
   const handleDelete = () => {
     if (!selected) return;
     if (String(selected.id).startsWith('builtin')) { showToast('Cannot delete built-in template!', 'error'); return; }
@@ -131,6 +200,7 @@ export default function PromptManager() {
     showToast('Prompt deleted.');
   };
 
+  /* Copy */
   const handleCopy = (txt, id) => {
     navigator.clipboard.writeText(txt).then(() => {
       setCopiedId(id); showToast('Copied! 📋');
@@ -138,6 +208,7 @@ export default function PromptManager() {
     }).catch(() => showToast('Failed to copy.', 'error'));
   };
 
+  /* Use in Chat */
   const handleUseInChat = () => {
     if (!edited.trim()) return;
     localStorage.setItem("prefilled_prompt_transfer", edited);
@@ -145,24 +216,35 @@ export default function PromptManager() {
     showToast('Loaded into Chat! 💬');
   };
 
-  // Smart AI-powered search with reranking
+  /* Keyboard Shortcuts */
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleGenerate();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSave, handleGenerate]);
+
+  /* Smart search + AI rerank */
   const handleSearchChange = (e) => {
     const q = e.target.value;
     setQuery(q);
-    setRerankedOrder(null); // reset on new query
-
-    // Only rerank if query is meaningful
+    setRerankedOrder(null);
     if (q.trim().length < 3) return;
-
     clearTimeout(rerankDebounce.current);
     rerankDebounce.current = setTimeout(async () => {
-      // Build candidate list (text filter first for speed)
       const candidates = prompts.filter(p => {
         if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
-        return true; // pass all to reranker for semantic scoring
+        return true;
       });
       if (candidates.length === 0) return;
-
       const docs = candidates.map(p => `${p.title} — ${(p.prompt || '').slice(0, 200)}`);
       setIsReranking(true);
       try {
@@ -174,7 +256,6 @@ export default function PromptManager() {
         if (!resp.ok) throw new Error('Rerank failed');
         const data = await resp.json();
         if (data.success && data.results) {
-          // Filter out low-relevance results (score < 0.01) when using real AI
           const threshold = data.provider === 'fallback' ? -1 : 0.01;
           const orderedIds = data.results
             .filter(r => r.score >= threshold)
@@ -185,13 +266,11 @@ export default function PromptManager() {
       } catch (err) {
         console.warn('[Rerank] Falling back to text search:', err.message);
         setRerankedOrder(null);
-      } finally {
-        setIsReranking(false);
-      }
-    }, 500); // 500ms debounce
+      } finally { setIsReranking(false); }
+    }, 500);
   };
 
-  // Apply rerank order or fall back to text match
+  /* Filtered list */
   const filtered = (() => {
     const base = prompts.filter(p => {
       if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
@@ -199,9 +278,7 @@ export default function PromptManager() {
       const q = query.toLowerCase();
       return (p.title || '').toLowerCase().includes(q) || (p.prompt || '').toLowerCase().includes(q);
     });
-
     if (query.trim().length >= 3 && rerankedOrder) {
-      // Sort by AI rerank order; items not in rerankedOrder go to end
       return [...base].sort((a, b) => {
         const ai = rerankedOrder.indexOf(a.id);
         const bi = rerankedOrder.indexOf(b.id);
@@ -214,10 +291,13 @@ export default function PromptManager() {
     return base;
   })();
 
-  const isBuiltin = selected ? String(selected.id).startsWith('builtin') : false;
+  const isBuiltin    = selected ? String(selected.id).startsWith('builtin') : false;
   const totalCustom  = prompts.filter(p => String(p.id).startsWith('user-')).length;
   const totalBuiltin = prompts.filter(p => String(p.id).startsWith('builtin')).length;
+  const words        = wordCount(edited);
+  const tokens       = estimateTokens(edited);
 
+  /* ─── RENDER ─── */
   return (
     <div className="pm-root">
 
@@ -228,18 +308,47 @@ export default function PromptManager() {
         </div>
       )}
 
+      {/* ── Keyboard Shortcut Modal ── */}
+      {showShortcuts && (
+        <div className="pm-shortcuts-overlay" onClick={() => setShowShortcuts(false)}>
+          <div className="pm-shortcuts-modal" onClick={e => e.stopPropagation()}>
+            <div className="pm-shortcuts-header">
+              <Keyboard size={16} />
+              <span>Keyboard Shortcuts</span>
+              <button onClick={() => setShowShortcuts(false)} className="pm-shortcuts-close">✕</button>
+            </div>
+            <div className="pm-shortcuts-list">
+              {[
+                ['Ctrl + S', 'Save prompt'],
+                ['Ctrl + Enter', 'Run / Test prompt'],
+              ].map(([key, desc]) => (
+                <div key={key} className="pm-shortcut-row">
+                  <kbd className="pm-kbd">{key}</kbd>
+                  <span>{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══════════ LEFT SIDEBAR ══════════ */}
       <aside className={`pm-sidebar ${selected ? 'pm-sidebar--hidden' : ''}`}>
 
         {/* Header */}
         <div className="pm-sidebar-head">
           <div>
-            <p className="pm-sidebar-eyebrow">Prompt Studio</p>
+            <p className="pm-sidebar-eyebrow">✦ Prompt Studio</p>
             <h2 className="pm-sidebar-title">Templates</h2>
           </div>
-          <button className="pm-new-btn" onClick={handleNew}>
-            <Plus size={15} /> New
-          </button>
+          <div className="pm-sidebar-head-actions">
+            <button className="pm-icon-btn" onClick={() => setShowShortcuts(true)} title="Keyboard Shortcuts">
+              <Keyboard size={15} />
+            </button>
+            <button className="pm-new-btn" onClick={handleNew}>
+              <Plus size={15} /> New
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -252,24 +361,34 @@ export default function PromptManager() {
             placeholder="Search templates (AI-powered)..."
           />
           {isReranking && (
-            <span style={{ fontSize: '10px', color: 'var(--accent)', marginLeft: 6, whiteSpace: 'nowrap', opacity: 0.8 }}
-              title="AI is ranking results by relevance">
+            <span className="pm-reranking-badge" title="AI is ranking results by relevance">
               ✦ AI
             </span>
           )}
         </div>
 
         {/* Category Pills */}
-        <div className="pm-pills">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              className={`pm-pill ${categoryFilter === cat ? 'pm-pill--on' : ''}`}
-              onClick={() => setCategoryFilter(cat)}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="pm-pills-wrap">
+          <div className="pm-pills">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                className={`pm-pill ${categoryFilter === cat ? 'pm-pill--on' : ''}`}
+                onClick={() => setCategoryFilter(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats strip */}
+        <div className="pm-sidebar-stats">
+          <span><strong>{totalBuiltin}</strong> System</span>
+          <span className="pm-sidebar-stats-dot" />
+          <span><strong>{totalCustom}</strong> Custom</span>
+          <span className="pm-sidebar-stats-dot" />
+          <span><strong>{totalBuiltin + totalCustom}</strong> Total</span>
         </div>
 
         {/* List */}
@@ -283,6 +402,7 @@ export default function PromptManager() {
             filtered.map(p => {
               const meta = CATEGORY_META[p.category] || CATEGORY_META.Template;
               const Icon = meta.icon;
+              const isCustom = String(p.id).startsWith('user-');
               return (
                 <div
                   key={p.id}
@@ -293,7 +413,15 @@ export default function PromptManager() {
                     <div className="pm-card-icon" style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
                       <Icon size={14} />
                     </div>
-                    <span className="pm-card-type">{String(p.id).startsWith('builtin') ? 'System' : 'Custom'}</span>
+                    <div className="pm-card-meta">
+                      <span className="pm-card-type">{isCustom ? 'Custom' : 'System'}</span>
+                      {isCustom && p.updatedAt && (
+                        <span className="pm-card-time">
+                          <Clock size={9} style={{ display: 'inline', marginRight: 2 }} />
+                          {relativeTime(p.updatedAt)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <h4 className="pm-card-title">{p.title}</h4>
                   <p className="pm-card-preview">{p.prompt}</p>
@@ -318,12 +446,21 @@ export default function PromptManager() {
 
             {/* Mobile back */}
             <button className="pm-back" onClick={() => setSelected(null)}>
-              <ArrowLeft size={15} /> Back
+              <ArrowLeft size={15} /> Back to Templates
             </button>
 
             {/* Title row */}
             <div className="pm-editor-header">
               <div className="pm-editor-title-wrap">
+                {(() => {
+                  const meta = CATEGORY_META[editCategory] || CATEGORY_META.Template;
+                  const Icon = meta.icon;
+                  return (
+                    <div className="pm-editor-title-icon" style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
+                      <Icon size={18} />
+                    </div>
+                  );
+                })()}
                 <input
                   className="pm-editor-title"
                   type="text"
@@ -332,7 +469,7 @@ export default function PromptManager() {
                   onChange={e => setTitle(e.target.value)}
                   placeholder="Template title..."
                 />
-                {isBuiltin && <span className="pm-readonly-badge">Read Only</span>}
+                {isBuiltin && <span className="pm-readonly-badge">🔒 Read Only</span>}
               </div>
 
               {/* Controls row */}
@@ -370,17 +507,29 @@ export default function PromptManager() {
             <div className="pm-textarea-wrap">
               <div className="pm-textarea-label-row">
                 <span className="pm-label">Prompt Content</span>
-                <span className="pm-char-count">{edited.length} chars</span>
+                <div className="pm-textarea-meta">
+                  <span className="pm-meta-badge">
+                    <Hash size={10} /> {words} words
+                  </span>
+                  <span className="pm-meta-badge">
+                    {edited.length} chars
+                  </span>
+                  <span className="pm-meta-badge pm-meta-badge--token">
+                    ~{tokens} tokens
+                  </span>
+                </div>
               </div>
               <textarea
                 className="pm-textarea"
                 value={edited}
                 disabled={isBuiltin}
                 onChange={e => setEdited(e.target.value)}
-                placeholder="Write your detailed prompt or template here..."
+                placeholder="Write your detailed prompt or template here...&#10;&#10;Tip: Use [Placeholders] for variable parts of your prompt."
               />
               {isBuiltin && (
-                <p className="pm-lock-hint">🔐 Duplicate as custom to edit this template</p>
+                <p className="pm-lock-hint">
+                  🔐 Click <strong>Duplicate</strong> to create an editable copy of this template
+                </p>
               )}
             </div>
 
@@ -392,6 +541,9 @@ export default function PromptManager() {
                     <Trash2 size={15} /> Delete
                   </button>
                 )}
+                <button className="pm-btn pm-btn--duplicate" onClick={handleDuplicate} title="Duplicate as custom">
+                  <CopyPlus size={15} /> Duplicate
+                </button>
               </div>
               <div className="pm-actions-right">
                 <button className="pm-btn pm-btn--ghost" onClick={() => handleCopy(edited, selected.id)}>
@@ -399,7 +551,7 @@ export default function PromptManager() {
                   Copy
                 </button>
                 {!isBuiltin && (
-                  <button className="pm-btn pm-btn--green" onClick={handleSave}>
+                  <button className="pm-btn pm-btn--green" onClick={handleSave} title="Ctrl+S">
                     Save
                   </button>
                 )}
@@ -410,6 +562,7 @@ export default function PromptManager() {
                   className={`pm-btn pm-btn--primary ${generating ? 'pm-btn--loading' : ''}`}
                   onClick={handleGenerate}
                   disabled={generating || !edited.trim()}
+                  title="Ctrl+Enter"
                 >
                   {generating ? (
                     <><span className="pm-spinner" /> Running...</>
@@ -420,14 +573,23 @@ export default function PromptManager() {
               </div>
             </div>
 
+            {/* Shortcut hint */}
+            <div className="pm-shortcut-hint">
+              <kbd className="pm-kbd-mini">Ctrl+S</kbd> Save &nbsp;·&nbsp;
+              <kbd className="pm-kbd-mini">Ctrl+↵</kbd> Run
+            </div>
+
             {/* Result Panel */}
             {(generated || generateError) && (
               <div className={`pm-result ${generateError ? 'pm-result--error' : ''}`}>
                 <div className="pm-result-header">
                   <Zap size={14} />
                   <span>{generateError ? 'Error' : 'AI Response'}</span>
+                  {generated && (
+                    <span className="pm-result-words">{wordCount(generated)} words</span>
+                  )}
                   <button className="pm-result-copy" onClick={() => handleCopy(generated || generateError, 'result')}>
-                    Copy
+                    <Copy size={12} /> Copy
                   </button>
                 </div>
                 <div className="pm-result-body">
@@ -442,7 +604,7 @@ export default function PromptManager() {
           <div className="pm-dashboard">
             <div className="pm-dashboard-hero">
               <div className="pm-hero-icon">
-                <Sparkles size={32} />
+                <Sparkles size={34} />
               </div>
               <h3>Prompt Studio</h3>
               <p>Create, manage, and test your AI prompt templates. Pick one from the sidebar or create a new one.</p>
@@ -475,7 +637,7 @@ export default function PromptManager() {
                   const Icon = meta.icon;
                   return (
                     <div key={p.id} className="pm-qs-card" onClick={() => openPrompt(p)}>
-                      <div className="pm-qs-icon" style={{ background: meta.bg, color: meta.color }}>
+                      <div className="pm-qs-icon" style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
                         <Icon size={16} />
                       </div>
                       <div className="pm-qs-info">
@@ -492,9 +654,21 @@ export default function PromptManager() {
             <button className="pm-cta-btn" onClick={handleNew}>
               <Plus size={16} /> Create New Template
             </button>
+
+            {/* Shortcut hint on dashboard */}
+            <div className="pm-shortcut-hint pm-shortcut-hint--center">
+              <Keyboard size={12} style={{ marginRight: 4, opacity: 0.5 }} />
+              <kbd className="pm-kbd-mini">Ctrl+S</kbd> Save &nbsp;·&nbsp;
+              <kbd className="pm-kbd-mini">Ctrl+↵</kbd> Run
+            </div>
           </div>
         )}
       </main>
+
+      {/* ── Mobile FAB ── */}
+      <button className="pm-fab" onClick={handleNew} title="New Prompt">
+        <Plus size={22} />
+      </button>
     </div>
   );
 }
