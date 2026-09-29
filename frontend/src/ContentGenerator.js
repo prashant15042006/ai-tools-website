@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, ClipboardPaste, Mic, ExternalLink, PenTool, Sparkles, Camera, X } from "lucide-react";
+import { Send, ClipboardPaste, Mic, ExternalLink, PenTool, Sparkles, X } from "lucide-react";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
@@ -11,6 +11,7 @@ import { PreRenderer } from "./utils/PreRenderer";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
 import { cacheResponseForOffline } from "./utils/responseCache";
 import { cleanFrontendResponse } from "./utils/helpers";
+import AttachmentMenu from "./components/AttachmentMenu";
 
 // Inject table styles on component mount
 injectTableStyles();
@@ -35,7 +36,6 @@ function ContentGenerator() {
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
-  const imageInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -240,16 +240,6 @@ function ContentGenerator() {
     }
   };
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { alert("Please select an image file."); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => setImagePreview(ev.target.result);
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
   const removeImage = () => setImagePreview(null);
 
   const startListening = () => {
@@ -391,7 +381,6 @@ function ContentGenerator() {
           </div>
         )}
         <div className="input-box-wrapper">
-          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSelect} />
           {/* LEFT: Paste button */}
           <button className="action-btn" title="Paste from Clipboard" onClick={handlePaste}>
             <ClipboardPaste size={20} />
@@ -411,11 +400,24 @@ function ContentGenerator() {
               }
             }}
           />
-          {/* RIGHT: Camera + Mic + Send */}
+          {/* RIGHT: Attachment (Camera/Photos/File/Folder) + Mic + Send */}
           <div className="input-actions-right">
-            <button className="action-btn" title="Upload Image" onClick={() => imageInputRef.current?.click()}>
-              <Camera size={20} color={imagePreview ? "#8b5cf6" : "var(--text-secondary)"} />
-            </button>
+            <AttachmentMenu
+              imagePreview={imagePreview}
+              onImageSelect={(dataUrl) => setImagePreview(dataUrl)}
+              onFileSelect={(content, fileName) => {
+                setInput((prev) =>
+                  prev
+                    ? `${prev}\n\n[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
+                    : `[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
+                );
+              }}
+              onFolderSelect={(summary) => {
+                setInput((prev) => (prev ? `${prev}\n\n${summary}\n` : `${summary}\n`));
+              }}
+              accentColor="#8b5cf6"
+              disabled={loading}
+            />
             <button
               className={`action-btn ${isListening ? "listening" : ""}`}
               title={isListening ? "Listening..." : "Voice Input"}

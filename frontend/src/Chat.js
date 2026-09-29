@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, Camera, X, Download } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -13,6 +13,7 @@ import { detectRatioFromPrompt, cleanFrontendResponse } from "./utils/helpers";
 import { useLocation } from "react-router-dom";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
 import { cacheResponseForOffline } from "./utils/responseCache";
+import AttachmentMenu from "./components/AttachmentMenu";
 
 // Inject table styles on component mount
 injectTableStyles();
@@ -44,7 +45,6 @@ function Chat() {
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
-  const imageInputRef = useRef(null);
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
@@ -430,17 +430,6 @@ function Chat() {
     }
   };
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { alert("Please select an image file."); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => setImagePreview(ev.target.result);
-    reader.readAsDataURL(file);
-    // Reset input so the same file can be re-selected
-    e.target.value = "";
-  };
-
   const removeImage = () => setImagePreview(null);
 
   const startListening = () => {
@@ -616,9 +605,6 @@ function Chat() {
           </div>
         )}
         <div className="input-box-wrapper">
-          {/* Hidden file input */}
-          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageSelect} />
-
           {/* LEFT: Paste button */}
           <button className="action-btn" title="Paste" onClick={handlePaste}>
             <ClipboardPaste size={20} />
@@ -644,16 +630,24 @@ function Chat() {
             }}
           />
 
-          {/* RIGHT: Camera + Mic + Send */}
+          {/* RIGHT: Attachment (Camera/Photos/File/Folder) + Mic + Send */}
           <div className="input-actions-right">
-            <button
-              className="action-btn"
-              title="Upload Image"
-              onClick={() => imageInputRef.current?.click()}
-              style={imagePreview ? { color: "#6366f1" } : {}}
-            >
-              <Camera size={20} color={imagePreview ? "#6366f1" : "var(--text-secondary)"} />
-            </button>
+            <AttachmentMenu
+              imagePreview={imagePreview}
+              onImageSelect={(dataUrl) => setImagePreview(dataUrl)}
+              onFileSelect={(content, fileName) => {
+                setInput((prev) =>
+                  prev
+                    ? `${prev}\n\n[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
+                    : `[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
+                );
+              }}
+              onFolderSelect={(summary) => {
+                setInput((prev) => (prev ? `${prev}\n\n${summary}\n` : `${summary}\n`));
+              }}
+              accentColor="#6366f1"
+              disabled={loading}
+            />
             <button 
               className={`action-btn ${isListening ? "listening" : ""}`} 
               title="Voice Input" 
