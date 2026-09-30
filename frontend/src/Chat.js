@@ -61,24 +61,31 @@ function Chat() {
 
   const storageKey = user?.email ? `nexus_chat_history_${user.email}` : 'nexus_chat_history_anonymous';
 
-  // Load persisted chat history for this session on component mount or when user changes
+  // Load persisted chat history — either from a history-item click (loadChatId) or sessionStorage
   useEffect(() => {
     const legacy = localStorage.getItem('nexus_chat_history');
-    if (legacy) {
-      localStorage.removeItem('nexus_chat_history');
+    if (legacy) localStorage.removeItem('nexus_chat_history');
+
+    const loadChatId = location.state?.loadChatId;
+    if (loadChatId) {
+      // User clicked a sidebar history item — restore that specific conversation
+      try {
+        const saved = localStorage.getItem(`nexus_chat_msgs_${loadChatId}`);
+        if (saved) {
+          setMessages(JSON.parse(saved));
+          return; // skip sessionStorage load
+        }
+      } catch (e) {}
     }
 
     const stored = sessionStorage.getItem(storageKey);
     if (stored) {
-      try {
-        setMessages(JSON.parse(stored));
-      } catch (e) {
-        console.warn('Failed to parse chat history', e);
-      }
+      try { setMessages(JSON.parse(stored)); }
+      catch (e) { console.warn('Failed to parse chat history', e); }
     }
-  }, [storageKey]);
+  }, [storageKey, location.state]);
 
-  // Persist chat history in sessionStorage so it survives route switches but clears when the browser/tab closes
+  // Persist chat history in sessionStorage so it survives route switches
   useEffect(() => {
     sessionStorage.setItem(storageKey, JSON.stringify(messages));
   }, [messages, storageKey]);
@@ -101,7 +108,6 @@ function Chat() {
 
   const sendMessage = async (text = input) => {
     if (!text.trim() || loading) return;
-    addRecentChat(text);
     setLoading(true);
     setInput("");
     const imageToBeSent = imagePreview;
@@ -109,8 +115,14 @@ function Chat() {
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
-    // Store image in user message so it renders in the chat bubble
-    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }]);
+
+    // Build the new full messages list (user + empty AI placeholder)
+    setMessages((prev) => {
+      const updated = [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }];
+      // Save snapshot to localStorage so history can restore it
+      addRecentChat(text, updated);
+      return updated;
+    });
 
     const isImageRequest = (promptText) => {
       const p = promptText.toLowerCase().trim();
@@ -353,6 +365,22 @@ function Chat() {
       if (aiReply && aiReply.trim()) {
         cacheResponseForOffline(text, aiReply);
         await handleSpeak(aiReply);
+        // Update saved history with the completed AI reply
+        setMessages((prev) => {
+          try {
+            const saved = localStorage.getItem('nexus_chats');
+            if (saved) {
+              const chats = JSON.parse(saved);
+              if (chats.length > 0) {
+                const latestId = chats[0].id;
+                const msgsKey = `nexus_chat_msgs_${latestId}`;
+                const currentMsgs = prev.filter(m => m.text && m.sender);
+                localStorage.setItem(msgsKey, JSON.stringify(currentMsgs));
+              }
+            }
+          } catch(e) {}
+          return prev;
+        });
         setLoading(false);
         return;
       }
@@ -400,6 +428,20 @@ function Chat() {
       }
 
       if (completeSuccess) {
+        // Persist with complete AI reply
+        setMessages((prev) => {
+          try {
+            const saved = localStorage.getItem('nexus_chats');
+            if (saved) {
+              const chats = JSON.parse(saved);
+              if (chats.length > 0) {
+                const latestId = chats[0].id;
+                localStorage.setItem(`nexus_chat_msgs_${latestId}`, JSON.stringify(prev.filter(m => m.text && m.sender)));
+              }
+            }
+          } catch(e) {}
+          return prev;
+        });
         setLoading(false);
         return;
       }

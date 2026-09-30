@@ -168,7 +168,7 @@ const PwaInstallBanner = () => {
   function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, user, connectionState, setConnectionState } = useContext(AppContext);
+  const { darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, setRecentChats, user, connectionState, setConnectionState } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
   const isSidebarOpen = !sidebarCollapsed;
@@ -331,13 +331,56 @@ const PwaInstallBanner = () => {
           <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '16px 0' }} />
           <div className="sidebar-section-title">Recent Chats</div>
           {recentChats.length === 0 ? (
-            <div style={{ color: 'var(--text-secondary)', fontSize: '14px', padding: '10px 14px', fontStyle: 'italic' }}>No recent chats yet</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '13px', padding: '10px 14px', fontStyle: 'italic' }}>No recent chats yet</div>
           ) : (
-            recentChats.map((chat) => (
-              <div key={chat.id} className="chat-history-item" onClick={() => { navigate('/chat'); handleMobileNav(); }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{chat.title}</span>
-              </div>
-            ))
+            recentChats.map((chat) => {
+              const isActive = location.state?.loadChatId === chat.id;
+              return (
+                <div
+                  key={chat.id}
+                  className="chat-history-item"
+                  style={{
+                    background: isActive ? 'var(--sidebar-active)' : undefined,
+                    color: isActive ? '#ffffff' : undefined,
+                    boxShadow: isActive ? '0 2px 10px rgba(59,130,246,0.25)' : undefined,
+                    justifyContent: 'space-between',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  onClick={() => {
+                    navigate('/chat', { state: { loadChatId: chat.id } });
+                    handleMobileNav();
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {chat.title}
+                  </span>
+                  <button
+                    title="Delete this chat"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      try { localStorage.removeItem(`nexus_chat_msgs_${chat.id}`); } catch(err) {}
+                      setRecentChats(prev => prev.filter(c => c.id !== chat.id));
+                    }}
+                    style={{
+                      flexShrink: 0,
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: isActive ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)',
+                      opacity: 0,
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      lineHeight: 1,
+                      transition: 'opacity 0.15s',
+                    }}
+                    className="chat-history-delete-btn"
+                  >✕</button>
+                </div>
+              );
+            })
           )}
         </div>
 
@@ -554,11 +597,18 @@ function App() {
     localStorage.setItem('tts_custom_url', customVoiceUrl);
   }, [customVoiceUrl]);
 
-  const addRecentChat = (question) => {
+  const addRecentChat = (question, messages = []) => {
     const title = question.length > 36 ? question.substring(0, 36) + '…' : question;
+    const id = Date.now();
     setRecentChats((prev) => {
       if (prev.length > 0 && prev[0].title === title) return prev;
-      return [{ title, id: Date.now() }, ...prev].slice(0, 10);
+      const newChat = { title, id };
+      // Save messages to localStorage keyed by chat id
+      try {
+        const toSave = messages.filter(m => m.text && m.sender);
+        localStorage.setItem(`nexus_chat_msgs_${id}`, JSON.stringify(toSave));
+      } catch(e) {}
+      return [newChat, ...prev].slice(0, 20);
     });
   };
 
@@ -593,7 +643,7 @@ function App() {
   }
 
   return (
-    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, addRecentChat, user, setUser, loading, setLoading, connectionState, setConnectionState, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
+    <AppContext.Provider value={{ darkMode, setDarkMode, ttsEnabled, setTtsEnabled, recentChats, setRecentChats, addRecentChat, user, setUser, loading, setLoading, connectionState, setConnectionState, voicePreset, setVoicePreset, customVoiceUrl, setCustomVoiceUrl }}>
       <Router>
         <Suspense fallback={<SuspenseFallback />}>
           <Routes>

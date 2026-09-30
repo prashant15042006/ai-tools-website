@@ -740,6 +740,15 @@ body {
   color: var(--text-primary);
 }
 
+.chat-history-item:hover .chat-history-delete-btn {
+  opacity: 1 !important;
+}
+
+.chat-history-delete-btn:hover {
+  background: rgba(239,68,68,0.15) !important;
+  color: #ef4444 !important;
+}
+
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid var(--border-color);
