@@ -67,21 +67,50 @@
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" />
     </noscript>
 
-    <!-- Structured Data (JSON-LD) for Search Console & Rich Results -->
+    <!-- Structured Data (JSON-LD) for Google Search, Rich Snippets & Sitelinks -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Nexuss Ai",
-      "url": "https://ai-tools-website-psi.vercel.app/",
-      "description": "All-in-one AI workspace for chat, code generation, and content creation.",
-      "applicationCategory": "ProductivityApplication",
-      "operatingSystem": "All",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      }
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://ai-tools-website-psi.vercel.app/#website",
+          "url": "https://ai-tools-website-psi.vercel.app/",
+          "name": "Nexuss Ai",
+          "alternateName": ["Nexuss AI", "Nexuss Workspace", "Nexuss"],
+          "description": "Nexuss Ai is an intelligent all-in-one AI workspace offering conversational AI chat, PDF document analysis, automated code generation, content writing, and FLUX.1 photorealistic image generation.",
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://ai-tools-website-psi.vercel.app/#webapp",
+          "name": "Nexuss Ai",
+          "url": "https://ai-tools-website-psi.vercel.app/",
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "All",
+          "description": "High-performance AI platform for smart Q&A, PDF analysis, coding in 20+ languages, blog & email writing, and AI art generation.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "AI Chat with Voice and Vision",
+            "PDF Document Text Extraction and Summarization",
+            "Code Generation and Debugging",
+            "Content Writing and SEO Outline Creation",
+            "AI Image Generation with FLUX.1 (Multiple Aspect Ratios)",
+            "Prompt Engineering Studio"
+          ]
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://ai-tools-website-psi.vercel.app/#organization",
+          "name": "Nexuss Ai",
+          "url": "https://ai-tools-website-psi.vercel.app/",
+          "logo": "https://ai-tools-website-psi.vercel.app/icon-512.png"
+        }
+      ]
     }
     </script>
 
@@ -106,12 +135,18 @@
   <body>
     <noscript>You need to enable JavaScript to run Nexuss Ai.</noscript>
     <div id="root">
-      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#06080f;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:20px;">
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#06080f;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;">
         <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#4f46e5,#9333ea);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 25px -5px rgba(79,70,229,0.5);margin-bottom:16px;">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
         </div>
-        <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#f8fafc;margin-bottom:6px;">Nexuss Ai</div>
-        <div style="font-size:14px;color:#94a3b8;font-weight:500;">Intelligent AI Workspace</div>
+        <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:#f8fafc;margin:0 0 8px 0;">Nexuss Ai</h1>
+        <p style="font-size:15px;color:#94a3b8;font-weight:500;margin:0 0 20px 0;max-width:480px;">Intelligent All-in-One AI Workspace for Chat, PDF Analysis, Code Generation, Content Writing, and AI Image Creation.</p>
+        <nav style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+          <a href="/chat" style="color:#818cf8;text-decoration:none;font-size:13px;padding:6px 14px;border-radius:8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);">AI Chat</a>
+          <a href="/code" style="color:#34d399;text-decoration:none;font-size:13px;padding:6px 14px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);">Code Generator</a>
+          <a href="/content" style="color:#fbbf24;text-decoration:none;font-size:13px;padding:6px 14px;border-radius:8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);">Content Writer</a>
+          <a href="/images" style="color:#f472b6;text-decoration:none;font-size:13px;padding:6px 14px;border-radius:8px;background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.25);">Image Studio</a>
+        </nav>
       </div>
     </div>
   </body>
