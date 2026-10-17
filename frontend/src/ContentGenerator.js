@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, ClipboardPaste, Mic, ExternalLink, PenTool, Sparkles, X } from "lucide-react";
+import { Send, ClipboardPaste, Mic, ExternalLink, PenTool, Sparkles, X, FileText } from "lucide-react";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
@@ -36,6 +36,7 @@ function ContentGenerator() {
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [fileAttachment, setFileAttachment] = useState(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -51,17 +52,32 @@ function ContentGenerator() {
   };
 
   const sendMessage = async (text = input) => {
-    if (!text.trim() || loading) return;
-    addRecentChat("Write: " + text);
-    setInput("");
-    setLoading(true);
+    const rawText = text.trim();
+    if ((!rawText && !imagePreview && !fileAttachment) || loading) return;
+    const fileToBeSent = fileAttachment;
+    setFileAttachment(null);
     const imageToBeSent = imagePreview;
     setImagePreview(null);
 
+    const displayPrompt = rawText || (fileToBeSent ? `Analyze and write based on attached document: ${fileToBeSent.name}` : "");
+    addRecentChat("Write: " + displayPrompt);
+    setInput("");
+    setLoading(true);
+
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
-    // Store image in user message so it renders in the chat bubble
-    setMessages((prev) => [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }]);
+    // Store image & file in user message so it renders in the chat bubble
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: userMsgId,
+        text: displayPrompt,
+        sender: "user",
+        image: imageToBeSent || null,
+        fileName: fileToBeSent ? fileToBeSent.name : null,
+      },
+      { id: aiMsgId, text: "", sender: "ai" }
+    ]);
 
     // Prepare conversation history (last 10 messages) so AI remembers context
     const history = messages.slice(-10).map(msg => ({
@@ -69,8 +85,13 @@ function ContentGenerator() {
       content: msg.text
     })).filter(msg => msg.content);
 
+    let finalPrompt = "Write: " + displayPrompt;
+    if (fileToBeSent) {
+      finalPrompt += `\n\n[Attached Reference Document: ${fileToBeSent.name}]\n${fileToBeSent.content}`;
+    }
+
     const payload = {
-      message: "Write: " + text,
+      message: finalPrompt,
       userName: displayName,
       history: history,
       ...(imageToBeSent ? { image: imageToBeSent } : {})
@@ -335,6 +356,23 @@ function ContentGenerator() {
                           />
                         </div>
                       )}
+                      {msg.fileName && (
+                        <div style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          background: "rgba(139, 92, 246, 0.2)",
+                          border: "1px solid rgba(139, 92, 246, 0.4)",
+                          padding: "4px 10px",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#ddd6fe",
+                          marginBottom: "8px"
+                        }}>
+                          <FileText size={14} color="#8b5cf6" />
+                          <span>{msg.fileName}</span>
+                        </div>
+                      )}
                       {msg.text}
                     </>
                   ) : (
@@ -369,6 +407,43 @@ function ContentGenerator() {
       </div>
 
       <div className="input-container">
+        {/* Document preview strip */}
+        {fileAttachment && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 16px 0", flexWrap: "wrap" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "rgba(139, 92, 246, 0.15)",
+              border: "1px solid rgba(139, 92, 246, 0.35)",
+              borderRadius: "10px",
+              padding: "6px 12px",
+              color: "var(--text-primary)",
+              fontSize: "13px"
+            }}>
+              <FileText size={16} color="#8b5cf6" />
+              <span style={{ fontWeight: 600 }}>{fileAttachment.name}</span>
+              <button
+                onClick={() => setFileAttachment(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center"
+                }}
+                title="Remove attached file"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+              Document ready — ask writing requests or summary
+            </span>
+          </div>
+        )}
         {imagePreview && (
           <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 16px 0", flexWrap: "wrap" }}>
             <div style={{ position: "relative", display: "inline-block" }}>
@@ -390,7 +465,13 @@ function ContentGenerator() {
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={imagePreview ? "Describe what to write about the image..." : (isListening ? "Listening..." : "Send a message...")}
+            placeholder={
+              fileAttachment
+                ? `Ask anything about ${fileAttachment.name} (e.g. summarize, write article, extract points)...`
+                : imagePreview 
+                ? "Describe what to write about the image..." 
+                : (isListening ? "Listening..." : "Send a message...")
+            }
             rows="1"
             disabled={loading}
             onKeyDown={(e) => {
@@ -406,14 +487,10 @@ function ContentGenerator() {
               imagePreview={imagePreview}
               onImageSelect={(dataUrl) => setImagePreview(dataUrl)}
               onFileSelect={(content, fileName) => {
-                setInput((prev) =>
-                  prev
-                    ? `${prev}\n\n[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
-                    : `[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
-                );
+                setFileAttachment({ name: fileName, content });
               }}
               onFolderSelect={(summary) => {
-                setInput((prev) => (prev ? `${prev}\n\n${summary}\n` : `${summary}\n`));
+                setFileAttachment({ name: "Uploaded Folder", content: summary });
               }}
               accentColor="#8b5cf6"
               disabled={loading}
@@ -425,7 +502,7 @@ function ContentGenerator() {
             >
               <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
             </button>
-            <button className="send-btn" onClick={() => sendMessage()} disabled={loading || (!input.trim() && !imagePreview)}>
+            <button className="send-btn" onClick={() => sendMessage()} disabled={loading || (!input.trim() && !imagePreview && !fileAttachment)}>
               <Send size={18} />
             </button>
           </div>

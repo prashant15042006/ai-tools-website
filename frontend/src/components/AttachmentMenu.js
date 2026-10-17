@@ -9,8 +9,10 @@ import {
   RotateCcw,
   Check,
   SwitchCamera,
-  AlertCircle
+  AlertCircle,
+  Loader
 } from "lucide-react";
+import { extractTextFromPDF } from "../utils/pdfExtractor";
 
 /**
  * Reusable Professional Attachment Menu & Live Camera Capture Component
@@ -34,6 +36,8 @@ const AttachmentMenu = ({
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isStreamReady, setIsStreamReady] = useState(false);
+  const [isFileProcessing, setIsFileProcessing] = useState(false);
+  const [fileProcessingMsg, setFileProcessingMsg] = useState("");
 
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
@@ -193,47 +197,115 @@ const AttachmentMenu = ({
     setIsOpen(false);
   };
 
-  // Document/File handler
-  const handleAnyFileChange = (e) => {
+  // Document/File handler — with full PDF text extraction
+  const handleAnyFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Images go to the image preview
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (ev) => {
         if (onImageSelect) onImageSelect(ev.target.result, file.name);
       };
       reader.readAsDataURL(file);
-    } else {
-      // Check if text/code file or binary
-      const isTextOrCode =
-        file.type.startsWith("text/") ||
-        /\.(txt|js|jsx|ts|tsx|py|html|css|json|md|csv|xml|yaml|yml|sql|sh|log|java|c|cpp|cs|php|rb|go|rs|env)$/i.test(
-          file.name
-        );
+      e.target.value = "";
+      setIsOpen(false);
+      return;
+    }
 
-      if (isTextOrCode) {
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+
+    // ── PDF files — extract actual text content ──────────────────────────
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      e.target.value = "";
+      setIsOpen(false);
+      setIsFileProcessing(true);
+      setFileProcessingMsg(`📄 Reading PDF: ${file.name}...`);
+
+      try {
+        const extractedText = await extractTextFromPDF(file);
+        const charCount = extractedText.length;
+        const header = `[PDF Uploaded: ${file.name} (${sizeMb} MB) — ${charCount.toLocaleString()} characters extracted]\n\n`;
+        if (onFileSelect) {
+          onFileSelect(header + extractedText, file.name);
+        }
+      } catch (err) {
+        console.error("PDF extraction failed:", err);
+        // Graceful fallback — tell AI a PDF was attached but extraction failed
+        if (onFileSelect) {
+          onFileSelect(
+            `[PDF Attached: ${file.name} (${sizeMb} MB) — Text extraction failed. The PDF may be scanned/image-based. Please describe its content manually or ask a question about it.]`,
+            file.name
+          );
+        }
+      } finally {
+        setIsFileProcessing(false);
+        setFileProcessingMsg("");
+      }
+      return;
+    }
+
+    // ── Text / Code files ────────────────────────────────────────────────
+    const isTextOrCode =
+      file.type.startsWith("text/") ||
+      /\.(txt|js|jsx|ts|tsx|py|html|css|json|md|csv|xml|yaml|yml|sql|sh|log|java|c|cpp|cs|php|rb|go|rs|env|toml|ini|conf|config|kt|swift|dart|vue|svelte|r|m|scala|pl|lua|ex|exs)$/i.test(
+        file.name
+      );
+
+    if (isTextOrCode) {
+      e.target.value = "";
+      setIsOpen(false);
+      setIsFileProcessing(true);
+      setFileProcessingMsg(`📝 Reading ${file.name}...`);
+      try {
         const reader = new FileReader();
         reader.onload = (ev) => {
           const content = ev.target.result;
           if (onFileSelect) {
             onFileSelect(content, file.name);
           }
+          setIsFileProcessing(false);
+          setFileProcessingMsg("");
+        };
+        reader.onerror = () => {
+          setIsFileProcessing(false);
+          setFileProcessingMsg("");
+          if (onFileSelect) {
+            onFileSelect(`[File: ${file.name} — Could not be read]`, file.name);
+          }
         };
         reader.readAsText(file);
-      } else {
-        // PDF or binary document
-        const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-        if (onFileSelect) {
-          onFileSelect(
-            `[Document Attached: ${file.name} (${sizeMb} MB, ${file.type || "binary"})]`,
-            file.name
-          );
-        }
+      } catch (err) {
+        setIsFileProcessing(false);
+        setFileProcessingMsg("");
       }
+      return;
     }
+
+    // ── Word / Excel / PowerPoint — inform AI with file details ──────────
+    const isOfficeDoc = /\.(docx?|xlsx?|pptx?|odt|ods|odp)$/i.test(file.name);
+    if (isOfficeDoc) {
+      e.target.value = "";
+      setIsOpen(false);
+      if (onFileSelect) {
+        onFileSelect(
+          `[Office Document Attached: ${file.name} (${sizeMb} MB, ${file.type || "office document"})]\n\nNote: Direct text extraction from Office files is not supported in the browser. Please copy-paste the relevant text from the document, or describe what you need help with.`,
+          file.name
+        );
+      }
+      return;
+    }
+
+    // ── Other binary files ───────────────────────────────────────────────
     e.target.value = "";
     setIsOpen(false);
+    if (onFileSelect) {
+      onFileSelect(
+        `[File Attached: ${file.name} (${sizeMb} MB, ${file.type || "binary"})]\n\nNote: This file type cannot be read as text. If it contains data you want to analyze, please copy-paste the content directly into the chat.`,
+        file.name
+      );
+    }
   };
 
   // Folder handler
@@ -314,36 +386,53 @@ const AttachmentMenu = ({
       />
 
       {/* Main Professional Trigger Button */}
-      <button
-        ref={buttonRef}
-        type="button"
-        className={`action-btn attachment-btn ${isOpen ? "active" : ""}`}
-        title="Attach files, photos, or use camera"
-        onClick={() => setIsOpen((prev) => !prev)}
-        disabled={disabled}
-        style={{
-          position: "relative",
-          color: imagePreview || isOpen ? accentColor : "var(--text-secondary)",
-          background: isOpen ? "rgba(255,255,255,0.08)" : "transparent",
-          transition: "all 0.2s ease",
-        }}
-      >
-        <Paperclip size={20} style={{ transform: "rotate(-45deg)" }} />
-        {imagePreview && (
-          <span
-            style={{
-              position: "absolute",
-              top: "4px",
-              right: "4px",
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              backgroundColor: accentColor,
-              boxShadow: `0 0 8px ${accentColor}`,
-            }}
-          />
-        )}
-      </button>
+      {isFileProcessing ? (
+        <button
+          type="button"
+          className="action-btn attachment-btn"
+          disabled
+          title={fileProcessingMsg}
+          style={{
+            position: "relative",
+            color: accentColor,
+            background: "rgba(255,255,255,0.08)",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <Loader size={20} style={{ animation: "spin 1s linear infinite" }} />
+        </button>
+      ) : (
+        <button
+          ref={buttonRef}
+          type="button"
+          className={`action-btn attachment-btn ${isOpen ? "active" : ""}`}
+          title="Attach files, photos, or use camera"
+          onClick={() => setIsOpen((prev) => !prev)}
+          disabled={disabled}
+          style={{
+            position: "relative",
+            color: imagePreview || isOpen ? accentColor : "var(--text-secondary)",
+            background: isOpen ? "rgba(255,255,255,0.08)" : "transparent",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <Paperclip size={20} style={{ transform: "rotate(-45deg)" }} />
+          {imagePreview && (
+            <span
+              style={{
+                position: "absolute",
+                top: "4px",
+                right: "4px",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                backgroundColor: accentColor,
+                boxShadow: `0 0 8px ${accentColor}`,
+              }}
+            />
+          )}
+        </button>
+      )}
 
       {/* Modern Attachment Dropdown Menu */}
       {isOpen && (

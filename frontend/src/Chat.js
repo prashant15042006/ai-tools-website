@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -45,6 +45,7 @@ function Chat() {
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
+  const [fileAttachment, setFileAttachment] = useState(null); // { name, content }
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
@@ -107,20 +108,35 @@ function Chat() {
   };
 
   const sendMessage = async (text = input) => {
-    if (!text.trim() || loading) return;
+    const rawText = text.trim();
+    if ((!rawText && !imagePreview && !fileAttachment) || loading) return;
     setLoading(true);
     setInput("");
     const imageToBeSent = imagePreview;
     setImagePreview(null); // clear preview after capturing
+    const fileToBeSent = fileAttachment;
+    setFileAttachment(null); // clear file after capturing
+
+    const displayPrompt = rawText || (fileToBeSent ? `Please read and analyze the attached document: ${fileToBeSent.name}` : "");
 
     const userMsgId = Date.now() + Math.random();
     const aiMsgId = Date.now() + Math.random();
 
     // Build the new full messages list (user + empty AI placeholder)
     setMessages((prev) => {
-      const updated = [...prev, { id: userMsgId, text: text, sender: "user", image: imageToBeSent || null }, { id: aiMsgId, text: "", sender: "ai" }];
+      const updated = [
+        ...prev,
+        {
+          id: userMsgId,
+          text: displayPrompt,
+          sender: "user",
+          image: imageToBeSent || null,
+          fileName: fileToBeSent ? fileToBeSent.name : null,
+        },
+        { id: aiMsgId, text: "", sender: "ai" }
+      ];
       // Save snapshot to localStorage so history can restore it
-      addRecentChat(text, updated);
+      addRecentChat(displayPrompt, updated);
       return updated;
     });
 
@@ -257,7 +273,10 @@ function Chat() {
       content: msg.text
     })).filter(msg => msg.content); // Filter out empty messages (like the typing indicator)
 
-    let finalMsg = text;
+    let finalMsg = displayPrompt;
+    if (fileToBeSent) {
+      finalMsg = `${displayPrompt}\n\n[Attached Document: ${fileToBeSent.name}]\n${fileToBeSent.content}`;
+    }
 
     const payload = {
       message: finalMsg,
@@ -575,6 +594,23 @@ function Chat() {
                           />
                         </div>
                       )}
+                      {msg.fileName && (
+                        <div style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          background: "rgba(99, 102, 241, 0.2)",
+                          border: "1px solid rgba(99, 102, 241, 0.4)",
+                          padding: "4px 10px",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#c7d2fe",
+                          marginBottom: "8px"
+                        }}>
+                          <FileText size={14} color="#818cf8" />
+                          <span>{msg.fileName}</span>
+                        </div>
+                      )}
                       {msg.text}
                     </>
                   ) : msg.isImageResult ? (
@@ -630,6 +666,43 @@ function Chat() {
       {/* Prompt editing moved to the Prompts page in the sidebar */}
 
       <div className="input-container">
+        {/* Document preview strip */}
+        {fileAttachment && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 16px 0", flexWrap: "wrap" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "rgba(99, 102, 241, 0.15)",
+              border: "1px solid rgba(99, 102, 241, 0.35)",
+              borderRadius: "10px",
+              padding: "6px 12px",
+              color: "var(--text-primary)",
+              fontSize: "13px"
+            }}>
+              <FileText size={16} color="#818cf8" />
+              <span style={{ fontWeight: 600 }}>{fileAttachment.name}</span>
+              <button
+                onClick={() => setFileAttachment(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center"
+                }}
+                title="Remove attached file"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+              Document ready — ask questions or request a summary
+            </span>
+          </div>
+        )}
         {/* Image preview strip */}
         {imagePreview && (
           <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 16px 0", flexWrap: "wrap" }}>
@@ -658,7 +731,9 @@ function Chat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
-              imagePreview 
+              fileAttachment
+                ? `Ask anything about ${fileAttachment.name} (e.g. summarize, key points)...`
+                : imagePreview 
                 ? "Ask about the image..." 
                 : "Ask anything..."
             }
@@ -678,14 +753,10 @@ function Chat() {
               imagePreview={imagePreview}
               onImageSelect={(dataUrl) => setImagePreview(dataUrl)}
               onFileSelect={(content, fileName) => {
-                setInput((prev) =>
-                  prev
-                    ? `${prev}\n\n[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
-                    : `[File: ${fileName}]\n\`\`\`\n${content}\n\`\`\`\n`
-                );
+                setFileAttachment({ name: fileName, content });
               }}
               onFolderSelect={(summary) => {
-                setInput((prev) => (prev ? `${prev}\n\n${summary}\n` : `${summary}\n`));
+                setFileAttachment({ name: "Uploaded Folder", content: summary });
               }}
               accentColor="#6366f1"
               disabled={loading}
@@ -700,7 +771,7 @@ function Chat() {
             <button 
               className="send-btn" 
               onClick={() => sendMessage()} 
-              disabled={loading || (!input.trim() && !imagePreview)}
+              disabled={loading || (!input.trim() && !imagePreview && !fileAttachment)}
             >
               <Send size={18} />
             </button>

@@ -6,6 +6,7 @@ import API_BASE_URL from "../apiConfig";
 
 const ProjectsView = ({ projects, setProjects }) => {
   const { user } = useContext(AppContext);
+  const effectiveEmail = user?.email || localStorage.getItem("nexus_mock_user") || "guest@nexuss.ai";
   const [selectedProject, setSelectedProject] = useState(null);
   const [notes, setNotes] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -28,26 +29,26 @@ const ProjectsView = ({ projects, setProjects }) => {
   };
 
   const addProject = async () => {
-    if (!newName.trim() || !user?.email) return;
+    if (!newName.trim()) return;
     try {
       const response = await fetch(`${API_BASE_URL}/api/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, name: newName, desc: newDesc || "New workspace project" }),
+        body: JSON.stringify({ email: effectiveEmail, name: newName, desc: newDesc || "New workspace project" }),
       });
       if (response.ok) {
         const created = await response.json();
         const updatedList = [...projects, created];
         setProjects(updatedList);
-        localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
+        localStorage.setItem(`nexus_projects_${effectiveEmail}`, JSON.stringify(updatedList));
       } else throw new Error("API call failed");
     } catch (err) {
       console.warn("API add failed, saving locally:", err.message);
       const id = Date.now().toString();
-      const created = { id, email: user.email, name: newName, desc: newDesc || "New workspace project", notes: "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const created = { id, email: effectiveEmail, name: newName, desc: newDesc || "New workspace project", notes: "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       const updatedList = [...projects, created];
       setProjects(updatedList);
-      localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
+      localStorage.setItem(`nexus_projects_${effectiveEmail}`, JSON.stringify(updatedList));
     }
     setNewName(""); setNewDesc(""); setIsAdding(false);
   };
@@ -60,12 +61,12 @@ const ProjectsView = ({ projects, setProjects }) => {
     } catch (err) { console.warn("API delete failed, updating local state:", err.message); }
     const updatedList = projects.filter((p) => p.id !== id);
     setProjects(updatedList);
-    localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedList));
+    localStorage.setItem(`nexus_projects_${effectiveEmail}`, JSON.stringify(updatedList));
     if (selectedProject?.id === id) closeProject();
   };
 
   const saveNotes = async (currentNotes = notes, silent = false) => {
-    if (!selectedProject || !user?.email) return;
+    if (!selectedProject) return;
     if (!silent) setSyncStatus("saving");
     try {
       const response = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}`, {
@@ -83,7 +84,7 @@ const ProjectsView = ({ projects, setProjects }) => {
       p.id === selectedProject.id ? { ...p, notes: currentNotes, updatedAt: new Date().toISOString() } : p
     );
     setProjects(updatedProjects);
-    localStorage.setItem(`nexus_projects_${user.email}`, JSON.stringify(updatedProjects));
+    localStorage.setItem(`nexus_projects_${effectiveEmail}`, JSON.stringify(updatedProjects));
     setSelectedProject((prev) => (prev ? { ...prev, notes: currentNotes } : null));
   };
 
