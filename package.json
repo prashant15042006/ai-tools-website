@@ -11,5 +11,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
+  },
+  "dependencies": {
+    "pdf-parse": "^2.4.5"
   }
 }

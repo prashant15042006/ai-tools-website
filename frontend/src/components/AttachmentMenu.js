@@ -226,19 +226,13 @@ const AttachmentMenu = ({
       try {
         const extractedText = await extractTextFromPDF(file);
         const charCount = extractedText.length;
-        const header = `[PDF Uploaded: ${file.name} (${sizeMb} MB) — ${charCount.toLocaleString()} characters extracted]\n\n`;
+        const formattedContent = `[PDF Document: ${file.name} (${sizeMb} MB, ${charCount.toLocaleString()} characters)]\n\n${extractedText}`;
         if (onFileSelect) {
-          onFileSelect(header + extractedText, file.name);
+          onFileSelect(formattedContent, file.name);
         }
       } catch (err) {
         console.error("PDF extraction failed:", err);
-        // Graceful fallback — tell AI a PDF was attached but extraction failed
-        if (onFileSelect) {
-          onFileSelect(
-            `[PDF Attached: ${file.name} (${sizeMb} MB) — Text extraction failed. The PDF may be scanned/image-based. Please describe its content manually or ask a question about it.]`,
-            file.name
-          );
-        }
+        alert(`PDF Text Extraction Notice:\n\n${err.message || "Could not extract text from this PDF."}\n\nIf this PDF contains scanned images or photos of documents, please use OCR or take a photo instead.`);
       } finally {
         setIsFileProcessing(false);
         setFileProcessingMsg("");

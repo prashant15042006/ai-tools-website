@@ -41,6 +41,10 @@
       "destination": "/api/chat.js"
     },
     {
+      "source": "/api/pdf-parse",
+      "destination": "/api/pdf-parse.js"
+    },
+    {
       "source": "/api/embed",
       "destination": "/api/embed.js"
     },

@@ -5,6 +5,7 @@ import fetch from "node-fetch";
 import admin from "firebase-admin";
 import fs from "fs";
 import killPort from "kill-port";
+import { PDFParse } from "pdf-parse";
 
 // Simple fallback when no external model is available
 const fallbackResponse = (message) => {
@@ -298,6 +299,46 @@ app.post("/api/upload", async (req, res) => {
   } catch (err) {
     console.error("❌ Upload error:", err.message);
     return res.status(500).json({ success: false, error: err.message || "Internal upload error" });
+  }
+});
+
+// POST /api/pdf-parse — parse PDF text using pdf-parse on backend
+app.post("/api/pdf-parse", async (req, res) => {
+  try {
+    const { fileData, fileName = "document.pdf" } = req.body || {};
+    if (!fileData) {
+      return res.status(400).json({ success: false, error: "No fileData provided" });
+    }
+
+    const cleanBase64 = fileData.replace(/^data:application\/pdf;base64,/, "").replace(/^data:.*;base64,/, "");
+    const buffer = Buffer.from(cleanBase64, "base64");
+
+    if (buffer.length === 0) {
+      return res.status(400).json({ success: false, error: "Empty file buffer" });
+    }
+
+    const parser = new PDFParse(new Uint8Array(buffer));
+    const result = await parser.getText();
+
+    let extractedText = "";
+    if (result && typeof result.text === "string") {
+      extractedText = result.text.trim();
+    } else if (result && Array.isArray(result.pages)) {
+      extractedText = result.pages.map((p, i) => `--- Page ${p.num || i + 1} ---\n${p.text}`).join("\n\n").trim();
+    }
+
+    const pageCount = result?.total || result?.numpages || 1;
+    console.log(`📄 PDF parsed: ${fileName} (${pageCount} pages, ${extractedText.length} chars)`);
+
+    return res.json({
+      success: true,
+      text: extractedText || "[PDF appears to contain no extractable text. It may be scanned or image-based.]",
+      pageCount,
+      charCount: extractedText.length
+    });
+  } catch (err) {
+    console.error("❌ PDF parse error:", err.message);
+    return res.status(500).json({ success: false, error: err.message || "Failed to parse PDF document" });
   }
 });
 

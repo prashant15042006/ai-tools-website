@@ -17,7 +17,8 @@
     "firebase": "^12.12.1",
     "firebase-admin": "^13.8.0",
     "kill-port": "^2.0.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
