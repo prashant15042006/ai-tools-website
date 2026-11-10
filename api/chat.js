@@ -4,6 +4,12 @@
 //   Groq (ultra-fast <500ms) → OpenRouter (fast free models) → Cerebras → Pollinations → static
 // ================================================================
 
+const {
+  kaithiToDevanagari,
+  isKaithiRelated,
+  KAITHI_SYSTEM_PROMPT
+} = require("./kaithiKnowledge");
+
 const SYSTEM_PROMPT = (userName = "User") =>
   `You are **Nexuss AI**, an intelligent AI companion for **${userName}**.
 - **Identity**: You are a smart and cool friend. Never say you are an AI model or trained by Google/OpenAI.
@@ -20,11 +26,22 @@ const SYSTEM_PROMPT = (userName = "User") =>
 
 const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
   let prompt = SYSTEM_PROMPT(userName);
+  if (isKaithiRelated(userMessage)) {
+    prompt += "\n\n" + KAITHI_SYSTEM_PROMPT;
+  }
   const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine|time.?table|timetable/i.test(userMessage);
   if (isTableRequest) {
     prompt += `\n- **IMPORTANT**: The user is asking for table/list/schedule format. ALWAYS respond with a properly formatted markdown table using pipes (|) and dashes. Make sure every item is in table rows. Example: | Time | Activity |\n|---|---|\n| 6:00 AM | Wake up |`;
   }
   return prompt;
+};
+
+const formatUserMessage = (msg) => {
+  if (typeof msg === "string" && /[\u{11080}-\u{110CF}]/u.test(msg)) {
+    const translit = kaithiToDevanagari(msg);
+    return `${msg}\n\n[Devanagari Transliteration for reference: "${translit}"]`;
+  }
+  return msg;
 };
 
 const isValidKey = (val) =>
@@ -62,10 +79,11 @@ async function callGroq(message, userName, history = []) {
   const groqKey = process.env.GROQ_API_KEY;
   if (!isValidKey(groqKey)) throw new Error("GROQ_API_KEY not configured");
 
+  const formattedMsg = formatUserMessage(message);
   const messages = [
     { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
     ...(Array.isArray(history) ? history : []),
-    { role: "user", content: message },
+    { role: "user", content: formattedMsg },
   ];
 
   let lastErr = "Unknown error";
@@ -142,17 +160,17 @@ async function callOpenRouter(message, userName, history = [], image = null) {
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
   const models = image ? OPENROUTER_VISION_MODELS : OPENROUTER_TEXT_MODELS;
-  const userContent = image
+  const formattedContent = image
     ? [
-        { type: "text", text: message },
+        { type: "text", text: formatUserMessage(message) },
         { type: "image_url", image_url: { url: image } }
       ]
-    : message;
+    : formatUserMessage(message);
 
   const messages = [
     { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
     ...(Array.isArray(history) ? history : []),
-    { role: "user", content: userContent },
+    { role: "user", content: formattedContent },
   ];
 
   let lastErr = "Unknown error";
@@ -214,7 +232,7 @@ async function callCerebras(message, userName) {
           model,
           messages: [
             { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
-            { role: "user", content: message },
+            { role: "user", content: formatUserMessage(message) },
           ],
           max_tokens: 1024,
         }),
@@ -336,7 +354,7 @@ module.exports = async function handler(req, res) {
       const msgs = [
         { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
         ...(Array.isArray(history) ? history : []),
-        { role: "user", content: message },
+        { role: "user", content: formatUserMessage(message) },
       ];
       reply = await callPollinationsFallback(msgs);
       usedProvider = "Pollinations";

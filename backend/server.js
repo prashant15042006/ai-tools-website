@@ -386,10 +386,26 @@ try {
 
 
 // ===============================
+// 📜 KAITHI KNOWLEDGE ENGINE IMPORT
+// ===============================
+import {
+  KAITHI_TO_DEVANAGARI,
+  DEVANAGARI_TO_KAITHI,
+  kaithiToDevanagari,
+  devanagariToKaithi,
+  isKaithiRelated,
+  KAITHI_SYSTEM_PROMPT
+} from "./kaithiKnowledge.js";
+
+// ===============================
 // 🌐 LANGUAGE DETECTOR
 // ===============================
 const detectLanguage = (text) => {
   if (!text) return "english";
+
+  // Kaithi detection (Unicode range U+11080 - U+110CF or keywords)
+  if (isKaithiRelated(text)) return "kaithi";
+
   // Devanagari Unicode range — pure Hindi
   const devanagariChars = (text.match(/[\u0900-\u097F]/g) || []).length;
   const totalChars = text.replace(/\s/g, "").length || 1;
@@ -415,13 +431,16 @@ const detectLanguage = (text) => {
 };
 
 const getLanguageInstruction = (lang) => {
+  if (lang === "kaithi") {
+    return "IMPORTANT: The user is discussing, translating, or writing in Kaithi Lipi (कैथी लिपि) or old Bihar land/revenue records. Respond with deep scholarly authority as trained on the Bihar Government's 'कैथी लिपि पाठ्य पुस्तिका'. Provide clear Devanagari transliteration, translation, and historical/revenue context.";
+  }
   if (lang === "hindi") {
     return "IMPORTANT: The user wrote in Hindi (Devanagari script). You MUST reply ONLY in Hindi (Devanagari). Do NOT use English or Roman script in your response.";
   }
   if (lang === "hinglish") {
     return "IMPORTANT: The user wrote in Hinglish (Hindi in Roman script). You MUST reply in natural, friendly Hinglish (Roman Hindi). Do NOT switch to full English or full Hindi Devanagari.";
   }
-  return "IMPORTANT: The user wrote in English. You MUST reply ONLY in English. Do NOT mix Hindi or Hinglish words.";
+  return "IMPORTANT: Match the user's language. If English, reply in English. If the user writes in another regional or international language, match their language naturally.";
 };
 
 // ===============================
@@ -492,6 +511,10 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
 
   // Prepend the hard language rule at the very TOP so AI always sees it first
   let prompt = langInstruction + "\n\n" + SYSTEM_PROMPT(userName);
+
+  if (lang === "kaithi" || isKaithiRelated(userMessage)) {
+    prompt += "\n\n" + KAITHI_SYSTEM_PROMPT;
+  }
 
   const isTableRequest = /table|tabular|format|list|daily|schedule|routine/i.test(userMessage);
   if (isTableRequest) {
@@ -618,9 +641,15 @@ const callPollinationsFallback = async (messages) => {
 
 // ── Non-streaming AI call (used by /api/code, /api/content, /api/chat/complete) ──
 const callZAI = async (message, userName = "User", image = null) => {
+  let enrichedMessage = message;
+  if (typeof message === "string" && /[\u{11080}-\u{110CF}]/u.test(message)) {
+    const translit = kaithiToDevanagari(message);
+    enrichedMessage = `${message}\n\n[Devanagari Transliteration for reference: "${translit}"]`;
+  }
+
   const userContent = image
-    ? [{ type: "text", text: message }, { type: "image_url", image_url: { url: image } }]
-    : message;
+    ? [{ type: "text", text: enrichedMessage }, { type: "image_url", image_url: { url: image } }]
+    : enrichedMessage;
 
   let lastError = null;
   const providers = getActiveProviders();
@@ -636,7 +665,7 @@ const callZAI = async (message, userName = "User", image = null) => {
           body: JSON.stringify({
             model,
             messages: [
-              { role: "system", content: SYSTEM_PROMPT(userName) },
+              { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
               { role: "user", content: userContent }
             ],
             max_tokens: 4096,
@@ -732,9 +761,15 @@ const saveChatMetadata = async ({ question, userName, userEmail, model, provider
 // callGeminiDirect and callGeminiDirectStream removed — Gemini API disabled by user
 
 const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
+  let enrichedMessage = message;
+  if (typeof message === "string" && /[\u{11080}-\u{110CF}]/u.test(message)) {
+    const translit = kaithiToDevanagari(message);
+    enrichedMessage = `${message}\n\n[Devanagari Transliteration for reference: "${translit}"]`;
+  }
+
   const userContent = image
-    ? [{ type: "text", text: message }, { type: "image_url", image_url: { url: image } }]
-    : message;
+    ? [{ type: "text", text: enrichedMessage }, { type: "image_url", image_url: { url: image } }]
+    : enrichedMessage;
 
   let lastError = null;
   const providers = getActiveProviders();
