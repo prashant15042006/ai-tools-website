@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Mic,
   Volume2,
-  VolumeX,
   Play,
   Square,
   Download,
@@ -10,7 +9,6 @@ import {
   Sparkles,
   Copy,
   CheckCircle2,
-  AlertCircle,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
