@@ -46,6 +46,37 @@ function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const [fileAttachment, setFileAttachment] = useState(null); // { name, content }
+  const textareaRef = useRef(null);
+
+  // Auto-focus textarea as soon as Chat opens so the mobile/desktop keyboard is ready
+  useEffect(() => {
+    const focusInput = () => {
+      if (textareaRef.current) {
+        textareaRef.current.focus({ preventScroll: true });
+      }
+    };
+
+    // Immediate focus attempt
+    focusInput();
+
+    // Small delay to ensure any page transitions, route changes, or mobile render finishes
+    const timer = setTimeout(focusInput, 150);
+    const secondTimer = setTimeout(focusInput, 350);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(secondTimer);
+    };
+  }, [location.key]);
+
+  // Auto-resize textarea as user types
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 180) + 'px';
+    }
+  }, [input]);
+
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
@@ -112,6 +143,7 @@ function Chat() {
     if ((!rawText && !imagePreview && !fileAttachment) || loading) return;
     setLoading(true);
     setInput("");
+    setTimeout(() => { if (textareaRef.current) textareaRef.current.style.height = '40px'; }, 0);
     const imageToBeSent = imagePreview;
     setImagePreview(null); // clear preview after capturing
     const fileToBeSent = fileAttachment;
@@ -702,6 +734,8 @@ function Chat() {
 
           {/* CENTER: Textarea */}
           <textarea
+            ref={textareaRef}
+            autoFocus
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}

@@ -38,6 +38,7 @@ function ContentGenerator() {
   const [imagePreview, setImagePreview] = useState(null);
   const [fileAttachment, setFileAttachment] = useState(null);
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -46,6 +47,14 @@ function ContentGenerator() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
+
+  // Auto-resize textarea as user types
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 180) + 'px';
+    }
+  }, [input]);
 
   const handleSpeak = async (text) => {
     await voiceSpeak(text, { voicePreset, customVoiceUrl, ttsEnabledRef });
@@ -62,6 +71,7 @@ function ContentGenerator() {
     const displayPrompt = rawText || (fileToBeSent ? `Analyze and write based on attached document: ${fileToBeSent.name}` : "");
     addRecentChat("Write: " + displayPrompt);
     setInput("");
+    setTimeout(() => { if (textareaRef.current) textareaRef.current.style.height = '40px'; }, 0);
     setLoading(true);
 
     const userMsgId = Date.now() + Math.random();
@@ -462,6 +472,8 @@ function ContentGenerator() {
           </button>
           {/* CENTER: Textarea */}
           <textarea
+            ref={textareaRef}
+            autoFocus
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
