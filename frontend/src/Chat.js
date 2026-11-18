@@ -1,23 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  Send,
-  Bot,
-  ClipboardPaste,
-  Mic,
-  ExternalLink,
-  Sparkles,
-  X,
-  Download,
-  FileText,
-  Atom,
-  Code,
-  Languages,
-  PenTool,
-  ArrowUpRight,
-  Zap
-} from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -62,17 +46,6 @@ function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const [fileAttachment, setFileAttachment] = useState(null); // { name, content }
-  const textareaRef = useRef(null);
-
-  // Auto-resize textarea as content changes
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      const nextHeight = Math.min(Math.max(textareaRef.current.scrollHeight, 40), 160);
-      textareaRef.current.style.height = `${nextHeight}px`;
-    }
-  }, [input]);
-
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
   const displayName = localStorage.getItem("nexus_user_name") || user?.displayName || (user?.email ? user.email.split('@')[0] : "User");
   const ttsEnabledRef = useRef(ttsEnabled);
@@ -564,120 +537,11 @@ function Chat() {
       )}
       <div className="chat-history-scroll">
         {messages.length === 0 && (
-          <div className="chat-hero-container">
-            <div className="hero-status-badge">
-              <span className="hero-status-dot"></span>
-              <span>Nexuss 2.0 • Ultra-Fast AI Workspace</span>
-              <Zap size={13} className="hero-status-icon" />
+          <div className="chat-watermark-bg">
+            <div className="watermark-logo-circle">
+              <Sparkles size={44} color="white" />
             </div>
-
-            <div className="chat-hero-header">
-              <div className="chat-hero-logo">
-                <Sparkles size={30} color="white" />
-              </div>
-              <h2 className="chat-hero-title">
-                Welcome to <span className="hero-gradient-text">Nexuss AI</span>
-              </h2>
-              <p className="chat-hero-sub">
-                Your intelligent copilot for reasoning, coding, writing, and creative tasks.
-              </p>
-            </div>
-
-            {/* Modern Futuristic Bento Grid */}
-            <div className="bento-suggestions-grid">
-              {[
-                {
-                  tag: "Concepts",
-                  tagColor: "cyan",
-                  icon: Atom,
-                  title: "Quantum Computing",
-                  sub: "Explain key principles using simple real-world analogies",
-                  prompt: "Quantum computing ko bilkul simple shabdon aur real-world examples ke sath samjhao."
-                },
-                {
-                  tag: "Coding",
-                  tagColor: "emerald",
-                  icon: Code,
-                  title: "Debug & Optimize",
-                  sub: "Identify bugs, improve latency & apply clean architecture",
-                  prompt: "Mera code debug aur optimize karne me help karo. Best practices ke sath explain karo."
-                },
-                {
-                  tag: "Languages",
-                  tagColor: "violet",
-                  icon: Languages,
-                  title: "Smart Translation",
-                  sub: "Translate with natural cultural context & idioms",
-                  prompt: "Translate and explain the cultural context between English, Hindi and other languages."
-                },
-                {
-                  tag: "Creative",
-                  tagColor: "amber",
-                  icon: PenTool,
-                  title: "Executive Writing",
-                  sub: "Draft high-converting emails, proposals & scripts",
-                  prompt: "Write a high-converting, professional project proposal email."
-                }
-              ].map((s, i) => {
-                const IconComponent = s.icon;
-                return (
-                  <div
-                    key={i}
-                    className={`bento-card bento-${s.tagColor}`}
-                    onClick={() => sendMessage(s.prompt)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="bento-card-top">
-                      <span className={`bento-tag bento-tag-${s.tagColor}`}>
-                        {s.tag}
-                      </span>
-                      <div className="bento-icon-wrapper">
-                        <IconComponent size={18} className="bento-icon" />
-                        <ArrowUpRight size={14} className="bento-arrow" />
-                      </div>
-                    </div>
-                    <div className="bento-card-body">
-                      <div className="bento-card-title">{s.title}</div>
-                      <div className="bento-card-sub">{s.sub}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Quick Prompt Starter Chips */}
-            <div className="quick-prompt-chips">
-              <span className="chips-label">Quick Starters:</span>
-              <button
-                type="button"
-                className="quick-chip"
-                onClick={() => sendMessage("Generate a high-converting landing page headline and hook.")}
-              >
-                ⚡ Marketing Hook
-              </button>
-              <button
-                type="button"
-                className="quick-chip"
-                onClick={() => sendMessage("Explain JavaScript Event Loop with a clear step-by-step example.")}
-              >
-                💻 JS Event Loop
-              </button>
-              <button
-                type="button"
-                className="quick-chip"
-                onClick={() => sendMessage("Create an image of a futuristic neon cybernetic city at sunset, 16:9 ratio")}
-              >
-                🎨 Cyberpunk City Image
-              </button>
-              <button
-                type="button"
-                className="quick-chip"
-                onClick={() => sendMessage("Kaithi script ke baare me detail se batao aur Devanagari se comparison karo.")}
-              >
-                📜 Kaithi Script
-              </button>
-            </div>
+            <span className="watermark-title">Nexuss</span>
           </div>
         )}
 
@@ -833,21 +697,20 @@ function Chat() {
         <div className="input-box-wrapper">
           {/* LEFT: Paste button */}
           <button className="action-btn" title="Paste text from clipboard" onClick={handlePaste}>
-            <ClipboardPaste size={19} />
+            <ClipboardPaste size={20} />
           </button>
 
           {/* CENTER: Textarea */}
           <textarea
-            ref={textareaRef}
             className="chat-textarea"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
               fileAttachment
-                ? `Ask anything about ${fileAttachment.name} (e.g. summarize, key takeaways)...`
+                ? `Ask anything about ${fileAttachment.name}...`
                 : imagePreview 
-                ? "Ask anything about the attached image..." 
-                : "Ask Nexuss anything (Shift + Enter for new line)..."
+                ? "Ask about the image..." 
+                : "Ask anything..."
             }
             rows="1"
             disabled={loading}
@@ -875,23 +738,19 @@ function Chat() {
             />
             <button 
               className={`action-btn ${isListening ? "listening" : ""}`} 
-              title={isListening ? "Listening... click to stop" : "Voice input"} 
+              title="Voice Input" 
               onClick={startListening} 
             >
-              <Mic size={19} color={isListening ? "#ef4444" : "currentColor"} />
+              <Mic size={20} color={isListening ? "#ef4444" : "var(--text-secondary)"} />
             </button>
             <button 
-              className={`send-btn ${input.trim() || imagePreview || fileAttachment ? "active" : ""}`} 
+              className="send-btn" 
               onClick={() => sendMessage()} 
               disabled={loading || (!input.trim() && !imagePreview && !fileAttachment)}
-              title="Send prompt"
             >
-              <Send size={17} />
+              <Send size={18} />
             </button>
           </div>
-        </div>
-        <div className="input-footer-note">
-          <span>Nexuss 2.0 AI can make mistakes. Verify critical facts & code.</span>
         </div>
       </div>
     </div>
