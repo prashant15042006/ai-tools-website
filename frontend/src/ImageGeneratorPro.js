@@ -37,6 +37,7 @@ const MODELS = [
   { id: "flux-anime", label: "🌸 Flux Anime", desc: "Studio Ghibli & modern anime masterpiece style" },
   { id: "flux-3d", label: "🎮 Flux 3D", desc: "Unreal Engine 5 & Blender 3D CGI render" },
   { id: "sana", label: "💎 Sana 4K", desc: "Crisp high-resolution modern generative art" },
+  { id: "recraft", label: "✨ Recraft v4.1 Flash", desc: "🆕 Recraft AI — Fast premium quality generation" },
 ];
 
 const ASPECT_RATIOS = [
@@ -216,6 +217,73 @@ export default function ImageGeneratorPro() {
     const ratio = ASPECT_RATIOS.find(item => item.id === finalRatioId) || ASPECT_RATIOS[0];
     const seed = Math.floor(Math.random() * 999999);
 
+    // ── 🆕 Recraft v4.1 Flash — Use backend API ──
+    if (model === "recraft") {
+      try {
+        const endpoints = [];
+        if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/image/recraft`);
+        endpoints.push("/api/image/recraft");
+
+        let recraftImageUrl = null;
+
+        for (const ep of endpoints) {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 65000);
+            const resp = await fetch(ep, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: finalPrompt,
+                width: ratio.width,
+                height: ratio.height,
+              }),
+              signal: controller.signal,
+            });
+            clearTimeout(timer);
+
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.success && (data.imageUrl || data.dataUrl)) {
+                recraftImageUrl = data.imageUrl || data.dataUrl;
+                break;
+              }
+            }
+          } catch (e) {
+            console.warn("Recraft endpoint failed:", ep, e.message);
+          }
+        }
+
+        if (recraftImageUrl) {
+          const result = {
+            url: recraftImageUrl,
+            prompt: finalPrompt,
+            model: "recraft",
+            ratio: finalRatioId,
+            seed,
+            id: Date.now(),
+            referenceImage: false,
+          };
+          setImageUrl(recraftImageUrl);
+          setActiveResult(result);
+          setLoading(false);
+          const newHistory = [result, ...history].slice(0, 30);
+          saveHistory(newHistory);
+          showToast("✨ Recraft v4.1 masterpiece generated!");
+        } else {
+          setLoading(false);
+          setLoadFailed(true);
+          showToast("Recraft generation failed. Check API key or try another model.", "error");
+        }
+      } catch (err) {
+        setLoading(false);
+        setLoadFailed(true);
+        showToast("Recraft generation error: " + (err.message || "Unknown"), "error");
+      }
+      return;
+    }
+
+    // ── Standard Pollinations models ──
     const url = buildImageUrl(finalPrompt, {
       width: ratio.width,
       height: ratio.height,

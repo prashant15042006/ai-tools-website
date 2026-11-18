@@ -84,6 +84,18 @@ if (!isValidKey(process.env.GROQ_API_KEY)) {
   console.log("✅ Groq API Key detected (ends with ...", process.env.GROQ_API_KEY.slice(-5), ")");
 }
 
+if (!isValidKey(process.env.OPENROUTER_KEY_HEYGEN)) {
+  console.warn("⚠️  WARNING: OPENROUTER_KEY_HEYGEN is not set. HeyGen Voice TTS will be unavailable.");
+} else {
+  console.log("✅ HeyGen Voice Key (heygen-voice-1-turbo) detected (ends with ...", process.env.OPENROUTER_KEY_HEYGEN.slice(-5), ")");
+}
+
+if (!isValidKey(process.env.OPENROUTER_KEY_RECRAFT)) {
+  console.warn("⚠️  WARNING: OPENROUTER_KEY_RECRAFT is not set. Recraft Image Generation will be unavailable.");
+} else {
+  console.log("✅ Recraft Image Key (recraft-v4.1-flash-v2) detected (ends with ...", process.env.OPENROUTER_KEY_RECRAFT.slice(-5), ")");
+}
+
 console.log("🌸 Pollinations AI is always available as emergency fallback (no key needed).");
 
 
@@ -239,6 +251,8 @@ app.get("/api/diag", (req, res) => {
       OPENROUTER_KEY_GEMMA: isValidKey(process.env.OPENROUTER_KEY_GEMMA) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_GEMMA.slice(-5) + ")" : "MISSING",
       OPENROUTER_KEY_EMBED: isValidKey(process.env.OPENROUTER_KEY_EMBED) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_EMBED.slice(-5) + ")" : "MISSING",
       OPENROUTER_KEY_RERANK: isValidKey(process.env.OPENROUTER_KEY_RERANK) ? "CONFIGURED (Ends with: ..." + process.env.OPENROUTER_KEY_RERANK.slice(-5) + ")" : "MISSING",
+      OPENROUTER_KEY_HEYGEN: isValidKey(process.env.OPENROUTER_KEY_HEYGEN) ? "CONFIGURED ✅ heygen/heygen-voice-1-turbo:free (Ends with: ..." + process.env.OPENROUTER_KEY_HEYGEN.slice(-5) + ")" : "MISSING",
+      OPENROUTER_KEY_RECRAFT: isValidKey(process.env.OPENROUTER_KEY_RECRAFT) ? "CONFIGURED ✅ recraft/recraft-v4.1-flash-v2:free (Ends with: ..." + process.env.OPENROUTER_KEY_RECRAFT.slice(-5) + ")" : "MISSING",
       POLLINATIONS: "ALWAYS AVAILABLE (no key)"
     }
   });
@@ -1842,6 +1856,169 @@ app.get("/api/tts/google", async (req, res) => {
   } catch (err) {
     console.error("Google TTS Proxy Error:", err.message || err);
     res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
+// ===============================
+// 🎙️ HEYGEN VOICE TTS — POST /api/tts/heygen
+// Uses: heygen/heygen-voice-1-turbo:free via OpenRouter
+// Body: { text: string, voice?: string }
+// Returns: { success: true, audioUrl: string } or { success: true, audio_b64: string }
+// ===============================
+app.post("/api/tts/heygen", async (req, res) => {
+  try {
+    const { text, voice = "en-US-JennyNeural" } = req.body || {};
+    if (!text || !text.trim()) {
+      return res.status(400).json({ success: false, error: "text is required" });
+    }
+
+    const apiKey = process.env.OPENROUTER_KEY_HEYGEN;
+    if (!isValidKey(apiKey)) {
+      return res.status(503).json({ success: false, error: "HeyGen Voice API key (OPENROUTER_KEY_HEYGEN) not configured." });
+    }
+
+    console.log(`🎙️ [HeyGen TTS] Synthesizing ${text.length} chars using heygen/heygen-voice-1-turbo:free`);
+
+    const payload = {
+      model: "heygen/heygen-voice-1-turbo:free",
+      input: text.trim(),
+      voice: voice,
+    };
+
+    const response = await fetchWithTimeout(
+      "https://openrouter.ai/api/v1/audio/speech",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss AI Voice Studio",
+        },
+        body: JSON.stringify(payload),
+      },
+      30000
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("❌ [HeyGen TTS] OpenRouter error:", response.status, errText);
+      return res.status(502).json({ success: false, error: `HeyGen TTS failed (${response.status}): ${errText}` });
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+
+    // If response is JSON (e.g., contains URL or base64)
+    if (contentType.includes("application/json")) {
+      const data = await response.json();
+      console.log("✅ [HeyGen TTS] JSON response received");
+      return res.json({ success: true, data });
+    }
+
+    // Binary audio stream — convert to base64 and return
+    const arrayBuffer = await response.arrayBuffer();
+    const audio_b64 = Buffer.from(arrayBuffer).toString("base64");
+    const mimeType = contentType.includes("wav") ? "audio/wav" : "audio/mpeg";
+
+    console.log(`✅ [HeyGen TTS] Audio synthesized. Size: ${arrayBuffer.byteLength} bytes`);
+    return res.json({
+      success: true,
+      audio_b64,
+      mimeType,
+      dataUrl: `data:${mimeType};base64,${audio_b64}`,
+    });
+
+  } catch (err) {
+    console.error("❌ [HeyGen TTS] Error:", err.message || err);
+    return res.status(500).json({ success: false, error: err.message || "HeyGen TTS internal error" });
+  }
+});
+
+// ===============================
+// 🎨 RECRAFT IMAGE GENERATION — POST /api/image/recraft
+// Uses: recraft/recraft-v4.1-flash-v2:free via OpenRouter
+// Body: { prompt: string, width?: number, height?: number, style?: string }
+// Returns: { success: true, imageUrl: string, b64?: string }
+// ===============================
+app.post("/api/image/recraft", async (req, res) => {
+  try {
+    const {
+      prompt,
+      width = 1024,
+      height = 1024,
+      style = "realistic_image",
+      n = 1,
+    } = req.body || {};
+
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ success: false, error: "prompt is required" });
+    }
+
+    const apiKey = process.env.OPENROUTER_KEY_RECRAFT;
+    if (!isValidKey(apiKey)) {
+      return res.status(503).json({ success: false, error: "Recraft API key (OPENROUTER_KEY_RECRAFT) not configured." });
+    }
+
+    console.log(`🎨 [Recraft] Generating image: "${prompt.slice(0, 60)}..." (${width}x${height})`);
+
+    // OpenRouter image generation endpoint
+    const payload = {
+      model: "recraft/recraft-v4.1-flash-v2:free",
+      prompt: prompt.trim(),
+      n,
+      size: `${width}x${height}`,
+      // Recraft-specific style parameter
+      response_format: "url",
+    };
+
+    const response = await fetchWithTimeout(
+      "https://openrouter.ai/api/v1/images/generations",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss AI Image Studio",
+        },
+        body: JSON.stringify(payload),
+      },
+      60000 // 60s timeout for image generation
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("❌ [Recraft] OpenRouter error:", response.status, errText);
+      return res.status(502).json({ success: false, error: `Recraft generation failed (${response.status}): ${errText}` });
+    }
+
+    const data = await response.json();
+    console.log("✅ [Recraft] Image generation response received");
+
+    // OpenRouter returns standard OpenAI images format: { data: [{ url, b64_json }] }
+    const images = data?.data || [];
+    if (!images.length) {
+      return res.status(502).json({ success: false, error: "Recraft returned no images", raw: data });
+    }
+
+    const firstImage = images[0];
+    const imageUrl = firstImage?.url || null;
+    const b64 = firstImage?.b64_json || null;
+
+    return res.json({
+      success: true,
+      imageUrl,
+      b64,
+      dataUrl: b64 ? `data:image/png;base64,${b64}` : null,
+      prompt: prompt.trim(),
+      model: "recraft/recraft-v4.1-flash-v2:free",
+      width,
+      height,
+    });
+
+  } catch (err) {
+    console.error("❌ [Recraft] Error:", err.message || err);
+    return res.status(500).json({ success: false, error: err.message || "Recraft image generation internal error" });
   }
 });
 

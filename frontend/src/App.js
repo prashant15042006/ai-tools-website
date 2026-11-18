@@ -19,6 +19,7 @@ const ImageGenerator   = lazy(() => import("./ImageGeneratorPro"));
 const PromptManager    = lazy(() => import("./PromptManager"));
 const ProjectsView     = lazy(() => import("./components/ProjectsView"));
 const SettingsView     = lazy(() => import("./components/SettingsView"));
+const VoiceStudio      = lazy(() => import("./VoiceStudio"));
 
 // Global context for dark mode & TTS
 export const AppContext = createContext();
@@ -324,6 +325,7 @@ const PwaInstallBanner = () => {
           <SidebarItem to="/code" icon={Code} label="Code" isActive={location.pathname === "/code"} color="#10b981" onClick={handleMobileNav} />
           <SidebarItem to="/content" icon={PenTool} label="Write" isActive={location.pathname === "/content"} color="#a855f7" onClick={handleMobileNav} />
           <SidebarItem to="/images" icon={Image} label="Image AI" isActive={location.pathname === "/images"} color="#f43f5e" onClick={handleMobileNav} />
+          <SidebarItem to="/voice" icon={Volume2} label="Voice Studio" isActive={location.pathname === "/voice"} color="#a855f7" onClick={handleMobileNav} />
           <SidebarItem to="/prompts" icon={Search} label="Prompts" isActive={location.pathname === "/prompts"} color="#06b6d4" onClick={handleMobileNav} />
           <SidebarItem to="/projects" icon={FolderOpen} label="Projects" isActive={location.pathname === "/projects"} color="#f59e0b" onClick={handleMobileNav} />
           <SidebarItem to="/settings" icon={Settings} label="Settings" isActive={location.pathname === "/settings"} color="#94a3b8" onClick={handleMobileNav} />
@@ -481,6 +483,7 @@ const PwaInstallBanner = () => {
                 <Route path="/code" element={<PageTransition><CodeGenerator /></PageTransition>} />
                 <Route path="/content" element={<PageTransition><ContentGenerator /></PageTransition>} />
                 <Route path="/images" element={<PageTransition><ImageGenerator /></PageTransition>} />
+                <Route path="/voice" element={<PageTransition><VoiceStudio /></PageTransition>} />
                 <Route path="/prompts" element={<PageTransition><PromptManager /></PageTransition>} />
                 <Route path="/projects" element={<PageTransition><ProjectsView projects={projects} setProjects={setProjects} /></PageTransition>} />
                 <Route path="/settings" element={<PageTransition><SettingsView /></PageTransition>} />
