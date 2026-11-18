@@ -1,24 +1,21 @@
 import React, { useState } from "react";
 import { Copy, CheckCircle2 } from "lucide-react";
 
-export const PreRenderer = ({ children, ...props }) => {
+export const PreRenderer = ({ children, className = "", ...props }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     let codeText = "";
-    
-    // Attempt to extract text from React children
-    if (children && children.props && children.props.children) {
-      codeText = children.props.children;
-    } else {
-      codeText = children?.toString() || "";
-    }
 
-    if (Array.isArray(codeText)) {
-      codeText = codeText.join("");
-    } else if (typeof codeText !== "string") {
-      codeText = codeText?.toString() || "";
-    }
+    const extractText = (node) => {
+      if (!node) return "";
+      if (typeof node === "string" || typeof node === "number") return String(node);
+      if (Array.isArray(node)) return node.map(extractText).join("");
+      if (node.props && node.props.children) return extractText(node.props.children);
+      return "";
+    };
+
+    codeText = extractText(children) || children?.toString() || "";
 
     try {
       await navigator.clipboard.writeText(codeText);
@@ -30,45 +27,22 @@ export const PreRenderer = ({ children, ...props }) => {
   };
 
   return (
-    <pre {...props} style={{ position: "relative" }}>
+    <pre {...props} className={`code-block-pre ${className}`.trim()} style={{ position: "relative", ...(props.style || {}) }}>
       <button
+        type="button"
         onClick={handleCopy}
-        style={{
-          position: "absolute",
-          top: "8px",
-          right: "8px",
-          background: "rgba(255, 255, 255, 0.05)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          borderRadius: "6px",
-          padding: "5px 10px",
-          color: copied ? "#10b981" : "#c084fc",
-          fontSize: "12px",
-          fontWeight: "600",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: "5px",
-          zIndex: 10,
-          fontFamily: "Outfit, sans-serif",
-          transition: "all 0.2s",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-          e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-          e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
-        }}
+        className={`code-copy-btn ${copied ? "copied" : ""}`}
+        aria-label="Copy code"
       >
         {copied ? (
           <>
-            <CheckCircle2 size={12} color="#10b981" /> Copied
+            <CheckCircle2 size={13} />
+            <span>Copied</span>
           </>
         ) : (
           <>
-            <Copy size={12} /> Copy
+            <Copy size={13} />
+            <span>Copy</span>
           </>
         )}
       </button>
