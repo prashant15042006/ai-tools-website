@@ -219,8 +219,39 @@ export default function ImageGeneratorPro() {
     setLoadFailed(false);
     setLoading(true);
 
-    // Auto-detect aspect ratio from prompt
-    const ratioId = detectRatioFromPrompt(finalPrompt) || "1:1";
+    // ── AI Decider: Perplexity Decision Engine for Precision Ratio & Genre ──
+    let ratioId = detectRatioFromPrompt(finalPrompt) || "1:1";
+    let detectedGenre = null;
+
+    try {
+      const deciderEndpoints = [];
+      if (API_BASE_URL) deciderEndpoints.push(`${API_BASE_URL}/api/decider`);
+      deciderEndpoints.push("/api/decider");
+
+      for (const decEp of deciderEndpoints) {
+        try {
+          const decController = new AbortController();
+          const decTimer = setTimeout(() => decController.abort(), 3500);
+          const decRes = await fetch(decEp, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "image", prompt: finalPrompt }),
+            signal: decController.signal,
+          });
+          clearTimeout(decTimer);
+
+          if (decRes.ok) {
+            const decData = await decRes.json();
+            if (decData.success && decData.ratio) {
+              ratioId = decData.ratio;
+              detectedGenre = decData.genre;
+              break;
+            }
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
+
     const currentRatio = ASPECT_RATIO_CONFIGS[ratioId] || ASPECT_RATIO_CONFIGS["1:1"];
     const seed = Math.floor(Math.random() * 999999);
 
@@ -249,6 +280,7 @@ export default function ImageGeneratorPro() {
             prompt: finalPrompt,
             width: currentRatio.width,
             height: currentRatio.height,
+            genre: detectedGenre,
           }),
           signal: controller.signal,
         });
@@ -272,6 +304,7 @@ export default function ImageGeneratorPro() {
         url: generatedArtUrl,
         prompt: finalPrompt,
         ratio: ratioId,
+        genre: detectedGenre,
         engine: engineName,
         seed,
         id: Date.now(),
@@ -575,6 +608,11 @@ export default function ImageGeneratorPro() {
                 {activeResult?.engine && (
                   <span className="ribbon-tag" style={{ color: "#22d3ee", borderColor: "rgba(6, 182, 212, 0.4)" }}>
                     ⚡ {activeResult.engine}
+                  </span>
+                )}
+                {activeResult?.genre && (
+                  <span className="ribbon-tag" style={{ color: "#a855f7", borderColor: "rgba(168, 85, 247, 0.4)" }}>
+                    🎨 {activeResult.genre.replace("_", " ").toUpperCase()}
                   </span>
                 )}
                 {activeResult?.seed && (

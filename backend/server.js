@@ -96,6 +96,12 @@ if (!isValidKey(process.env.OPENROUTER_KEY_RECRAFT)) {
   console.log("✅ Recraft Image Key (recraft-v4.1-flash-v2) detected (ends with ...", process.env.OPENROUTER_KEY_RECRAFT.slice(-5), ")");
 }
 
+if (!isValidKey(process.env.OPENROUTER_KEY_PPLX)) {
+  console.warn("⚠️  WARNING: OPENROUTER_KEY_PPLX is not set. Perplexity Decider will use fallback.");
+} else {
+  console.log("✅ Perplexity Decider Key (pplx-decider-v1.3) detected (ends with ...", process.env.OPENROUTER_KEY_PPLX.slice(-5), ")");
+}
+
 console.log("🌸 Pollinations AI is always available as emergency fallback (no key needed).");
 
 
@@ -1994,6 +2000,7 @@ const handleImageGeneration = async (req, res) => {
       prompt,
       width = 1024,
       height = 1024,
+      genre,
       n = 1,
     } = req.body || {};
 
@@ -2066,7 +2073,12 @@ const handleImageGeneration = async (req, res) => {
 
     // ── Tier 2: Pollinations FLUX Smart Router (enhance=false & Quality Boost) ──
     try {
-      const chosenModel = selectFluxModel(cleanPrompt);
+      let chosenModel = "flux";
+      if (genre === "anime") chosenModel = "flux-anime";
+      else if (genre === "cgi_3d") chosenModel = "flux-3d";
+      else if (genre === "photorealistic") chosenModel = "flux-realism";
+      else chosenModel = selectFluxModel(cleanPrompt);
+
       const seed = Math.floor(Math.random() * 999999);
       console.log(`🚀 [ImageGen Tier 2] Attempting Pollinations FLUX Router (${chosenModel})...`);
 
@@ -2121,6 +2133,151 @@ const handleImageGeneration = async (req, res) => {
 
 app.post("/api/image/generate", handleImageGeneration);
 app.post("/api/image/recraft", handleImageGeneration);
+
+// ================================================================
+// 🧠 PERPLEXITY DECIDER & ROUTER — POST /api/decider
+// Model: perplexity/pplx-decider-v1.3:free via OpenRouter Decisions API
+// Fast probabilistic decisions for intent routing, ratio detection, and genre classification
+// ================================================================
+
+const DECIDER_RATIO_PRESETS = {
+  "16:9": { width: 1024, height: 576, label: "16:9 Widescreen", icon: "🌅" },
+  "9:16": { width: 576, height: 1024, label: "9:16 Portrait / Story", icon: "📱" },
+  "4:3": { width: 1024, height: 768, label: "4:3 Classic Photo", icon: "📺" },
+  "1:1": { width: 1024, height: 1024, label: "1:1 Square", icon: "⏹️" },
+};
+
+const callPplxDecider = async (state, questions) => {
+  const apiKey = process.env.OPENROUTER_KEY_PPLX || process.env.OPENROUTER_KEY_NEMOTRON;
+  if (!isValidKey(apiKey)) return null;
+
+  try {
+    const payload = {
+      model: "perplexity/pplx-decider-v1.3:free",
+      state,
+      questions,
+    };
+
+    const response = await fetchWithTimeout(
+      "https://openrouter.ai/api/alpha/decisions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nexuss-ai.io",
+          "X-Title": "Nexuss AI Decider",
+        },
+        body: JSON.stringify(payload),
+      },
+      8000
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.answers || null;
+    }
+  } catch (err) {
+    console.warn("⚠️ [PPLX Decider] Error:", err.message);
+  }
+  return null;
+};
+
+app.post("/api/decider", async (req, res) => {
+  try {
+    const { text, prompt, mode = "image", questions } = req.body || {};
+    const inputState = (text || prompt || "").trim();
+
+    if (!inputState) {
+      return res.status(400).json({ success: false, error: "text or prompt is required" });
+    }
+
+    let queryQuestions = questions;
+    if (!queryQuestions) {
+      if (mode === "image") {
+        queryQuestions = {
+          ratio: {
+            type: "choice",
+            criteria: {
+              "16:9": "Widescreen, landscape, banner, desktop wallpaper, horizontal view, 16:9",
+              "9:16": "Mobile portrait, vertical, story, reel, phone wallpaper, full body, 9:16",
+              "4:3": "Standard photo, classic television, landscape photo, 4:3",
+              "1:1": "Square, avatar, icon, profile picture, logo, centered portrait, default 1:1"
+            }
+          },
+          genre: {
+            type: "choice",
+            criteria: {
+              "photorealistic": "Real life photo, camera shot, human portrait, realistic nature, DSLR, 8k",
+              "anime": "Anime, manga, Japanese animation, cartoon, cel shaded, Studio Ghibli",
+              "vector_logo": "Logo, icon, flat vector, branding, sticker, minimalist graphic",
+              "cgi_3d": "3D render, digital sculpture, blender, octane render, unreal engine",
+              "artistic": "General concept art, oil painting, fantasy illustration, surreal artwork"
+            }
+          }
+        };
+      } else if (mode === "intent") {
+        queryQuestions = {
+          intent: {
+            type: "choice",
+            criteria: {
+              "image_generation": "User wants to generate, draw, create, or render an image, picture, photo, artwork, or logo",
+              "voice_audio": "User wants to speak, hear speech, text-to-speech, convert text to audio or voice narration",
+              "code_programming": "User wants to write, debug, explain, or fix computer software code or programming script",
+              "general_chat": "General conversation, informational queries, writing assistance, analysis, or advice"
+            }
+          }
+        };
+      }
+    }
+
+    const answers = await callPplxDecider(inputState, queryQuestions);
+    if (!answers) {
+      if (mode === "image") {
+        return res.json({
+          success: true,
+          mode: "image",
+          ratio: "1:1",
+          ratioConfig: DECIDER_RATIO_PRESETS["1:1"],
+          genre: "photorealistic",
+          source: "fallback",
+        });
+      }
+      return res.json({
+        success: true,
+        mode: "intent",
+        intent: "general_chat",
+        source: "fallback",
+      });
+    }
+
+    let result = {
+      success: true,
+      mode,
+      model: "perplexity/pplx-decider-v1.3:free",
+      answers,
+      provider: "Perplexity"
+    };
+
+    if (mode === "image" && answers.ratio && answers.genre) {
+      const selectedRatio = answers.ratio.choice || "1:1";
+      const config = DECIDER_RATIO_PRESETS[selectedRatio] || DECIDER_RATIO_PRESETS["1:1"];
+      result.ratio = selectedRatio;
+      result.ratioConfig = config;
+      result.genre = answers.genre.choice || "photorealistic";
+      result.ratioConfidence = answers.ratio.confidence;
+      result.genreConfidence = answers.genre.confidence;
+    } else if (mode === "intent" && answers.intent) {
+      result.intent = answers.intent.choice || "general_chat";
+      result.confidence = answers.intent.confidence;
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error("❌ [Decider] Error:", err.message);
+    return res.status(500).json({ success: false, error: err.message || "Decider internal error" });
+  }
+});
 
 const startServer = async () => {
   try {

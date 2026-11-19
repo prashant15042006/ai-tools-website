@@ -37,7 +37,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ success: false, error: "Method not allowed" });
 
   try {
-    const { prompt, width = 1024, height = 1024, n = 1 } = req.body || {};
+    const { prompt, width = 1024, height = 1024, genre, n = 1 } = req.body || {};
 
     if (!prompt || !prompt.trim()) {
       return res.status(400).json({ success: false, error: "prompt is required" });
@@ -101,7 +101,12 @@ module.exports = async function handler(req, res) {
 
     // ── Tier 2: Pollinations FLUX Smart Router (enhance=false) ──
     try {
-      const chosenModel = selectFluxModel(cleanPrompt);
+      let chosenModel = "flux";
+      if (genre === "anime") chosenModel = "flux-anime";
+      else if (genre === "cgi_3d") chosenModel = "flux-3d";
+      else if (genre === "photorealistic") chosenModel = "flux-realism";
+      else chosenModel = selectFluxModel(cleanPrompt);
+
       const seed = Math.floor(Math.random() * 999999);
       const enhancedQuery = `${cleanPrompt}, 8k uhd, highly detailed, professional masterpiece`;
       const fluxUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedQuery)}?width=${width}&height=${height}&model=${chosenModel}&seed=${seed}&nologo=true&enhance=false`;
