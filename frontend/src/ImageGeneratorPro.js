@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Sparkles,
   Download,
@@ -9,7 +9,6 @@ import {
   Dices,
   Maximize2,
   X,
-  ExternalLink,
   Check,
   Zap,
   SlidersHorizontal,
