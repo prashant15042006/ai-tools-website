@@ -1,9 +1,34 @@
 // ================================================================
 // Vercel Serverless Function: POST /api/tts/heygen
 // HeyGen Voice TTS via OpenRouter — heygen/heygen-voice-1-turbo:free
+// Supported voices: nadine, tabitha, bram, gareth, noelle, meredith, sabrina, lucian, weston, vincent
 // Body: { text: string, voice?: string }
-// Returns: { success, dataUrl, audio_b64, mimeType } or { success, data }
+// Returns: { success, dataUrl, audio_b64, mimeType: "audio/wav" }
 // ================================================================
+
+const HEYGEN_VOICES = ['nadine', 'tabitha', 'bram', 'gareth', 'noelle', 'meredith', 'sabrina', 'lucian', 'weston', 'vincent'];
+
+const pcmToWav = (pcmBuffer, sampleRate = 44100, numChannels = 1, bitsPerSample = 16) => {
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const wavHeader = Buffer.alloc(44);
+
+  wavHeader.write('RIFF', 0);
+  wavHeader.writeUInt32LE(36 + pcmBuffer.length, 4);
+  wavHeader.write('WAVE', 8);
+  wavHeader.write('fmt ', 12);
+  wavHeader.writeUInt32LE(16, 16);
+  wavHeader.writeUInt16LE(1, 20); // PCM format
+  wavHeader.writeUInt16LE(numChannels, 22);
+  wavHeader.writeUInt32LE(sampleRate, 24);
+  wavHeader.writeUInt32LE(byteRate, 28);
+  wavHeader.writeUInt16LE(blockAlign, 32);
+  wavHeader.writeUInt16LE(bitsPerSample, 34);
+  wavHeader.write('data', 36);
+  wavHeader.writeUInt32LE(pcmBuffer.length, 40);
+
+  return Buffer.concat([wavHeader, pcmBuffer]);
+};
 
 const isValidKey = (val) =>
   val &&
@@ -22,7 +47,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ success: false, error: "Method not allowed" });
 
   try {
-    const { text, voice = "en-US-JennyNeural" } = req.body || {};
+    const { text, voice = "nadine" } = req.body || {};
 
     if (!text || !text.trim()) {
       return res.status(400).json({ success: false, error: "text is required" });
@@ -39,7 +64,12 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    console.log(`[HeyGen TTS] Synthesizing ${text.length} chars, voice: ${voice}`);
+    let selectedVoice = (voice || "").toLowerCase().trim();
+    if (!HEYGEN_VOICES.includes(selectedVoice)) {
+      selectedVoice = "nadine";
+    }
+
+    console.log(`[HeyGen TTS] Synthesizing ${text.length} chars, voice: ${selectedVoice}`);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
@@ -55,7 +85,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         model: "heygen/heygen-voice-1-turbo:free",
         input: text.trim(),
-        voice: voice,
+        voice: selectedVoice,
       }),
       signal: controller.signal,
     });
@@ -78,12 +108,14 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ success: true, data });
     }
 
-    // Binary audio — convert to base64
+    // Convert raw PCM to browser-playable WAV
     const arrayBuffer = await response.arrayBuffer();
-    const audio_b64 = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = contentType.includes("wav") ? "audio/wav" : "audio/mpeg";
+    const rawBuffer = Buffer.from(arrayBuffer);
+    const wavBuffer = (contentType.includes("pcm") || !contentType.includes("wav")) ? pcmToWav(rawBuffer) : rawBuffer;
+    const audio_b64 = wavBuffer.toString("base64");
+    const mimeType = "audio/wav";
 
-    console.log(`[HeyGen TTS] ✅ Audio ready. ${arrayBuffer.byteLength} bytes`);
+    console.log(`[HeyGen TTS] ✅ WAV Audio ready. ${wavBuffer.length} bytes`);
     return res.status(200).json({
       success: true,
       audio_b64,

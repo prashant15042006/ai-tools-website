@@ -1862,12 +1862,37 @@ app.get("/api/tts/google", async (req, res) => {
 // ===============================
 // 🎙️ HEYGEN VOICE TTS — POST /api/tts/heygen
 // Uses: heygen/heygen-voice-1-turbo:free via OpenRouter
+// Supported voices: nadine, tabitha, bram, gareth, noelle, meredith, sabrina, lucian, weston, vincent
 // Body: { text: string, voice?: string }
-// Returns: { success: true, audioUrl: string } or { success: true, audio_b64: string }
+// Returns: { success: true, audio_b64: string, dataUrl: string, mimeType: "audio/wav" }
 // ===============================
+const HEYGEN_VOICES = ['nadine', 'tabitha', 'bram', 'gareth', 'noelle', 'meredith', 'sabrina', 'lucian', 'weston', 'vincent'];
+
+const pcmToWav = (pcmBuffer, sampleRate = 44100, numChannels = 1, bitsPerSample = 16) => {
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const wavHeader = Buffer.alloc(44);
+
+  wavHeader.write('RIFF', 0);
+  wavHeader.writeUInt32LE(36 + pcmBuffer.length, 4);
+  wavHeader.write('WAVE', 8);
+  wavHeader.write('fmt ', 12);
+  wavHeader.writeUInt32LE(16, 16);
+  wavHeader.writeUInt16LE(1, 20); // PCM format
+  wavHeader.writeUInt16LE(numChannels, 22);
+  wavHeader.writeUInt32LE(sampleRate, 24);
+  wavHeader.writeUInt32LE(byteRate, 28);
+  wavHeader.writeUInt16LE(blockAlign, 32);
+  wavHeader.writeUInt16LE(bitsPerSample, 34);
+  wavHeader.write('data', 36);
+  wavHeader.writeUInt32LE(pcmBuffer.length, 40);
+
+  return Buffer.concat([wavHeader, pcmBuffer]);
+};
+
 app.post("/api/tts/heygen", async (req, res) => {
   try {
-    const { text, voice = "en-US-JennyNeural" } = req.body || {};
+    const { text, voice = "nadine" } = req.body || {};
     if (!text || !text.trim()) {
       return res.status(400).json({ success: false, error: "text is required" });
     }
@@ -1877,12 +1902,17 @@ app.post("/api/tts/heygen", async (req, res) => {
       return res.status(503).json({ success: false, error: "HeyGen Voice API key (OPENROUTER_KEY_HEYGEN) not configured." });
     }
 
-    console.log(`🎙️ [HeyGen TTS] Synthesizing ${text.length} chars using heygen/heygen-voice-1-turbo:free`);
+    let selectedVoice = (voice || "").toLowerCase().trim();
+    if (!HEYGEN_VOICES.includes(selectedVoice)) {
+      selectedVoice = "nadine";
+    }
+
+    console.log(`🎙️ [HeyGen TTS] Synthesizing ${text.length} chars using voice '${selectedVoice}'`);
 
     const payload = {
       model: "heygen/heygen-voice-1-turbo:free",
       input: text.trim(),
-      voice: voice,
+      voice: selectedVoice,
     };
 
     const response = await fetchWithTimeout(
@@ -1908,19 +1938,21 @@ app.post("/api/tts/heygen", async (req, res) => {
 
     const contentType = response.headers.get("content-type") || "";
 
-    // If response is JSON (e.g., contains URL or base64)
+    // If response is JSON
     if (contentType.includes("application/json")) {
       const data = await response.json();
       console.log("✅ [HeyGen TTS] JSON response received");
       return res.json({ success: true, data });
     }
 
-    // Binary audio stream — convert to base64 and return
+    // Convert raw PCM to WAV with 44-byte standard header for instant browser playback
     const arrayBuffer = await response.arrayBuffer();
-    const audio_b64 = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = contentType.includes("wav") ? "audio/wav" : "audio/mpeg";
+    const rawBuffer = Buffer.from(arrayBuffer);
+    const wavBuffer = (contentType.includes("pcm") || !contentType.includes("wav")) ? pcmToWav(rawBuffer) : rawBuffer;
+    const audio_b64 = wavBuffer.toString("base64");
+    const mimeType = "audio/wav";
 
-    console.log(`✅ [HeyGen TTS] Audio synthesized. Size: ${arrayBuffer.byteLength} bytes`);
+    console.log(`✅ [HeyGen TTS] Audio synthesized and formatted to WAV. Size: ${wavBuffer.length} bytes`);
     return res.json({
       success: true,
       audio_b64,

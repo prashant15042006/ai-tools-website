@@ -20,12 +20,16 @@ import API_BASE_URL from "./apiConfig";
 // ============================================================
 
 const VOICE_OPTIONS = [
-  { id: "en-US-JennyNeural", label: "👩 Jenny (US English)", lang: "English" },
-  { id: "en-US-GuyNeural", label: "👨 Guy (US English)", lang: "English" },
-  { id: "en-GB-SoniaNeural", label: "👩‍💼 Sonia (British)", lang: "English" },
-  { id: "en-IN-NeerjaNeural", label: "🇮🇳 Neerja (Indian English)", lang: "English" },
-  { id: "hi-IN-SwaraNeural", label: "🎤 Swara (Hindi Female)", lang: "Hindi" },
-  { id: "hi-IN-MadhurNeural", label: "🎙️ Madhur (Hindi Male)", lang: "Hindi" },
+  { id: "nadine", label: "👩 Nadine (Natural Female - Recommended)", desc: "Clear, warm & natural tone" },
+  { id: "tabitha", label: "👩 Tabitha (Expressive Female)", desc: "Vibrant & engaging voice" },
+  { id: "bram", label: "👨 Bram (Deep Male)", desc: "Deep, rich & cinematic voice" },
+  { id: "gareth", label: "👨 Gareth (Professional Male)", desc: "Polished & authoritative tone" },
+  { id: "noelle", label: "👩 Noelle (Soft Female)", desc: "Gentle, friendly & conversational" },
+  { id: "meredith", label: "👩 Meredith (Storyteller Female)", desc: "Calm, narrative & audiobook style" },
+  { id: "sabrina", label: "👩 Sabrina (Energetic Female)", desc: "Enthusiastic & modern presentation" },
+  { id: "lucian", label: "👨 Lucian (Corporate Male)", desc: "Commanding & executive presence" },
+  { id: "weston", label: "👨 Weston (Casual Male)", desc: "Friendly, relaxed & approachable" },
+  { id: "vincent", label: "👨 Vincent (Dynamic Male)", desc: "Bold, energetic & presenter style" },
 ];
 
 const QUICK_TEXTS = [
@@ -61,7 +65,7 @@ function Toast({ message, type }) {
 
 export default function VoiceStudio() {
   const [text, setText] = useState("");
-  const [voice, setVoice] = useState("en-US-JennyNeural");
+  const [voice, setVoice] = useState("nadine");
   const [loading, setLoading] = useState(false);
   const [audioDataUrl, setAudioDataUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -100,6 +104,7 @@ export default function VoiceStudio() {
     endpoints.push("/api/tts/heygen");
 
     let result = null;
+    let lastError = null;
 
     for (const ep of endpoints) {
       try {
@@ -119,16 +124,17 @@ export default function VoiceStudio() {
             result = data;
             break;
           } else {
-            showToast("HeyGen TTS error: " + (data.error || "Unknown"), "error");
+            lastError = data.error || "Generation unsuccessful";
           }
         } else {
           const errData = await resp.json().catch(() => ({}));
-          showToast("Server error: " + (errData.error || resp.statusText), "error");
+          lastError = errData.error || `Server responded with ${resp.status}`;
         }
       } catch (e) {
         if (e.name === "AbortError") {
-          showToast("Request timed out. Please try again.", "error");
+          lastError = "Request timed out. Please try again.";
         } else {
+          lastError = e.message || "Network error";
           console.warn("HeyGen endpoint failed:", ep, e.message);
         }
       }
@@ -142,12 +148,12 @@ export default function VoiceStudio() {
       if (result.dataUrl) {
         dataUrl = result.dataUrl;
       } else if (result.audio_b64) {
-        const mime = result.mimeType || "audio/mpeg";
+        const mime = result.mimeType || "audio/wav";
         dataUrl = `data:${mime};base64,${result.audio_b64}`;
       } else if (result.data?.url) {
         dataUrl = result.data.url;
       } else if (result.data?.b64) {
-        dataUrl = `data:audio/mpeg;base64,${result.data.b64}`;
+        dataUrl = `data:audio/wav;base64,${result.data.b64}`;
       }
 
       if (dataUrl) {
@@ -156,6 +162,8 @@ export default function VoiceStudio() {
       } else {
         showToast("Could not extract audio from response.", "error");
       }
+    } else {
+      showToast(lastError || "Voice generation failed. Please try again.", "error");
     }
   };
 
@@ -175,7 +183,7 @@ export default function VoiceStudio() {
     if (!audioDataUrl) return;
     const a = document.createElement("a");
     a.href = audioDataUrl;
-    a.download = `nexuss_voice_${Date.now()}.mp3`;
+    a.download = `nexuss_voice_${Date.now()}.wav`;
     a.click();
     showToast("Audio downloaded! 📥");
   };
@@ -270,7 +278,7 @@ export default function VoiceStudio() {
                   }}
                 >
                   <div>{v.label}</div>
-                  <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "2px" }}>{v.lang}</div>
+                  <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "2px" }}>{v.desc}</div>
                 </button>
               ))}
             </div>
