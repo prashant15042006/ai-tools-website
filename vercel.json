@@ -58,6 +58,10 @@
       "destination": "/api/tts/heygen.js"
     },
     {
+      "source": "/api/image/generate",
+      "destination": "/api/image/generate.js"
+    },
+    {
       "source": "/api/image/recraft",
       "destination": "/api/image/recraft.js"
     },

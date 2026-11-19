@@ -1967,18 +1967,33 @@ app.post("/api/tts/heygen", async (req, res) => {
 });
 
 // ===============================
-// 🎨 RECRAFT IMAGE GENERATION — POST /api/image/recraft
-// Uses: recraft/recraft-v4.1-flash-v2:free via OpenRouter
-// Body: { prompt: string, width?: number, height?: number, style?: string }
-// Returns: { success: true, imageUrl: string, b64?: string }
-// ===============================
-app.post("/api/image/recraft", async (req, res) => {
+// ================================================================
+// 🎨 BEAST IMAGE GENERATION WATERFALL — POST /api/image/generate & /api/image/recraft
+// Tier 1: Recraft V4.1 Flash (Free SOTA 8K-like Photorealism & Design via OpenRouter)
+// Tier 2: Pollinations FLUX Smart Router (flux-realism / flux-anime / flux-3d with enhance=false)
+// Tier 3: High-speed FLUX direct URL fallback
+// ================================================================
+
+function selectFluxModel(promptText = "") {
+  const p = promptText.toLowerCase();
+  if (/\b(anime|manga|chibi|ghibli|waifu|shinkai|kawaii|comic|illustration)\b/.test(p)) {
+    return "flux-anime";
+  }
+  if (/\b(3d|render|blender|octane|cgi|unreal|pixar|sculpture|isometric)\b/.test(p)) {
+    return "flux-3d";
+  }
+  if (/\b(photo|portrait|realistic|realism|hyperrealistic|dslr|cinematic|camera|face|person|man|woman|nature|landscape)\b/.test(p)) {
+    return "flux-realism";
+  }
+  return "flux";
+}
+
+const handleImageGeneration = async (req, res) => {
   try {
     const {
       prompt,
       width = 1024,
       height = 1024,
-      style = "realistic_image",
       n = 1,
     } = req.body || {};
 
@@ -1986,73 +2001,126 @@ app.post("/api/image/recraft", async (req, res) => {
       return res.status(400).json({ success: false, error: "prompt is required" });
     }
 
+    const cleanPrompt = prompt.trim();
+    console.log(`🎨 [ImageGen] Request: "${cleanPrompt.slice(0, 60)}..." (${width}x${height})`);
+
+    // ── Tier 1: Recraft V4.1 Flash (OpenRouter Free SOTA) ──
     const apiKey = process.env.OPENROUTER_KEY_RECRAFT;
-    if (!isValidKey(apiKey)) {
-      return res.status(503).json({ success: false, error: "Recraft API key (OPENROUTER_KEY_RECRAFT) not configured." });
+    if (isValidKey(apiKey)) {
+      try {
+        console.log("🚀 [ImageGen Tier 1] Attempting Recraft v4.1 Flash...");
+        const payload = {
+          model: "recraft/recraft-v4.1-flash-v2:free",
+          prompt: cleanPrompt,
+          n,
+          size: `${width}x${height}`,
+          response_format: "url",
+        };
+
+        const response = await fetchWithTimeout(
+          "https://openrouter.ai/api/v1/images/generations",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://nexuss-ai.io",
+              "X-Title": "Nexuss AI Image Studio",
+            },
+            body: JSON.stringify(payload),
+          },
+          45000
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const images = data?.data || [];
+          if (images.length > 0) {
+            const firstImage = images[0];
+            const imageUrl = firstImage?.url || null;
+            const b64 = firstImage?.b64_json || null;
+
+            console.log("✅ [ImageGen Tier 1] Recraft success! Size:", b64 ? `${Math.round(b64.length / 1024)} KB` : "URL");
+            return res.json({
+              success: true,
+              engine: "Recraft V4.1 Flash",
+              model: "recraft/recraft-v4.1-flash-v2:free",
+              imageUrl,
+              b64,
+              dataUrl: b64 ? `data:image/webp;base64,${b64}` : imageUrl,
+              prompt: cleanPrompt,
+              width,
+              height,
+            });
+          }
+        } else {
+          const errText = await response.text();
+          console.warn(`⚠️ [ImageGen Tier 1] Recraft returned ${response.status}:`, errText.slice(0, 150));
+        }
+      } catch (tier1Err) {
+        console.warn("⚠️ [ImageGen Tier 1] Recraft failed, cascading to Tier 2:", tier1Err.message);
+      }
+    } else {
+      console.log("ℹ️ [ImageGen Tier 1] OPENROUTER_KEY_RECRAFT not set, using Tier 2 FLUX router.");
     }
 
-    console.log(`🎨 [Recraft] Generating image: "${prompt.slice(0, 60)}..." (${width}x${height})`);
+    // ── Tier 2: Pollinations FLUX Smart Router (enhance=false & Quality Boost) ──
+    try {
+      const chosenModel = selectFluxModel(cleanPrompt);
+      const seed = Math.floor(Math.random() * 999999);
+      console.log(`🚀 [ImageGen Tier 2] Attempting Pollinations FLUX Router (${chosenModel})...`);
 
-    // OpenRouter image generation endpoint
-    const payload = {
-      model: "recraft/recraft-v4.1-flash-v2:free",
-      prompt: prompt.trim(),
-      n,
-      size: `${width}x${height}`,
-      // Recraft-specific style parameter
-      response_format: "url",
-    };
+      // Add high-fidelity prompt anchors without mutating the core intent
+      const enhancedQuery = `${cleanPrompt}, 8k uhd, highly detailed, professional masterpiece`;
+      const fluxUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedQuery)}?width=${width}&height=${height}&model=${chosenModel}&seed=${seed}&nologo=true&enhance=false`;
 
-    const response = await fetchWithTimeout(
-      "https://openrouter.ai/api/v1/images/generations",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://nexuss-ai.io",
-          "X-Title": "Nexuss AI Image Studio",
-        },
-        body: JSON.stringify(payload),
-      },
-      60000 // 60s timeout for image generation
-    );
+      const imgResp = await fetchWithTimeout(fluxUrl, {}, 25000);
+      if (imgResp.ok) {
+        const arrayBuf = await imgResp.arrayBuffer();
+        const b64 = Buffer.from(arrayBuf).toString("base64");
+        const mime = imgResp.headers.get("content-type") || "image/jpeg";
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("❌ [Recraft] OpenRouter error:", response.status, errText);
-      return res.status(502).json({ success: false, error: `Recraft generation failed (${response.status}): ${errText}` });
+        console.log(`✅ [ImageGen Tier 2] FLUX (${chosenModel}) success! Size: ${Math.round(b64.length / 1024)} KB`);
+        return res.json({
+          success: true,
+          engine: `FLUX Smart Router (${chosenModel})`,
+          model: chosenModel,
+          imageUrl: fluxUrl,
+          b64,
+          dataUrl: `data:${mime};base64,${b64}`,
+          prompt: cleanPrompt,
+          width,
+          height,
+        });
+      }
+    } catch (tier2Err) {
+      console.warn("⚠️ [ImageGen Tier 2] FLUX router fetch failed, cascading to Tier 3:", tier2Err.message);
     }
 
-    const data = await response.json();
-    console.log("✅ [Recraft] Image generation response received");
-
-    // OpenRouter returns standard OpenAI images format: { data: [{ url, b64_json }] }
-    const images = data?.data || [];
-    if (!images.length) {
-      return res.status(502).json({ success: false, error: "Recraft returned no images", raw: data });
-    }
-
-    const firstImage = images[0];
-    const imageUrl = firstImage?.url || null;
-    const b64 = firstImage?.b64_json || null;
+    // ── Tier 3: Direct FLUX CDN URL Fallback ──
+    const fallbackSeed = Math.floor(Math.random() * 999999);
+    const directUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=${width}&height=${height}&model=flux&seed=${fallbackSeed}&nologo=true&enhance=false`;
+    console.log("✅ [ImageGen Tier 3] Serving Direct FLUX URL fallback.");
 
     return res.json({
       success: true,
-      imageUrl,
-      b64,
-      dataUrl: b64 ? `data:image/png;base64,${b64}` : null,
-      prompt: prompt.trim(),
-      model: "recraft/recraft-v4.1-flash-v2:free",
+      engine: "FLUX Ultra Direct",
+      model: "flux",
+      imageUrl: directUrl,
+      dataUrl: directUrl,
+      prompt: cleanPrompt,
       width,
       height,
     });
 
   } catch (err) {
-    console.error("❌ [Recraft] Error:", err.message || err);
-    return res.status(500).json({ success: false, error: err.message || "Recraft image generation internal error" });
+    console.error("❌ [ImageGen] Critical error:", err.message || err);
+    return res.status(500).json({ success: false, error: err.message || "Image generation internal error" });
   }
-});
+};
+
+app.post("/api/image/generate", handleImageGeneration);
+app.post("/api/image/recraft", handleImageGeneration);
 
 const startServer = async () => {
   try {

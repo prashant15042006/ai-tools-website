@@ -43,17 +43,33 @@ const INSPIRATION_PROMPTS = [
   "Ancient fantasy castle built into a towering misty waterfall, dramatic sunset rays, epic digital concept art, 16:9",
 ];
 
+function selectFluxModelClient(promptText = "") {
+  const p = promptText.toLowerCase();
+  if (/\b(anime|manga|chibi|ghibli|waifu|shinkai|kawaii|comic|illustration)\b/.test(p)) {
+    return "flux-anime";
+  }
+  if (/\b(3d|render|blender|octane|cgi|unreal|pixar|sculpture|isometric)\b/.test(p)) {
+    return "flux-3d";
+  }
+  if (/\b(photo|portrait|realistic|realism|hyperrealistic|dslr|cinematic|camera|face|person|man|woman|nature|landscape)\b/.test(p)) {
+    return "flux-realism";
+  }
+  return "flux";
+}
+
 function buildImageUrl(prompt, options = {}) {
   const {
     width = 1024,
     height = 1024,
-    model = "flux",
+    model = null,
     seed = Math.floor(Math.random() * 999999),
-    enhance = true,
+    enhance = false,
   } = options;
 
-  const encoded = encodeURIComponent(prompt.trim());
-  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=${enhance}`;
+  const chosenModel = model || selectFluxModelClient(prompt);
+  const promptBoost = `${prompt.trim()}, 8k uhd, highly detailed, professional masterpiece`;
+  const encoded = encodeURIComponent(promptBoost);
+  return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=${chosenModel}&seed=${seed}&nologo=true&enhance=${enhance}`;
 }
 
 function Toast({ message, type }) {
@@ -114,7 +130,18 @@ export default function ImageGeneratorPro() {
     try {
       localStorage.setItem("nexus_image_history", JSON.stringify(newHistory));
     } catch (error) {
-      console.warn("Could not save history to localStorage", error);
+      try {
+        // Fallback for quota: strip ultra-large base64 items for localStorage
+        const sanitized = newHistory.slice(0, 10).map((item) => {
+          if (item.url && item.url.startsWith("data:") && item.url.length > 250000) {
+            return { ...item, url: "" };
+          }
+          return item;
+        });
+        localStorage.setItem("nexus_image_history", JSON.stringify(sanitized));
+      } catch (err) {
+        console.warn("Could not save history to localStorage", err);
+      }
     }
   };
 
@@ -180,7 +207,7 @@ export default function ImageGeneratorPro() {
     }
   };
 
-  // ── Intelligent Generation Engine ──
+  // ── Intelligent Generation Engine (Prioritized Beast Waterfall) ──
   const generateImage = async () => {
     const finalPrompt = prompt.trim();
     if (!finalPrompt) {
@@ -197,70 +224,72 @@ export default function ImageGeneratorPro() {
     const currentRatio = ASPECT_RATIO_CONFIGS[ratioId] || ASPECT_RATIO_CONFIGS["1:1"];
     const seed = Math.floor(Math.random() * 999999);
 
-    // Auto-route model: If vector/logo/branding keywords present, use Recraft
-    const isVectorOrLogo = /\b(logo|vector|minimalist icon|badge|sticker|branding|clean vector)\b/i.test(finalPrompt);
+    // ── Prioritized Backend Engine Waterfall ──
+    // 1. Recraft V4.1 Flash (8K-quality SOTA raster, photorealism & typography)
+    // 2. Pollinations FLUX Smart Router (Realism / Anime / 3D with enhance=false)
+    const endpoints = [];
+    if (API_BASE_URL) {
+      endpoints.push(`${API_BASE_URL}/api/image/generate`);
+      endpoints.push(`${API_BASE_URL}/api/image/recraft`);
+    }
+    endpoints.push("/api/image/generate");
+    endpoints.push("/api/image/recraft");
 
-    if (isVectorOrLogo) {
+    let generatedArtUrl = null;
+    let engineName = "Recraft V4.1 Flash";
+
+    for (const ep of endpoints) {
       try {
-        const endpoints = [];
-        if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/image/recraft`);
-        endpoints.push("/api/image/recraft");
-
-        let recraftUrl = null;
-
-        for (const ep of endpoints) {
-          try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 45000);
-            const resp = await fetch(ep, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                prompt: finalPrompt,
-                width: currentRatio.width,
-                height: currentRatio.height,
-              }),
-              signal: controller.signal,
-            });
-            clearTimeout(timer);
-
-            if (resp.ok) {
-              const data = await resp.json();
-              if (data.success && (data.imageUrl || data.dataUrl)) {
-                recraftUrl = data.imageUrl || data.dataUrl;
-                break;
-              }
-            }
-          } catch (e) {}
-        }
-
-        if (recraftUrl) {
-          const result = {
-            url: recraftUrl,
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 50000);
+        const resp = await fetch(ep, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             prompt: finalPrompt,
-            ratio: ratioId,
-            seed,
-            id: Date.now(),
-          };
-          setImageUrl(recraftUrl);
-          setActiveResult(result);
-          setLoading(false);
-          saveHistory([result, ...history].slice(0, 40));
-          showToast("✨ Vector masterpiece rendered with Recraft!");
-          return;
+            width: currentRatio.width,
+            height: currentRatio.height,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.success && (data.dataUrl || data.imageUrl)) {
+            generatedArtUrl = data.dataUrl || data.imageUrl;
+            engineName = data.engine || "Recraft V4.1 Flash";
+            break;
+          }
         }
-      } catch (err) {
-        // Fallback to Flux if Recraft is busy
+      } catch (e) {
+        console.warn(`Endpoint ${ep} error:`, e.message);
       }
     }
 
-    // Default & Photorealistic Engine: Flux.1 Ultra
-    const url = buildImageUrl(finalPrompt, {
+    if (generatedArtUrl) {
+      const result = {
+        url: generatedArtUrl,
+        prompt: finalPrompt,
+        ratio: ratioId,
+        engine: engineName,
+        seed,
+        id: Date.now(),
+      };
+      setImageUrl(generatedArtUrl);
+      setActiveResult(result);
+      setLoading(false);
+      saveHistory([result, ...history].slice(0, 30));
+      showToast(`✨ 8K Masterpiece created with ${engineName}!`);
+      return;
+    }
+
+    // ── Direct Browser Fallback: FLUX Smart Router (enhance=false) ──
+    const clientFluxUrl = buildImageUrl(finalPrompt, {
       width: currentRatio.width,
       height: currentRatio.height,
-      model: "flux",
       seed,
-      enhance: true,
+      enhance: false,
     });
 
     const loadWithUrl = (genUrl, isRetry = false) => {
@@ -273,26 +302,27 @@ export default function ImageGeneratorPro() {
           url: genUrl,
           prompt: finalPrompt,
           ratio: ratioId,
+          engine: isRetry ? "SANA Fast Engine" : "FLUX Smart Router",
           seed,
           id: Date.now(),
         };
         setImageUrl(genUrl);
         setActiveResult(result);
         setLoading(false);
-        saveHistory([result, ...history].slice(0, 40));
-        showToast("Masterpiece generated successfully! ✨");
+        saveHistory([result, ...history].slice(0, 30));
+        showToast("✨ Masterpiece generated successfully!");
       };
 
       img.onerror = () => {
         if (!isRetry) {
-          // Instant fallback to Turbo engine
+          // Fallback to SANA high-speed model
           const retrySeed = Math.floor(Math.random() * 999999);
           const retryUrl = buildImageUrl(finalPrompt, {
             width: currentRatio.width,
             height: currentRatio.height,
-            model: "turbo",
+            model: "sana",
             seed: retrySeed,
-            enhance: true,
+            enhance: false,
           });
           loadWithUrl(retryUrl, true);
           return;
@@ -304,7 +334,7 @@ export default function ImageGeneratorPro() {
       };
     };
 
-    loadWithUrl(url);
+    loadWithUrl(clientFluxUrl);
   };
 
   const handleDownload = async (url) => {
@@ -542,6 +572,11 @@ export default function ImageGeneratorPro() {
                 <span className="ribbon-tag">
                   {ratioConfig.icon} {ratioConfig.label}
                 </span>
+                {activeResult?.engine && (
+                  <span className="ribbon-tag" style={{ color: "#22d3ee", borderColor: "rgba(6, 182, 212, 0.4)" }}>
+                    ⚡ {activeResult.engine}
+                  </span>
+                )}
                 {activeResult?.seed && (
                   <span className="ribbon-tag">Seed #{activeResult.seed}</span>
                 )}
