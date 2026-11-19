@@ -7,14 +7,32 @@
  * Used by both Chat.js (inline image gen) and ImageGeneratorPro.js.
  */
 export function detectRatioFromPrompt(promptText) {
+  if (!promptText) return null;
   const p = promptText.toLowerCase();
-  if (/\b16[:\sx]9\b/.test(p) || /\blandscape\s*ratio\b/.test(p) || /\bwidescreen\b/.test(p)) return "16:9";
-  if (/\b9[:\sx]16\b/.test(p) || /\bportrait\s*ratio\b/.test(p) || /\bvertical\s*ratio\b/.test(p)) return "9:16";
-  if (/\b4[:\sx]3\b/.test(p) || /\bclassic\s*ratio\b/.test(p)) return "4:3";
-  if (/\b1[:\sx]1\b/.test(p) || /\bsquare\s*ratio\b/.test(p)) return "1:1";
-  if (/\b(16x9|16[/]9)\b/.test(p)) return "16:9";
-  if (/\b(9x16|9[/]16)\b/.test(p)) return "9:16";
-  if (/\b(4x3|4[/]3)\b/.test(p)) return "4:3";
+
+  // 16:9 Landscape / Widescreen / Banner
+  if (
+    /\b(16[:\sx/]9|16by9)\b/.test(p) ||
+    /\b(landscape|widescreen|horizontal|desktop wallpaper|banner|youtube banner|thumbnail|cover photo)\b/.test(p)
+  ) return "16:9";
+
+  // 9:16 Portrait / Story / Reel / Mobile Wallpaper
+  if (
+    /\b(9[:\sx/]16|9by16)\b/.test(p) ||
+    /\b(portrait|vertical|story|reel|shorts|phone wallpaper|mobile wallpaper|smartphone wallpaper|tall)\b/.test(p)
+  ) return "9:16";
+
+  // 4:3 Classic Photo
+  if (
+    /\b(4[:\sx/]3|4by3)\b/.test(p) ||
+    /\b(classic ratio|vintage photo|standard photo)\b/.test(p)
+  ) return "4:3";
+
+  // 1:1 Square
+  if (
+    /\b(1[:\sx/]1|1by1|square|dp|avatar|profile picture|instagram post)\b/.test(p)
+  ) return "1:1";
+
   return null;
 }
 

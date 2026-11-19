@@ -10,9 +10,6 @@ import {
   Maximize2,
   X,
   Check,
-  Zap,
-  SlidersHorizontal,
-  Layers,
   ArrowUpRight,
   ImageIcon,
 } from "lucide-react";
@@ -20,9 +17,31 @@ import API_BASE_URL from "./apiConfig";
 import { detectRatioFromPrompt } from "./utils/helpers";
 
 // ============================================================
-// 🎨 AI IMAGE STUDIO — BEAST DASHBOARD REDESIGN
-// Ultra-clean, modern, distraction-free creative workspace
+// 🎨 AI IMAGE STUDIO — BEAST MODE (CLEAN & INTELLIGENT)
+// - No manual model buttons: AI auto-routes under the hood
+// - No manual ratio buttons: AI auto-detects from natural prompt
+// - No manual style buttons: User controls style directly in prompt
+// - AI Magic Enhance: Polishes simple prompts into 8K masterpieces
+// - Full scrolling fix: Smooth native scrolling across all screens
 // ============================================================
+
+const ASPECT_RATIO_CONFIGS = {
+  "16:9": { width: 1024, height: 576, label: "16:9 Widescreen", icon: "🌅" },
+  "9:16": { width: 576, height: 1024, label: "9:16 Portrait / Story", icon: "📱" },
+  "4:3": { width: 1024, height: 768, label: "4:3 Classic Photo", icon: "📺" },
+  "1:1": { width: 1024, height: 1024, label: "1:1 Square", icon: "⏹️" },
+};
+
+const INSPIRATION_PROMPTS = [
+  "A majestic white tiger with glowing bioluminescent cyan stripes in a mystical moonlit jungle, 8k cinematic lighting, 16:9",
+  "Futuristic Formula 1 cyber car racing across a neon glass skybridge over neo-Tokyo at midnight, rain reflections, widescreen",
+  "Astronaut discovering a giant glowing crystalline obelisk on an alien desert planet at sunset, photorealistic 8k, landscape",
+  "Cozy lofi Japanese cafe during gentle snowfall, warm yellow lanterns, steaming coffee cup, Makoto Shinkai anime style, 16:9",
+  "Cyberpunk samurai in ornate chrome armor standing beneath pouring neon rain, volumetric lighting, vertical portrait",
+  "Hyper-realistic portrait of an ethereal celestial goddess with diamond jewelry and golden nebulae in the background, 8k",
+  "Minimalist geometric vector logo of a roaring lion in gold and deep navy blue, clean lines, white background",
+  "Ancient fantasy castle built into a towering misty waterfall, dramatic sunset rays, epic digital concept art, 16:9",
+];
 
 function buildImageUrl(prompt, options = {}) {
   const {
@@ -36,39 +55,6 @@ function buildImageUrl(prompt, options = {}) {
   const encoded = encodeURIComponent(prompt.trim());
   return `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=${enhance}`;
 }
-
-const MODELS = [
-  { id: "flux", label: "Flux.1 Ultra", badge: "POPULAR", desc: "Hyper-realistic textures & cinematic lighting" },
-  { id: "recraft", label: "Recraft v4.1", badge: "NEW", desc: "Crisp vector, branding & ultra-clean details" },
-  { id: "turbo", label: "Turbo Speed", badge: "FAST", desc: "Blazing fast generation in 2–4 seconds" },
-  { id: "flux-anime", label: "Anime Master", badge: "ART", desc: "Makoto Shinkai & Ghibli aesthetic" },
-  { id: "flux-3d", label: "Unreal 3D", badge: "CGI", desc: "3D Pixar & Octane Render CGI quality" },
-];
-
-const ASPECT_RATIOS = [
-  { id: "1:1", label: "Square", width: 1024, height: 1024, sub: "1:1 • Post", icon: "⏹️" },
-  { id: "16:9", label: "Landscape", width: 1024, height: 576, sub: "16:9 • Desktop", icon: "🌅" },
-  { id: "9:16", label: "Portrait", width: 576, height: 1024, sub: "9:16 • Story", icon: "📱" },
-  { id: "4:3", label: "Classic", width: 1024, height: 768, sub: "4:3 • Photo", icon: "📺" },
-];
-
-const STYLES = [
-  { id: "photo", label: "📸 8K Photo", suffix: "photorealistic 8k, ultra sharp focus, Hasselblad shot, studio lighting" },
-  { id: "cinematic", label: "🎬 Cinematic", suffix: "cinematic movie still, dramatic rim lighting, 35mm lens, depth of field" },
-  { id: "anime", label: "🌸 Anime", suffix: "anime aesthetic, Makoto Shinkai style, vibrant colors, detailed scenery" },
-  { id: "cyberpunk", label: "🕹️ Cyberpunk", suffix: "cyberpunk city, neon lights, volumetric rain, octane render 8k" },
-  { id: "3d", label: "🎮 3D Render", suffix: "unreal engine 5, Pixar 3D style, smooth shading, clay material, 8k render" },
-  { id: "fantasy", label: "🏰 Fantasy", suffix: "classical oil painting, textured canvas, atmospheric lighting, masterpiece" },
-];
-
-const INSPIRATION_PROMPTS = [
-  "A majestic white tiger with glowing cyan stripes resting inside a bioluminescent rainforest, 8k cinematic",
-  "Futuristic Formula 1 cyber car racing across a transparent neon skybridge over Tokyo at midnight",
-  "Astronaut discovering a giant glowing crystalline obelisk on an alien desert planet at sunset",
-  "Cozy lofi Japanese cafe during gentle snowfall, warm yellow lanterns, steaming coffee cup, anime style",
-  "Cyberpunk samurai in chrome armor standing beneath pouring neon rain, cinematic reflection",
-  "Hyper-realistic portrait of an ethereal celestial goddess woven from golden nebulae and starlight",
-];
 
 function Toast({ message, type }) {
   return (
@@ -99,8 +85,6 @@ function Toast({ message, type }) {
 
 export default function ImageGeneratorPro() {
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState("flux");
-  const [aspectRatio, setAspectRatio] = useState("1:1");
   const [imageUrl, setImageUrl] = useState(null);
   const [activeResult, setActiveResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -108,7 +92,6 @@ export default function ImageGeneratorPro() {
   const [toast, setToast] = useState(null);
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("create"); // 'create' | 'gallery'
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   // ── History State ──
@@ -135,22 +118,15 @@ export default function ImageGeneratorPro() {
     }
   };
 
-  // ── Random Prompt ──
+  // ── Smart Auto-Detection from Prompt ──
+  const detectedRatio = detectRatioFromPrompt(prompt) || "1:1";
+  const ratioConfig = ASPECT_RATIO_CONFIGS[detectedRatio] || ASPECT_RATIO_CONFIGS["1:1"];
+
+  // ── Random Inspiration ──
   const handleRandomPrompt = () => {
     const randomIndex = Math.floor(Math.random() * INSPIRATION_PROMPTS.length);
     setPrompt(INSPIRATION_PROMPTS[randomIndex]);
-    showToast("Loaded fresh creative prompt! 🎲");
-  };
-
-  // ── Append Style ──
-  const appendStyle = (suffix) => {
-    setPrompt((prev) => {
-      const base = prev.trim();
-      if (!base) return suffix;
-      if (base.toLowerCase().includes(suffix.toLowerCase())) return prev;
-      return `${base}, ${suffix}`;
-    });
-    showToast("Style added to prompt! 🎨");
+    showToast("Loaded creative prompt idea! 🎲");
   };
 
   // ── AI Magic Wand: Enhance Prompt ──
@@ -198,13 +174,13 @@ export default function ImageGeneratorPro() {
       setPrompt(enhanced);
       showToast("Enhanced with cinematic 8K details! ✨");
     } else {
-      const fallback = prompt.trim() + ", photorealistic 8k, highly detailed, cinematic dramatic lighting, sharp focus";
+      const fallback = prompt.trim() + ", photorealistic 8k, highly detailed, dramatic lighting, sharp focus";
       setPrompt(fallback);
-      showToast("Applied photographic details tag! ✨");
+      showToast("Enhanced with cinematic details! ✨");
     }
   };
 
-  // ── Image Generation ──
+  // ── Intelligent Generation Engine ──
   const generateImage = async () => {
     const finalPrompt = prompt.trim();
     if (!finalPrompt) {
@@ -216,33 +192,33 @@ export default function ImageGeneratorPro() {
     setLoadFailed(false);
     setLoading(true);
 
-    const detectedRatioId = detectRatioFromPrompt(finalPrompt);
-    const finalRatioId = detectedRatioId || aspectRatio;
-    if (detectedRatioId && detectedRatioId !== aspectRatio) setAspectRatio(detectedRatioId);
-
-    const ratio = ASPECT_RATIOS.find((item) => item.id === finalRatioId) || ASPECT_RATIOS[0];
+    // Auto-detect aspect ratio from prompt
+    const ratioId = detectRatioFromPrompt(finalPrompt) || "1:1";
+    const currentRatio = ASPECT_RATIO_CONFIGS[ratioId] || ASPECT_RATIO_CONFIGS["1:1"];
     const seed = Math.floor(Math.random() * 999999);
 
-    // ── Recraft v4.1 Flash via Backend API ──
-    if (model === "recraft") {
+    // Auto-route model: If vector/logo/branding keywords present, use Recraft
+    const isVectorOrLogo = /\b(logo|vector|minimalist icon|badge|sticker|branding|clean vector)\b/i.test(finalPrompt);
+
+    if (isVectorOrLogo) {
       try {
         const endpoints = [];
         if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/image/recraft`);
         endpoints.push("/api/image/recraft");
 
-        let recraftImageUrl = null;
+        let recraftUrl = null;
 
         for (const ep of endpoints) {
           try {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 55000);
+            const timer = setTimeout(() => controller.abort(), 45000);
             const resp = await fetch(ep, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 prompt: finalPrompt,
-                width: ratio.width,
-                height: ratio.height,
+                width: currentRatio.width,
+                height: currentRatio.height,
               }),
               signal: controller.signal,
             });
@@ -251,47 +227,38 @@ export default function ImageGeneratorPro() {
             if (resp.ok) {
               const data = await resp.json();
               if (data.success && (data.imageUrl || data.dataUrl)) {
-                recraftImageUrl = data.imageUrl || data.dataUrl;
+                recraftUrl = data.imageUrl || data.dataUrl;
                 break;
               }
             }
-          } catch (e) {
-            console.warn("Recraft endpoint:", ep, e.message);
-          }
+          } catch (e) {}
         }
 
-        if (recraftImageUrl) {
+        if (recraftUrl) {
           const result = {
-            url: recraftImageUrl,
+            url: recraftUrl,
             prompt: finalPrompt,
-            model: "recraft",
-            ratio: finalRatioId,
+            ratio: ratioId,
             seed,
             id: Date.now(),
           };
-          setImageUrl(recraftImageUrl);
+          setImageUrl(recraftUrl);
           setActiveResult(result);
           setLoading(false);
           saveHistory([result, ...history].slice(0, 40));
-          showToast("✨ Recraft v4.1 masterpiece rendered!");
-        } else {
-          setLoading(false);
-          setLoadFailed(true);
-          showToast("Recraft took too long or API is busy. Try Flux or retry.", "error");
+          showToast("✨ Vector masterpiece rendered with Recraft!");
+          return;
         }
       } catch (err) {
-        setLoading(false);
-        setLoadFailed(true);
-        showToast("Generation error: " + (err.message || "Failed"), "error");
+        // Fallback to Flux if Recraft is busy
       }
-      return;
     }
 
-    // ── Pollinations Standard Generation ──
+    // Default & Photorealistic Engine: Flux.1 Ultra
     const url = buildImageUrl(finalPrompt, {
-      width: ratio.width,
-      height: ratio.height,
-      model,
+      width: currentRatio.width,
+      height: currentRatio.height,
+      model: "flux",
       seed,
       enhance: true,
     });
@@ -305,8 +272,7 @@ export default function ImageGeneratorPro() {
         const result = {
           url: genUrl,
           prompt: finalPrompt,
-          model,
-          ratio: finalRatioId,
+          ratio: ratioId,
           seed,
           id: Date.now(),
         };
@@ -314,17 +280,17 @@ export default function ImageGeneratorPro() {
         setActiveResult(result);
         setLoading(false);
         saveHistory([result, ...history].slice(0, 40));
-        showToast("Masterpiece generated! ✨");
+        showToast("Masterpiece generated successfully! ✨");
       };
 
       img.onerror = () => {
         if (!isRetry) {
+          // Instant fallback to Turbo engine
           const retrySeed = Math.floor(Math.random() * 999999);
-          const fallbackModel = model === "flux" ? "turbo" : "flux";
           const retryUrl = buildImageUrl(finalPrompt, {
-            width: ratio.width,
-            height: ratio.height,
-            model: fallbackModel,
+            width: currentRatio.width,
+            height: currentRatio.height,
+            model: "turbo",
             seed: retrySeed,
             enhance: true,
           });
@@ -372,408 +338,315 @@ export default function ImageGeneratorPro() {
     }
   };
 
-  const activeRatioConfig = ASPECT_RATIOS.find((r) => r.id === (activeResult?.ratio || aspectRatio)) || ASPECT_RATIOS[0];
-  const activeModelConfig = MODELS.find((m) => m.id === (activeResult?.model || model)) || MODELS[0];
-
   return (
-    <div className="studio-root">
-      {/* ── TOP HEADER / NAV BAR ── */}
-      <header className="studio-nav">
-        <div className="studio-brand">
-          <div className="studio-badge-icon">
-            <Sparkles size={18} />
+    <div className="page-view beast-studio-page">
+      {/* ── HEADER ── */}
+      <div className="beast-header">
+        <div className="beast-header-left">
+          <div className="beast-icon-glow">
+            <Sparkles size={20} />
           </div>
           <div>
-            <h1 className="studio-title">AI Image Studio</h1>
-            <p className="studio-caption">State-of-the-Art Generative Visual Engine</p>
+            <h1 className="beast-title">AI Image Studio</h1>
+            <p className="beast-subtitle">
+              Type your vision naturally in plain words • AI automatically crafts the art & ratio
+            </p>
           </div>
         </div>
+      </div>
 
-        <div className="studio-header-tabs">
-          <button
-            onClick={() => setActiveTab("create")}
-            className={`studio-tab-btn ${activeTab === "create" ? "active" : ""}`}
-          >
-            <SlidersHorizontal size={14} />
-            <span>Studio</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("gallery")}
-            className={`studio-tab-btn ${activeTab === "gallery" ? "active" : ""}`}
-          >
-            <Layers size={14} />
-            <span>History ({history.length})</span>
-          </button>
+      {/* ── HERO PROMPT COMMAND BAR ── */}
+      <div className="beast-command-card">
+        <div className="prompt-input-row">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Describe anything you want to create... (e.g. 'Majestic white tiger in bioluminescent jungle, 16:9 widescreen' or 'Anime sunset cafe')"
+            rows={3}
+            className="beast-textarea"
+          />
         </div>
-      </header>
 
-      {/* ── VIEW: STUDIO CREATE ── */}
-      {activeTab === "create" && (
-        <div className="studio-grid">
-          {/* ── LEFT: WORKSPACE CONTROLS ── */}
-          <div className="studio-controls-card">
-            {/* Prompt Section */}
-            <div className="control-group">
-              <div className="group-header">
-                <span className="group-label">Description & Prompt</span>
-                <div className="prompt-actions-mini">
-                  <button
-                    type="button"
-                    onClick={handleRandomPrompt}
-                    className="ghost-pill-btn"
-                    title="Generate a random creative prompt"
-                  >
-                    <Dices size={12} />
-                    <span>Surprise Me</span>
-                  </button>
-                  {prompt.trim() && (
-                    <button
-                      type="button"
-                      onClick={() => setPrompt("")}
-                      className="ghost-pill-btn text-danger"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="textarea-wrapper">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Describe your vision in detail... e.g. An astronaut exploring an ancient bioluminescent crystal city on Mars, 8k cinematic lighting, octane render..."
-                  rows={4}
-                  className="studio-textarea"
-                />
-              </div>
-
-              {/* Toolbar beneath textarea */}
-              <div className="prompt-footer-row">
-                <button
-                  type="button"
-                  onClick={enhancePromptWithAI}
-                  disabled={isEnhancingPrompt || !prompt.trim()}
-                  className="magic-enhance-btn"
-                >
-                  {isEnhancingPrompt ? (
-                    <>
-                      <RefreshCw size={13} className="spin-icon" />
-                      <span>Enhancing Prompt...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 size={13} />
-                      <span>AI Magic Enhance</span>
-                    </>
-                  )}
-                </button>
-
-                <span className="char-badge">{prompt.length} chars</span>
-              </div>
+        {/* Command Bar Footer with Live Intelligent Badges & Actions */}
+        <div className="beast-command-footer">
+          <div className="beast-badges-group">
+            {/* Live Auto-detected Ratio Badge */}
+            <div className="auto-ratio-badge" title="Auto-detected from your prompt words (16:9, portrait, landscape, square)">
+              <span className="ratio-badge-icon">{ratioConfig.icon}</span>
+              <span className="ratio-badge-text">
+                Ratio: <strong>{ratioConfig.label}</strong>
+              </span>
             </div>
 
-            {/* Quick Style Chips */}
-            <div className="control-group">
-              <span className="group-label">Artistic Styles</span>
-              <div className="chips-flex">
-                {STYLES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => appendStyle(s.suffix)}
-                    className="style-chip"
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Model Selector */}
-            <div className="control-group">
-              <span className="group-label">Select Generator Model</span>
-              <div className="model-selector-grid">
-                {MODELS.map((m) => {
-                  const isSelected = model === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setModel(m.id)}
-                      className={`model-card-btn ${isSelected ? "selected" : ""}`}
-                    >
-                      <div className="model-card-top">
-                        <span className="model-name">{m.label}</span>
-                        <span className={`badge-pill ${m.badge.toLowerCase()}`}>{m.badge}</span>
-                      </div>
-                      <span className="model-sub">{m.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Aspect Ratio Selector */}
-            <div className="control-group">
-              <span className="group-label">Aspect Ratio</span>
-              <div className="ratio-selector-grid">
-                {ASPECT_RATIOS.map((r) => {
-                  const isSelected = aspectRatio === r.id;
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setAspectRatio(r.id)}
-                      className={`ratio-card-btn ${isSelected ? "selected" : ""}`}
-                    >
-                      <span className="ratio-icon">{r.icon}</span>
-                      <span className="ratio-name">{r.label}</span>
-                      <span className="ratio-sub">{r.id}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Main Action Button */}
+            {/* Quick Actions */}
             <button
               type="button"
-              onClick={generateImage}
-              disabled={loading || !prompt.trim()}
-              className="generate-action-btn"
+              onClick={enhancePromptWithAI}
+              disabled={isEnhancingPrompt || !prompt.trim()}
+              className="beast-tool-btn"
+              title="Enhance prompt with 8K photorealistic lighting and detail"
             >
-              {loading ? (
+              {isEnhancingPrompt ? (
                 <>
-                  <RefreshCw size={18} className="spin-icon" />
-                  <span>Weaving Pixels...</span>
+                  <RefreshCw size={13} className="spin-icon" />
+                  <span>Enhancing...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles size={18} />
-                  <span>Generate Masterpiece</span>
-                  <span className="shortcut-hint">Ctrl + ↵</span>
+                  <Wand2 size={13} />
+                  <span>AI Enhance</span>
                 </>
               )}
             </button>
-          </div>
 
-          {/* ── RIGHT: HERO CANVAS ── */}
-          <div className="studio-canvas-card">
-            {/* 1. Loading State */}
-            {loading && (
-              <div className="canvas-state-center">
-                <div className="render-pulse-ring">
-                  <Sparkles size={32} color="#06b6d4" />
-                </div>
-                <h3 className="state-headline">Rendering Your Vision</h3>
-                <p className="state-sub">
-                  Synthesizing pixels using <strong style={{ color: "#22d3ee" }}>{activeModelConfig.label}</strong>
-                </p>
-                <div className="render-progress-bar">
-                  <div className="render-progress-fill" />
-                </div>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={handleRandomPrompt}
+              className="beast-tool-btn"
+              title="Load a random creative prompt"
+            >
+              <Dices size={13} />
+              <span>Surprise Me</span>
+            </button>
 
-            {/* 2. Error / Failed State */}
-            {loadFailed && !loading && (
-              <div className="canvas-state-center">
-                <div className="error-icon-box">⚠️</div>
-                <h3 className="state-headline" style={{ color: "#f87171" }}>Generation Interrupted</h3>
-                <p className="state-sub">The render engine encountered a brief hiccup. Please retry.</p>
-                <button type="button" onClick={generateImage} className="retry-btn">
-                  <RefreshCw size={14} />
-                  <span>Retry Generation</span>
-                </button>
-              </div>
-            )}
-
-            {/* 3. Empty Canvas State */}
-            {!imageUrl && !loading && !loadFailed && (
-              <div className="canvas-state-center">
-                <div className="empty-sparkle-box">
-                  <ImageIcon size={44} color="#06b6d4" />
-                </div>
-                <h3 className="state-headline">Your Masterpiece Canvas</h3>
-                <p className="state-sub">
-                  Enter a prompt on the left or click <strong style={{ color: "#22d3ee" }}>"Surprise Me"</strong> to create high-resolution imagery.
-                </p>
-              </div>
-            )}
-
-            {/* 4. Loaded Active Image Result */}
-            {imageUrl && !loading && (
-              <div className="active-render-wrapper">
-                <div className="image-viewport">
-                  <img
-                    src={imageUrl}
-                    alt="AI Generated Artwork"
-                    className="rendered-image"
-                  />
-
-                  {/* Floating Action Buttons */}
-                  <div className="floating-action-bar">
-                    <button
-                      type="button"
-                      onClick={() => setLightboxOpen(true)}
-                      className="canvas-icon-btn"
-                      title="Fullscreen Preview"
-                    >
-                      <Maximize2 size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyPrompt(activeResult?.prompt || prompt)}
-                      className="canvas-icon-btn"
-                      title="Copy Prompt"
-                    >
-                      {copiedPrompt ? <Check size={16} color="#4ade80" /> : <Copy size={16} />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={generateImage}
-                      className="canvas-icon-btn"
-                      title="Regenerate / Remix"
-                    >
-                      <RefreshCw size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(imageUrl)}
-                      className="canvas-primary-btn"
-                    >
-                      <Download size={15} />
-                      <span>Download</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Details Bar */}
-                <div className="render-meta-card">
-                  <div className="meta-info-row">
-                    <div className="meta-tag">
-                      <Zap size={13} color="#22d3ee" />
-                      <span>{activeModelConfig.label}</span>
-                    </div>
-                    <div className="meta-tag">
-                      <span>{activeRatioConfig.id}</span>
-                    </div>
-                    {activeResult?.seed && (
-                      <div className="meta-tag">
-                        <span>Seed: {activeResult.seed}</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="meta-prompt-text">"{activeResult?.prompt || prompt}"</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── VIEW: GALLERY TAB ── */}
-      {activeTab === "gallery" && (
-        <div className="gallery-view">
-          <div className="gallery-header-row">
-            <div>
-              <h2 className="gallery-title">Your Creation History</h2>
-              <p className="gallery-subtitle">{history.length} pieces created in this workspace</p>
-            </div>
-            {history.length > 0 && (
+            {prompt.trim() && (
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to clear your generation history?")) {
-                    saveHistory([]);
-                    showToast("History cleared");
-                  }
-                }}
-                className="clear-history-btn"
+                onClick={() => setPrompt("")}
+                className="beast-tool-btn danger"
               >
-                <Trash2 size={14} />
-                <span>Clear History</span>
+                Clear
               </button>
             )}
           </div>
 
-          {history.length === 0 ? (
-            <div className="empty-gallery-state">
-              <ImageIcon size={48} color="#4b5563" />
-              <p>No creations yet. Head over to the Studio tab to create your first artwork!</p>
-              <button onClick={() => setActiveTab("create")} className="start-creating-btn">
-                Open Studio
-              </button>
+          {/* Big Radiant Generate Action Button */}
+          <button
+            type="button"
+            onClick={generateImage}
+            disabled={loading || !prompt.trim()}
+            className="beast-generate-btn"
+          >
+            {loading ? (
+              <>
+                <RefreshCw size={18} className="spin-icon" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={18} />
+                <span>Generate Art</span>
+                <span className="key-hint">Ctrl + ↵</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ── HERO OUTPUT CANVAS ── */}
+      <div className="beast-canvas-section">
+        {/* Loading State */}
+        {loading && (
+          <div className="beast-canvas-box loading-box">
+            <div className="beast-pulse-ring">
+              <Sparkles size={34} color="#06b6d4" />
             </div>
-          ) : (
-            <div className="gallery-masonry-grid">
-              {history.map((item) => (
-                <div key={item.id} className="gallery-card">
-                  <img src={item.url} alt={item.prompt} loading="lazy" />
-                  <div className="gallery-card-overlay">
-                    <p className="gallery-card-prompt">{item.prompt}</p>
-                    <div className="gallery-card-actions">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPrompt(item.prompt);
-                          setModel(item.model || "flux");
-                          setAspectRatio(item.ratio || "1:1");
-                          setImageUrl(item.url);
-                          setActiveResult(item);
-                          setActiveTab("create");
-                          showToast("Loaded artwork into Studio!");
-                        }}
-                        className="overlay-btn"
-                        title="Load into Studio"
-                      >
-                        <ArrowUpRight size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDownload(item.url)}
-                        className="overlay-btn"
-                        title="Download"
-                      >
-                        <Download size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = history.filter((h) => h.id !== item.id);
-                          saveHistory(updated);
-                          showToast("Removed from history");
-                        }}
-                        className="overlay-btn text-danger"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+            <h3 className="canvas-state-title">Weaving High-Resolution Pixels</h3>
+            <p className="canvas-state-desc">Synthesizing lighting, atmosphere and textures...</p>
+            <div className="canvas-progress-track">
+              <div className="canvas-progress-bar" />
+            </div>
+          </div>
+        )}
+
+        {/* Failed State */}
+        {loadFailed && !loading && (
+          <div className="beast-canvas-box error-box">
+            <div className="error-badge-icon">⚠️</div>
+            <h3 className="canvas-state-title" style={{ color: "#f87171" }}>Generation Interrupted</h3>
+            <p className="canvas-state-desc">The render engine took too long. Let's retry.</p>
+            <button type="button" onClick={generateImage} className="beast-retry-btn">
+              <RefreshCw size={14} />
+              <span>Retry Generation</span>
+            </button>
+          </div>
+        )}
+
+        {/* Empty Canvas Placeholder */}
+        {!imageUrl && !loading && !loadFailed && (
+          <div className="beast-canvas-box empty-box">
+            <div className="empty-halo-icon">
+              <ImageIcon size={44} color="#06b6d4" />
+            </div>
+            <h3 className="canvas-state-title">Your Masterpiece Canvas</h3>
+            <p className="canvas-state-desc">
+              Write any creative idea above or hit <strong style={{ color: "#22d3ee" }}>"Surprise Me"</strong> to create studio-quality visuals.
+            </p>
+            <div className="prompt-tip-chip">
+              💡 <span>Tip: Mention aspect ratios like <strong>"16:9"</strong>, <strong>"landscape"</strong>, or <strong>"portrait"</strong> right in your prompt.</span>
+            </div>
+          </div>
+        )}
+
+        {/* Loaded Image Result */}
+        {imageUrl && !loading && (
+          <div className="beast-result-card">
+            <div className="beast-image-container">
+              <img
+                src={imageUrl}
+                alt="AI Masterpiece"
+                className="beast-rendered-img"
+              />
+
+              {/* Floating Action Controls on Canvas */}
+              <div className="canvas-floating-toolbar">
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(true)}
+                  className="floating-action-btn"
+                  title="Fullscreen Lightbox"
+                >
+                  <Maximize2 size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopyPrompt(activeResult?.prompt || prompt)}
+                  className="floating-action-btn"
+                  title="Copy Prompt"
+                >
+                  {copiedPrompt ? <Check size={16} color="#4ade80" /> : <Copy size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={generateImage}
+                  className="floating-action-btn"
+                  title="Re-roll with new seed"
+                >
+                  <RefreshCw size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownload(imageUrl)}
+                  className="floating-download-btn"
+                >
+                  <Download size={15} />
+                  <span>Download High-Res</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Prompt details ribbon */}
+            <div className="beast-details-ribbon">
+              <div className="ribbon-tags">
+                <span className="ribbon-tag">
+                  {ratioConfig.icon} {ratioConfig.label}
+                </span>
+                {activeResult?.seed && (
+                  <span className="ribbon-tag">Seed #{activeResult.seed}</span>
+                )}
+              </div>
+              <p className="ribbon-prompt">"{activeResult?.prompt || prompt}"</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── RECENT CREATIONS GALLERY ── */}
+      {history.length > 0 && (
+        <div className="beast-gallery-section">
+          <div className="gallery-section-header">
+            <div>
+              <h2 className="section-title">Recent Creations ({history.length})</h2>
+              <p className="section-sub">Click any creation to reload its prompt onto your canvas</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Clear all generation history?")) {
+                  saveHistory([]);
+                  showToast("History cleared");
+                }
+              }}
+              className="gallery-clear-btn"
+            >
+              <Trash2 size={13} />
+              <span>Clear History</span>
+            </button>
+          </div>
+
+          <div className="beast-gallery-grid">
+            {history.map((item) => (
+              <div
+                key={item.id}
+                className="gallery-thumb-card"
+                onClick={() => {
+                  setPrompt(item.prompt);
+                  setImageUrl(item.url);
+                  setActiveResult(item);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  showToast("Loaded artwork prompt! 🎨");
+                }}
+              >
+                <img src={item.url} alt={item.prompt} loading="lazy" />
+                <div className="gallery-thumb-overlay">
+                  <p className="gallery-thumb-prompt">{item.prompt}</p>
+                  <div className="thumb-action-row" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(item.url)}
+                      className="thumb-mini-btn"
+                      title="Download"
+                    >
+                      <Download size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = history.filter((h) => h.id !== item.id);
+                        saveHistory(updated);
+                        showToast("Removed from history");
+                      }}
+                      className="thumb-mini-btn danger"
+                      title="Delete"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrompt(item.prompt);
+                        setImageUrl(item.url);
+                        setActiveResult(item);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="thumb-mini-btn primary"
+                      title="Load"
+                    >
+                      <ArrowUpRight size={13} />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* ── LIGHTBOX MODAL ── */}
       {lightboxOpen && imageUrl && (
-        <div className="lightbox-backdrop" onClick={() => setLightboxOpen(false)}>
+        <div className="beast-lightbox-backdrop" onClick={() => setLightboxOpen(false)}>
           <button
             type="button"
-            className="lightbox-close-btn"
+            className="beast-lightbox-close"
             onClick={() => setLightboxOpen(false)}
           >
             <X size={24} />
           </button>
           <img
             src={imageUrl}
-            alt="Enlarged Artwork"
-            className="lightbox-image"
+            alt="Fullscreen Artwork"
+            className="beast-lightbox-img"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -782,7 +655,7 @@ export default function ImageGeneratorPro() {
       {/* Toast Notification */}
       {toast && <Toast message={toast.message} type={toast.type} />}
 
-      {/* ── ULTRA-CLEAN MODERN CSS ── */}
+      {/* ── STYLES (CLEAN, MODERN & FULLY SCROLLABLE) ── */}
       <style>{`
         @keyframes toastSlide {
           from { transform: translateY(20px); opacity: 0; }
@@ -792,9 +665,9 @@ export default function ImageGeneratorPro() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes pulseGlow {
+        @keyframes pulseHalo {
           0%, 100% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.25); transform: scale(1); }
-          50% { box-shadow: 0 0 50px rgba(6, 182, 212, 0.55); transform: scale(1.05); }
+          50% { box-shadow: 0 0 50px rgba(6, 182, 212, 0.6); transform: scale(1.06); }
         }
         @keyframes progressSlide {
           0% { transform: translateX(-100%); }
@@ -803,428 +676,257 @@ export default function ImageGeneratorPro() {
 
         .spin-icon { animation: spin 0.8s linear infinite; }
 
-        .studio-root {
-          max-width: 1360px;
-          margin: 0 auto;
-          padding: 24px 28px;
-          min-height: 100vh;
-          font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        /* ── Full Scroll Container Fix ── */
+        .beast-studio-page {
+          max-width: 1200px !important;
+          margin: 0 auto !important;
+          padding: 24px 20px 80px 20px !important;
+          height: 100% !important;
+          overflow-y: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          display: flex;
+          flex-direction: column;
+          gap: 28px;
         }
 
         /* ── Header ── */
-        .studio-nav {
+        .beast-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 24px;
-          flex-wrap: wrap;
-          gap: 16px;
         }
-        .studio-brand {
+        .beast-header-left {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
         }
-        .studio-badge-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
+        .beast-icon-glow {
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
           background: linear-gradient(135deg, #06b6d4, #6366f1);
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          box-shadow: 0 4px 18px rgba(6, 182, 212, 0.35);
+          box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4);
         }
-        .studio-title {
-          font-size: 22px;
+        .beast-title {
+          font-size: 24px;
           font-weight: 800;
           margin: 0;
+          color: #f8fafc;
           letter-spacing: -0.4px;
-          color: #f1f5f9;
         }
-        .studio-caption {
-          font-size: 12px;
+        .beast-subtitle {
+          font-size: 13px;
           color: #94a3b8;
-          margin: 2px 0 0 0;
+          margin: 3px 0 0 0;
           font-weight: 500;
         }
 
-        .studio-header-tabs {
-          display: flex;
-          background: rgba(15, 23, 42, 0.65);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          padding: 4px;
-          gap: 4px;
-        }
-        .studio-tab-btn {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 8px 16px;
-          border-radius: 8px;
-          border: none;
-          background: transparent;
-          color: #94a3b8;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .studio-tab-btn.active {
-          background: rgba(6, 182, 212, 0.15);
-          color: #22d3ee;
-        }
-        .studio-tab-btn:hover:not(.active) {
-          color: #e2e8f0;
-        }
-
-        /* ── Studio Layout Grid ── */
-        .studio-grid {
-          display: grid;
-          grid-template-columns: 460px 1fr;
-          gap: 24px;
-          align-items: start;
-        }
-
-        @media (max-width: 1024px) {
-          .studio-grid { grid-template-columns: 1fr; }
-        }
-
-        /* ── Controls Card ── */
-        .studio-controls-card {
-          background: rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 20px;
-          padding: 24px;
+        /* ── Command Bar Card ── */
+        .beast-command-card {
+          background: rgba(15, 23, 42, 0.7);
+          backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 22px;
+          padding: 18px 20px;
           display: flex;
           flex-direction: column;
-          gap: 20px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+          gap: 14px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(6, 182, 212, 0.03);
+          transition: border-color 0.2s ease;
+        }
+        .beast-command-card:focus-within {
+          border-color: rgba(6, 182, 212, 0.5);
+          box-shadow: 0 10px 45px rgba(6, 182, 212, 0.15);
         }
 
-        .control-group {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
+        .prompt-input-row {
+          width: 100%;
         }
-        .group-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .group-label {
-          font-size: 11px;
-          font-weight: 800;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-        }
-        .prompt-actions-mini {
-          display: flex;
-          gap: 6px;
-        }
-        .ghost-pill-btn {
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: #94a3b8;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          transition: all 0.15s ease;
-        }
-        .ghost-pill-btn:hover {
-          background: rgba(6, 182, 212, 0.15);
-          color: #22d3ee;
-          border-color: rgba(6, 182, 212, 0.3);
-        }
-        .ghost-pill-btn.text-danger:hover {
-          background: rgba(239, 68, 68, 0.15);
-          color: #f87171;
-          border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        .textarea-wrapper {
-          position: relative;
-        }
-        .studio-textarea {
+        .beast-textarea {
           width: 100%;
           box-sizing: border-box;
-          background: rgba(2, 6, 23, 0.55);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 14px;
-          padding: 14px;
+          background: transparent;
+          border: none;
           color: #f8fafc;
-          font-size: 13px;
+          font-size: 15px;
           line-height: 1.6;
           resize: vertical;
-          min-height: 95px;
+          min-height: 72px;
           outline: none;
           font-family: inherit;
-          transition: all 0.2s ease;
         }
-        .studio-textarea:focus {
-          border-color: #06b6d4;
-          box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
-        }
-        .studio-textarea::placeholder {
+        .beast-textarea::placeholder {
           color: #64748b;
         }
 
-        .prompt-footer-row {
+        .beast-command-footer {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 2px 2px 0 2px;
+          flex-wrap: wrap;
+          gap: 12px;
+          padding-top: 10px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .magic-enhance-btn {
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.15));
-          border: 1px solid rgba(6, 182, 212, 0.35);
+
+        .beast-badges-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        /* Auto-ratio badge */
+        .auto-ratio-badge {
+          background: rgba(6, 182, 212, 0.12);
+          border: 1px solid rgba(6, 182, 212, 0.3);
           color: #22d3ee;
           padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 11px;
-          font-weight: 700;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .ratio-badge-icon { font-size: 14px; }
+        .ratio-badge-text strong { color: #ffffff; }
+
+        .beast-tool-btn {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.09);
+          color: #cbd5e1;
+          padding: 6px 12px;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 6px;
           transition: all 0.2s ease;
         }
-        .magic-enhance-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(6, 182, 212, 0.3));
-          border-color: #06b6d4;
-          transform: translateY(-1px);
+        .beast-tool-btn:hover:not(:disabled) {
+          background: rgba(6, 182, 212, 0.15);
+          color: #22d3ee;
+          border-color: rgba(6, 182, 212, 0.4);
         }
-        .magic-enhance-btn:disabled {
+        .beast-tool-btn.danger:hover {
+          background: rgba(239, 68, 68, 0.15);
+          color: #f87171;
+          border-color: rgba(239, 68, 68, 0.4);
+        }
+        .beast-tool-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
-        .char-badge {
-          font-size: 11px;
-          color: #64748b;
-        }
-
-        /* Style Chips */
-        .chips-flex {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-        .style-chip {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: #cbd5e1;
-          padding: 5px 11px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-        .style-chip:hover {
-          background: rgba(6, 182, 212, 0.15);
-          border-color: rgba(6, 182, 212, 0.4);
-          color: #22d3ee;
-        }
-
-        /* Models Grid */
-        .model-selector-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 8px;
-        }
-        .model-card-btn {
-          background: rgba(2, 6, 23, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          border-radius: 12px;
-          padding: 10px 14px;
-          cursor: pointer;
-          text-align: left;
-          transition: all 0.2s ease;
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-        }
-        .model-card-btn:hover {
-          background: rgba(6, 182, 212, 0.06);
-          border-color: rgba(6, 182, 212, 0.3);
-        }
-        .model-card-btn.selected {
-          background: rgba(6, 182, 212, 0.12);
-          border: 1.5px solid #06b6d4;
-          box-shadow: 0 4px 20px rgba(6, 182, 212, 0.2);
-        }
-        .model-card-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-        .model-name {
-          font-size: 13px;
-          font-weight: 700;
-          color: #f1f5f9;
-        }
-        .model-card-btn.selected .model-name {
-          color: #22d3ee;
-        }
-        .model-sub {
-          font-size: 11px;
-          color: #64748b;
-        }
-        .badge-pill {
-          font-size: 9px;
-          font-weight: 800;
-          padding: 2px 6px;
-          border-radius: 4px;
-          letter-spacing: 0.5px;
-        }
-        .badge-pill.popular { background: rgba(99, 102, 241, 0.25); color: #a5b4fc; }
-        .badge-pill.new { background: rgba(34, 197, 94, 0.25); color: #86efac; }
-        .badge-pill.fast { background: rgba(245, 158, 11, 0.25); color: #fde68a; }
-        .badge-pill.art { background: rgba(236, 72, 153, 0.25); color: #fbcfe8; }
-        .badge-pill.cgi { background: rgba(6, 182, 212, 0.25); color: #67e8f9; }
-
-        /* Ratio Grid */
-        .ratio-selector-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 8px;
-        }
-        .ratio-card-btn {
-          background: rgba(2, 6, 23, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          border-radius: 12px;
-          padding: 10px 6px;
-          cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          transition: all 0.2s ease;
-        }
-        .ratio-card-btn:hover {
-          border-color: rgba(6, 182, 212, 0.3);
-        }
-        .ratio-card-btn.selected {
-          background: rgba(6, 182, 212, 0.12);
-          border: 1.5px solid #06b6d4;
-          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
-        }
-        .ratio-icon { font-size: 16px; }
-        .ratio-name {
-          font-size: 11px;
-          font-weight: 700;
-          color: #f1f5f9;
-        }
-        .ratio-card-btn.selected .ratio-name {
-          color: #22d3ee;
-        }
-        .ratio-sub {
-          font-size: 9px;
-          color: #64748b;
-        }
 
         /* Generate Button */
-        .generate-action-btn {
+        .beast-generate-btn {
           background: linear-gradient(135deg, #06b6d4, #6366f1);
           color: #ffffff;
           border: none;
-          border-radius: 14px;
-          padding: 16px;
-          font-size: 15px;
+          padding: 11px 22px;
+          border-radius: 12px;
+          font-size: 14px;
           font-weight: 800;
           cursor: pointer;
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 10px;
-          box-shadow: 0 6px 25px rgba(6, 182, 212, 0.4);
-          transition: all 0.25s ease;
-          position: relative;
+          gap: 8px;
+          box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4);
+          transition: all 0.2s ease;
         }
-        .generate-action-btn:hover:not(:disabled) {
+        .beast-generate-btn:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 8px 35px rgba(6, 182, 212, 0.6);
+          box-shadow: 0 6px 28px rgba(6, 182, 212, 0.6);
         }
-        .generate-action-btn:disabled {
-          opacity: 0.55;
+        .beast-generate-btn:disabled {
+          opacity: 0.5;
           cursor: not-allowed;
           box-shadow: none;
         }
-        .shortcut-hint {
+        .key-hint {
           font-size: 10px;
           background: rgba(255, 255, 255, 0.2);
           padding: 2px 6px;
           border-radius: 4px;
-          color: #ffffff;
-          margin-left: 6px;
         }
 
-        /* ── Canvas Card ── */
-        .studio-canvas-card {
+        /* ── Canvas Section ── */
+        .beast-canvas-section {
+          width: 100%;
+        }
+
+        .beast-canvas-box {
           background: rgba(15, 23, 42, 0.4);
           backdrop-filter: blur(20px);
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 20px;
-          min-height: 520px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          overflow: hidden;
-          padding: 20px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-        }
-
-        .canvas-state-center {
+          border-radius: 24px;
+          min-height: 480px;
           display: flex;
           flex-direction: column;
           align-items: center;
+          justify-content: center;
           text-align: center;
-          gap: 12px;
-          max-width: 380px;
+          padding: 36px 24px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
-        .render-pulse-ring {
-          width: 72px;
-          height: 72px;
+
+        .beast-pulse-ring {
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
           background: rgba(6, 182, 212, 0.1);
           border: 2px solid #06b6d4;
           display: flex;
           align-items: center;
           justify-content: center;
-          animation: pulseGlow 1.8s infinite ease-in-out;
+          animation: pulseHalo 1.8s infinite ease-in-out;
+          margin-bottom: 16px;
         }
-        .state-headline {
-          font-size: 18px;
-          font-weight: 700;
-          color: #f1f5f9;
-          margin: 0;
+        .empty-halo-icon {
+          width: 80px;
+          height: 80px;
+          border-radius: 22px;
+          background: rgba(6, 182, 212, 0.06);
+          border: 1px dashed rgba(6, 182, 212, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 16px;
         }
-        .state-sub {
+        .error-badge-icon {
+          font-size: 44px;
+          margin-bottom: 12px;
+        }
+
+        .canvas-state-title {
+          font-size: 20px;
+          font-weight: 800;
+          color: #f8fafc;
+          margin: 0 0 6px 0;
+        }
+        .canvas-state-desc {
           font-size: 13px;
           color: #94a3b8;
+          max-width: 440px;
           margin: 0;
-          line-height: 1.5;
+          line-height: 1.6;
         }
-        .render-progress-bar {
-          width: 220px;
+        .canvas-progress-track {
+          width: 240px;
           height: 4px;
           background: rgba(255, 255, 255, 0.08);
           border-radius: 4px;
           overflow: hidden;
-          margin-top: 8px;
-          position: relative;
+          margin-top: 16px;
         }
-        .render-progress-fill {
+        .canvas-progress-bar {
           width: 50%;
           height: 100%;
           background: linear-gradient(90deg, #06b6d4, #6366f1);
@@ -1232,28 +934,25 @@ export default function ImageGeneratorPro() {
           animation: progressSlide 1.5s infinite linear;
         }
 
-        .empty-sparkle-box {
-          width: 76px;
-          height: 76px;
-          border-radius: 20px;
-          background: rgba(6, 182, 212, 0.06);
-          border: 1px dashed rgba(6, 182, 212, 0.3);
+        .prompt-tip-chip {
+          margin-top: 20px;
+          background: rgba(6, 182, 212, 0.08);
+          border: 1px solid rgba(6, 182, 212, 0.2);
+          border-radius: 12px;
+          padding: 8px 16px;
+          font-size: 12px;
+          color: #cbd5e1;
           display: flex;
           align-items: center;
-          justify-content: center;
-          margin-bottom: 4px;
+          gap: 6px;
         }
 
-        .error-icon-box {
-          font-size: 40px;
-          margin-bottom: 4px;
-        }
-        .retry-btn {
-          margin-top: 8px;
+        .beast-retry-btn {
+          margin-top: 16px;
           background: rgba(6, 182, 212, 0.15);
           border: 1px solid rgba(6, 182, 212, 0.4);
           color: #22d3ee;
-          padding: 8px 16px;
+          padding: 9px 18px;
           border-radius: 10px;
           font-size: 13px;
           font-weight: 700;
@@ -1263,36 +962,36 @@ export default function ImageGeneratorPro() {
           gap: 6px;
         }
 
-        /* ── Active Render Viewport ── */
-        .active-render-wrapper {
+        /* ── Loaded Image Masterpiece Card ── */
+        .beast-result-card {
           width: 100%;
           display: flex;
           flex-direction: column;
           gap: 16px;
         }
-        .image-viewport {
+        .beast-image-container {
           position: relative;
           width: 100%;
-          max-height: 520px;
-          border-radius: 16px;
+          max-height: 600px;
+          border-radius: 20px;
           overflow: hidden;
           background: #020617;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .rendered-image {
+        .beast-rendered-img {
           width: 100%;
           height: 100%;
-          max-height: 520px;
+          max-height: 600px;
           object-fit: contain;
           display: block;
         }
 
         /* Floating action buttons */
-        .floating-action-bar {
+        .canvas-floating-toolbar {
           position: absolute;
           bottom: 16px;
           right: 16px;
@@ -1300,15 +999,15 @@ export default function ImageGeneratorPro() {
           align-items: center;
           gap: 8px;
           background: rgba(15, 23, 42, 0.85);
-          backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           padding: 6px 8px;
           border-radius: 14px;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
-        .canvas-icon-btn {
-          width: 36px;
-          height: 36px;
+        .floating-action-btn {
+          width: 38px;
+          height: 38px;
           border-radius: 10px;
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1319,17 +1018,17 @@ export default function ImageGeneratorPro() {
           cursor: pointer;
           transition: all 0.2s ease;
         }
-        .canvas-icon-btn:hover {
+        .floating-action-btn:hover {
           background: rgba(6, 182, 212, 0.2);
           color: #22d3ee;
           border-color: #06b6d4;
         }
-        .canvas-primary-btn {
+        .floating-download-btn {
           background: linear-gradient(135deg, #06b6d4, #6366f1);
           color: #ffffff;
           border: none;
           padding: 0 16px;
-          height: 36px;
+          height: 38px;
           border-radius: 10px;
           font-size: 13px;
           font-weight: 700;
@@ -1340,75 +1039,75 @@ export default function ImageGeneratorPro() {
           box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
           transition: all 0.2s ease;
         }
-        .canvas-primary-btn:hover {
+        .floating-download-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
         }
 
-        /* Render Meta Card */
-        .render-meta-card {
-          background: rgba(2, 6, 23, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 14px;
-          padding: 14px 16px;
+        /* Ribbon info */
+        .beast-details-ribbon {
+          background: rgba(15, 23, 42, 0.5);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          padding: 14px 18px;
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
-        .meta-info-row {
+        .ribbon-tags {
           display: flex;
           gap: 8px;
           align-items: center;
         }
-        .meta-tag {
+        .ribbon-tag {
           font-size: 11px;
-          color: #cbd5e1;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #22d3ee;
+          background: rgba(6, 182, 212, 0.1);
+          border: 1px solid rgba(6, 182, 212, 0.25);
           padding: 3px 8px;
           border-radius: 6px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
           font-weight: 600;
         }
-        .meta-prompt-text {
-          font-size: 12px;
-          color: #94a3b8;
+        .ribbon-prompt {
+          font-size: 13px;
+          color: #cbd5e1;
           margin: 0;
-          line-height: 1.5;
+          line-height: 1.6;
           font-style: italic;
         }
 
-        /* ── Gallery Tab ── */
-        .gallery-view {
+        /* ── Recent Gallery Feed ── */
+        .beast-gallery-section {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 16px;
+          padding-top: 10px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .gallery-header-row {
+        .gallery-section-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
-        .gallery-title {
-          font-size: 20px;
+        .section-title {
+          font-size: 18px;
           font-weight: 800;
           color: #f1f5f9;
           margin: 0;
         }
-        .gallery-subtitle {
-          font-size: 13px;
-          color: #64748b;
-          margin: 4px 0 0 0;
-        }
-        .clear-history-btn {
-          background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          color: #f87171;
-          padding: 8px 14px;
-          border-radius: 10px;
+        .section-sub {
           font-size: 12px;
+          color: #64748b;
+          margin: 3px 0 0 0;
+        }
+        .gallery-clear-btn {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.25);
+          color: #f87171;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 11px;
           font-weight: 700;
           cursor: pointer;
           display: flex;
@@ -1416,16 +1115,16 @@ export default function ImageGeneratorPro() {
           gap: 6px;
           transition: all 0.2s ease;
         }
-        .clear-history-btn:hover {
+        .gallery-clear-btn:hover {
           background: rgba(239, 68, 68, 0.2);
         }
 
-        .gallery-masonry-grid {
+        .beast-gallery-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 16px;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 14px;
         }
-        .gallery-card {
+        .gallery-thumb-card {
           position: relative;
           aspect-ratio: 1 / 1;
           border-radius: 14px;
@@ -1435,16 +1134,16 @@ export default function ImageGeneratorPro() {
           cursor: pointer;
           transition: transform 0.2s ease;
         }
-        .gallery-card:hover {
+        .gallery-thumb-card:hover {
           transform: translateY(-2px);
-          border-color: rgba(6, 182, 212, 0.5);
+          border-color: rgba(6, 182, 212, 0.6);
         }
-        .gallery-card img {
+        .gallery-thumb-card img {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
-        .gallery-card-overlay {
+        .gallery-thumb-overlay {
           position: absolute;
           inset: 0;
           background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
@@ -1453,30 +1152,30 @@ export default function ImageGeneratorPro() {
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
-          padding: 12px;
-          gap: 8px;
+          padding: 10px;
+          gap: 6px;
         }
-        .gallery-card:hover .gallery-card-overlay {
+        .gallery-thumb-card:hover .gallery-thumb-overlay {
           opacity: 1;
         }
-        .gallery-card-prompt {
+        .gallery-thumb-prompt {
           font-size: 11px;
           color: #e2e8f0;
           margin: 0;
-          line-height: 1.4;
+          line-height: 1.3;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        .gallery-card-actions {
+        .thumb-action-row {
           display: flex;
-          gap: 6px;
+          gap: 5px;
         }
-        .overlay-btn {
-          width: 30px;
-          height: 30px;
-          border-radius: 8px;
+        .thumb-mini-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 7px;
           background: rgba(255, 255, 255, 0.15);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #ffffff;
@@ -1486,39 +1185,15 @@ export default function ImageGeneratorPro() {
           cursor: pointer;
           transition: all 0.15s ease;
         }
-        .overlay-btn:hover {
-          background: #06b6d4;
-        }
-        .overlay-btn.text-danger:hover {
-          background: #ef4444;
-        }
+        .thumb-mini-btn:hover { background: #06b6d4; }
+        .thumb-mini-btn.danger:hover { background: #ef4444; }
+        .thumb-mini-btn.primary { background: rgba(6, 182, 212, 0.8); }
 
-        .empty-gallery-state {
-          padding: 80px 20px;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          color: #64748b;
-          font-size: 14px;
-        }
-        .start-creating-btn {
-          background: linear-gradient(135deg, #06b6d4, #6366f1);
-          color: white;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 10px;
-          font-weight: 700;
-          cursor: pointer;
-          margin-top: 8px;
-        }
-
-        /* ── Lightbox ── */
-        .lightbox-backdrop {
+        /* ── Fullscreen Lightbox ── */
+        .beast-lightbox-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.92);
+          background: rgba(0, 0, 0, 0.94);
           backdrop-filter: blur(16px);
           z-index: 999999;
           display: flex;
@@ -1527,16 +1202,16 @@ export default function ImageGeneratorPro() {
           padding: 24px;
           cursor: zoom-out;
         }
-        .lightbox-image {
-          max-width: 90vw;
-          max-height: 90vh;
+        .beast-lightbox-img {
+          max-width: 92vw;
+          max-height: 92vh;
           object-fit: contain;
           border-radius: 12px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
           border: 1px solid rgba(255, 255, 255, 0.15);
           cursor: default;
         }
-        .lightbox-close-btn {
+        .beast-lightbox-close {
           position: absolute;
           top: 24px;
           right: 24px;
@@ -1552,9 +1227,30 @@ export default function ImageGeneratorPro() {
           cursor: pointer;
           transition: all 0.2s ease;
         }
-        .lightbox-close-btn:hover {
+        .beast-lightbox-close:hover {
           background: rgba(239, 68, 68, 0.8);
           border-color: #ef4444;
+        }
+
+        /* ── Responsive Mobile ── */
+        @media (max-width: 640px) {
+          .beast-command-footer {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .beast-badges-group {
+            justify-content: space-between;
+          }
+          .beast-generate-btn {
+            width: 100%;
+            justify-content: center;
+          }
+          .canvas-floating-toolbar {
+            bottom: 10px;
+            right: 10px;
+            left: 10px;
+            justify-content: space-around;
+          }
         }
       `}</style>
     </div>
