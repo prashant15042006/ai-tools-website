@@ -75,7 +75,7 @@ if (!isValidKey(process.env.OPENROUTER_KEY_EMBED)) {
 if (!isValidKey(process.env.OPENROUTER_KEY_RERANK)) {
   console.warn("⚠️  WARNING: OPENROUTER_KEY_RERANK is not set. Reranking will be unavailable.");
 } else {
-  console.log("✅ OpenRouter Rerank Key (llama-nemotron-rerank-vl-1b-v2) detected (ends with ...", process.env.OPENROUTER_KEY_RERANK.slice(-5), ")");
+  console.log("✅ OpenRouter Rerank Key (nemotron-3.5-rerank-8b) detected (ends with ...", process.env.OPENROUTER_KEY_RERANK.slice(-5), ")");
 }
 
 if (!isValidKey(process.env.GROQ_API_KEY)) {
@@ -1425,7 +1425,7 @@ app.post("/api/rerank", async (req, res) => {
           "X-Title": "Nexuss Workspace",
         },
         body: JSON.stringify({
-          model: "nvidia/llama-nemotron-rerank-vl-1b-v2:free",
+          model: "nvidia/nemotron-3.5-rerank-8b:free",
           query,
           documents,
           top_n: documents.length, // return all, sorted by relevance
@@ -1456,7 +1456,7 @@ app.post("/api/rerank", async (req, res) => {
         }));
 
       console.log(`✅ [RERANK] Reranking complete. Top result index: ${ranked[0]?.index}`);
-      return res.json({ success: true, provider: "openrouter", model: "nvidia/llama-nemotron-rerank-vl-1b-v2:free", results: ranked });
+      return res.json({ success: true, provider: "openrouter", model: "nvidia/nemotron-3.5-rerank-8b:free", results: ranked });
 
     } catch (err) {
       console.error("❌ [RERANK] Exception:", err.message);

@@ -62,6 +62,10 @@
       "destination": "/api/decider.js"
     },
     {
+      "source": "/api/rerank",
+      "destination": "/api/rerank.js"
+    },
+    {
       "source": "/api/image/generate",
       "destination": "/api/image/generate.js"
     },
