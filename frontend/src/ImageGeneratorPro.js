@@ -1,21 +1,29 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
-  AlertCircle,
-  CheckCircle2,
-  Copy,
-  Download,
-  ImageIcon,
-  RefreshCw,
-  Settings,
   Sparkles,
+  Download,
+  Copy,
+  RefreshCw,
   Trash2,
-  ChevronDown,
-  ChevronUp,
   Wand2,
-  Palette,
+  Dices,
+  Maximize2,
+  X,
+  ExternalLink,
+  Check,
+  Zap,
+  SlidersHorizontal,
+  Layers,
+  ArrowUpRight,
+  ImageIcon,
 } from "lucide-react";
 import API_BASE_URL from "./apiConfig";
 import { detectRatioFromPrompt } from "./utils/helpers";
+
+// ============================================================
+// 🎨 AI IMAGE STUDIO — BEAST DASHBOARD REDESIGN
+// Ultra-clean, modern, distraction-free creative workspace
+// ============================================================
 
 function buildImageUrl(prompt, options = {}) {
   const {
@@ -31,59 +39,61 @@ function buildImageUrl(prompt, options = {}) {
 }
 
 const MODELS = [
-  { id: "flux", label: "⚡ Flux.1 (Ultra Realism)", desc: "Best photorealism, details, anatomy & textures" },
-  { id: "turbo", label: "🚀 Turbo (Ultra Fast)", desc: "Lightning fast generation in 2–4 seconds" },
-  { id: "flux-realism", label: "📷 Flux Realism", desc: "Studio photography, natural skin & lighting" },
-  { id: "flux-anime", label: "🌸 Flux Anime", desc: "Studio Ghibli & modern anime masterpiece style" },
-  { id: "flux-3d", label: "🎮 Flux 3D", desc: "Unreal Engine 5 & Blender 3D CGI render" },
-  { id: "sana", label: "💎 Sana 4K", desc: "Crisp high-resolution modern generative art" },
-  { id: "recraft", label: "✨ Recraft v4.1 Flash", desc: "🆕 Recraft AI — Fast premium quality generation" },
+  { id: "flux", label: "Flux.1 Ultra", badge: "POPULAR", desc: "Hyper-realistic textures & cinematic lighting" },
+  { id: "recraft", label: "Recraft v4.1", badge: "NEW", desc: "Crisp vector, branding & ultra-clean details" },
+  { id: "turbo", label: "Turbo Speed", badge: "FAST", desc: "Blazing fast generation in 2–4 seconds" },
+  { id: "flux-anime", label: "Anime Master", badge: "ART", desc: "Makoto Shinkai & Ghibli aesthetic" },
+  { id: "flux-3d", label: "Unreal 3D", badge: "CGI", desc: "3D Pixar & Octane Render CGI quality" },
 ];
 
 const ASPECT_RATIOS = [
-  { id: "1:1", label: "Square", width: 1024, height: 1024, icon: "⏹️", desc: "1024 × 1024" },
-  { id: "16:9", label: "Landscape", width: 1024, height: 576, icon: "🌅", desc: "1024 × 576" },
-  { id: "9:16", label: "Portrait", width: 576, height: 1024, icon: "📱", desc: "576 × 1024" },
-  { id: "4:3", label: "Classic", width: 1024, height: 768, icon: "📺", desc: "1024 × 768" },
+  { id: "1:1", label: "Square", width: 1024, height: 1024, sub: "1:1 • Post", icon: "⏹️" },
+  { id: "16:9", label: "Landscape", width: 1024, height: 576, sub: "16:9 • Desktop", icon: "🌅" },
+  { id: "9:16", label: "Portrait", width: 576, height: 1024, sub: "9:16 • Story", icon: "📱" },
+  { id: "4:3", label: "Classic", width: 1024, height: 768, sub: "4:3 • Photo", icon: "📺" },
 ];
 
-const STYLE_PRESETS = [
-  { label: "📸 8K Photorealistic", suffix: "photorealistic 8k, ultra sharp focus, Hasselblad camera, studio lighting" },
-  { label: "🎨 Digital Concept Art", suffix: "concept art, digital painting, trending on ArtStation, intricate detail" },
-  { label: "🌸 Anime Masterpiece", suffix: "anime aesthetic, Makoto Shinkai style, vibrant colors, detailed scenery" },
-  { label: "🕹️ Cyberpunk Neon", suffix: "cyberpunk city, neon lights, volumetric rain, octane render 8k" },
-  { label: "🎬 Cinematic Film", suffix: "cinematic film still, 35mm photograph, dramatic rim lighting, depth of field" },
-  { label: "🏰 Fantasy Oil Painting", suffix: "classical oil painting, textured canvas, atmospheric lighting, masterpiece" },
-  { label: "✨ 3D Isometric", suffix: "isometric 3D render, Pixar style, cute, smooth shading, clay material" },
+const STYLES = [
+  { id: "photo", label: "📸 8K Photo", suffix: "photorealistic 8k, ultra sharp focus, Hasselblad shot, studio lighting" },
+  { id: "cinematic", label: "🎬 Cinematic", suffix: "cinematic movie still, dramatic rim lighting, 35mm lens, depth of field" },
+  { id: "anime", label: "🌸 Anime", suffix: "anime aesthetic, Makoto Shinkai style, vibrant colors, detailed scenery" },
+  { id: "cyberpunk", label: "🕹️ Cyberpunk", suffix: "cyberpunk city, neon lights, volumetric rain, octane render 8k" },
+  { id: "3d", label: "🎮 3D Render", suffix: "unreal engine 5, Pixar 3D style, smooth shading, clay material, 8k render" },
+  { id: "fantasy", label: "🏰 Fantasy", suffix: "classical oil painting, textured canvas, atmospheric lighting, masterpiece" },
 ];
 
-const SUGGESTIONS = [
-  "Cyberpunk cat with glowing neon eyes, 3D render",
-  "Astronaut standing on alien crystal planet at sunset, cinematic 8k",
-  "Lofi cozy study room with rain outside the window, warm lights",
-  "Royal white Bengal tiger in lush rainforest, photorealistic",
+const INSPIRATION_PROMPTS = [
+  "A majestic white tiger with glowing cyan stripes resting inside a bioluminescent rainforest, 8k cinematic",
+  "Futuristic Formula 1 cyber car racing across a transparent neon skybridge over Tokyo at midnight",
+  "Astronaut discovering a giant glowing crystalline obelisk on an alien desert planet at sunset",
+  "Cozy lofi Japanese cafe during gentle snowfall, warm yellow lanterns, steaming coffee cup, anime style",
+  "Cyberpunk samurai in chrome armor standing beneath pouring neon rain, cinematic reflection",
+  "Hyper-realistic portrait of an ethereal celestial goddess woven from golden nebulae and starlight",
 ];
 
 function Toast({ message, type }) {
   return (
     <div style={{
       position: "fixed",
-      bottom: "80px",
-      right: "20px",
-      background: type === "error" ? "rgba(239,68,68,0.25)" : "rgba(6, 182, 212, 0.2)",
-      border: `1px solid ${type === "error" ? "rgba(239,68,68,0.5)" : "rgba(6, 182, 212, 0.5)"}`,
-      color: type === "error" ? "#f87171" : "#e0f7fa",
-      padding: "14px 20px",
+      bottom: "32px",
+      right: "32px",
+      background: type === "error" ? "rgba(239, 68, 68, 0.95)" : "rgba(15, 23, 42, 0.95)",
+      border: `1px solid ${type === "error" ? "rgba(239, 68, 68, 0.4)" : "rgba(6, 182, 212, 0.4)"}`,
+      color: "#ffffff",
+      padding: "12px 20px",
       borderRadius: "14px",
-      fontSize: "14px",
+      fontSize: "13px",
       fontWeight: "600",
-      backdropFilter: "blur(16px)",
-      zIndex: 9999,
-      boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-      maxWidth: "340px",
-      lineHeight: "1.5",
+      backdropFilter: "blur(20px)",
+      zIndex: 99999,
+      boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      animation: "toastSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
     }}>
-      {message}
+      <span>{type === "error" ? "⚠️" : "✨"}</span>
+      <span>{message}</span>
     </div>
   );
 }
@@ -92,14 +102,15 @@ export default function ImageGeneratorPro() {
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("flux");
   const [aspectRatio, setAspectRatio] = useState("1:1");
-  const [enhance, setEnhance] = useState(true);
   const [imageUrl, setImageUrl] = useState(null);
   const [activeResult, setActiveResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [toast, setToast] = useState(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("create"); // 'create' | 'gallery'
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   // ── History State ──
   const [history, setHistory] = useState(() => {
@@ -110,11 +121,10 @@ export default function ImageGeneratorPro() {
       return [];
     }
   });
-  const [historyQuery, setHistoryQuery] = useState("");
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 3200);
   };
 
   const saveHistory = (newHistory) => {
@@ -126,24 +136,25 @@ export default function ImageGeneratorPro() {
     }
   };
 
-  const clearPrompt = () => {
-    setPrompt("");
-    showToast("Prompt cleared.");
+  // ── Random Prompt ──
+  const handleRandomPrompt = () => {
+    const randomIndex = Math.floor(Math.random() * INSPIRATION_PROMPTS.length);
+    setPrompt(INSPIRATION_PROMPTS[randomIndex]);
+    showToast("Loaded fresh creative prompt! 🎲");
   };
 
-  const appendStylePreset = (suffix) => {
-    setPrompt(prev => {
+  // ── Append Style ──
+  const appendStyle = (suffix) => {
+    setPrompt((prev) => {
       const base = prev.trim();
       if (!base) return suffix;
       if (base.toLowerCase().includes(suffix.toLowerCase())) return prev;
       return `${base}, ${suffix}`;
     });
-    showToast("Style preset added! 🎨");
+    showToast("Style added to prompt! 🎨");
   };
 
-
-
-  // ── AI Magic Wand: Enhance / Translate Prompt ──
+  // ── AI Magic Wand: Enhance Prompt ──
   const enhancePromptWithAI = async () => {
     if (!prompt.trim()) {
       showToast("Please enter a prompt first!", "error");
@@ -152,9 +163,7 @@ export default function ImageGeneratorPro() {
 
     setIsEnhancingPrompt(true);
     const endpoints = [];
-    if (API_BASE_URL) {
-      endpoints.push(`${API_BASE_URL}/api/image-prompt`);
-    }
+    if (API_BASE_URL) endpoints.push(`${API_BASE_URL}/api/image-prompt`);
     endpoints.push("/api/image-prompt");
 
     let enhanced = "";
@@ -162,12 +171,12 @@ export default function ImageGeneratorPro() {
     for (const ep of endpoints) {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15000);
+        const timer = setTimeout(() => controller.abort(), 12000);
         const res = await fetch(ep, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prompt: prompt.trim() || "Create a high quality image based on this",
+            prompt: prompt.trim(),
             imageContext: "",
           }),
           signal: controller.signal,
@@ -181,26 +190,24 @@ export default function ImageGeneratorPro() {
             break;
           }
         }
-      } catch (e) { }
+      } catch (e) {}
     }
 
     setIsEnhancingPrompt(false);
 
     if (enhanced) {
       setPrompt(enhanced);
-      showToast("Prompt enhanced with 8K photorealistic details! ✨");
+      showToast("Enhanced with cinematic 8K details! ✨");
     } else {
-      // Local fallback enhancement
-      const fallback = prompt.trim() + ", photorealistic 8k, highly detailed, dramatic lighting, sharp focus";
+      const fallback = prompt.trim() + ", photorealistic 8k, highly detailed, cinematic dramatic lighting, sharp focus";
       setPrompt(fallback);
-      showToast("Applied photography enhancement tags!");
+      showToast("Applied photographic details tag! ✨");
     }
   };
 
   // ── Image Generation ──
   const generateImage = async () => {
     const finalPrompt = prompt.trim();
-
     if (!finalPrompt) {
       showToast("Please enter a prompt first!", "error");
       return;
@@ -214,10 +221,10 @@ export default function ImageGeneratorPro() {
     const finalRatioId = detectedRatioId || aspectRatio;
     if (detectedRatioId && detectedRatioId !== aspectRatio) setAspectRatio(detectedRatioId);
 
-    const ratio = ASPECT_RATIOS.find(item => item.id === finalRatioId) || ASPECT_RATIOS[0];
+    const ratio = ASPECT_RATIOS.find((item) => item.id === finalRatioId) || ASPECT_RATIOS[0];
     const seed = Math.floor(Math.random() * 999999);
 
-    // ── 🆕 Recraft v4.1 Flash — Use backend API ──
+    // ── Recraft v4.1 Flash via Backend API ──
     if (model === "recraft") {
       try {
         const endpoints = [];
@@ -229,7 +236,7 @@ export default function ImageGeneratorPro() {
         for (const ep of endpoints) {
           try {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 65000);
+            const timer = setTimeout(() => controller.abort(), 55000);
             const resp = await fetch(ep, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -250,7 +257,7 @@ export default function ImageGeneratorPro() {
               }
             }
           } catch (e) {
-            console.warn("Recraft endpoint failed:", ep, e.message);
+            console.warn("Recraft endpoint:", ep, e.message);
           }
         }
 
@@ -262,34 +269,32 @@ export default function ImageGeneratorPro() {
             ratio: finalRatioId,
             seed,
             id: Date.now(),
-            referenceImage: false,
           };
           setImageUrl(recraftImageUrl);
           setActiveResult(result);
           setLoading(false);
-          const newHistory = [result, ...history].slice(0, 30);
-          saveHistory(newHistory);
-          showToast("✨ Recraft v4.1 masterpiece generated!");
+          saveHistory([result, ...history].slice(0, 40));
+          showToast("✨ Recraft v4.1 masterpiece rendered!");
         } else {
           setLoading(false);
           setLoadFailed(true);
-          showToast("Recraft generation failed. Check API key or try another model.", "error");
+          showToast("Recraft took too long or API is busy. Try Flux or retry.", "error");
         }
       } catch (err) {
         setLoading(false);
         setLoadFailed(true);
-        showToast("Recraft generation error: " + (err.message || "Unknown"), "error");
+        showToast("Generation error: " + (err.message || "Failed"), "error");
       }
       return;
     }
 
-    // ── Standard Pollinations models ──
+    // ── Pollinations Standard Generation ──
     const url = buildImageUrl(finalPrompt, {
       width: ratio.width,
       height: ratio.height,
       model,
       seed,
-      enhance,
+      enhance: true,
     });
 
     const loadWithUrl = (genUrl, isRetry = false) => {
@@ -305,19 +310,16 @@ export default function ImageGeneratorPro() {
           ratio: finalRatioId,
           seed,
           id: Date.now(),
-          referenceImage: false,
         };
         setImageUrl(genUrl);
         setActiveResult(result);
         setLoading(false);
-        const newHistory = [result, ...history].slice(0, 30);
-        saveHistory(newHistory);
-        showToast("Masterpiece generated successfully! ✨");
+        saveHistory([result, ...history].slice(0, 40));
+        showToast("Masterpiece generated! ✨");
       };
 
       img.onerror = () => {
         if (!isRetry) {
-          // Retry once with alternate model / seed
           const retrySeed = Math.floor(Math.random() * 999999);
           const fallbackModel = model === "flux" ? "turbo" : "flux";
           const retryUrl = buildImageUrl(finalPrompt, {
@@ -325,7 +327,7 @@ export default function ImageGeneratorPro() {
             height: ratio.height,
             model: fallbackModel,
             seed: retrySeed,
-            enhance,
+            enhance: true,
           });
           loadWithUrl(retryUrl, true);
           return;
@@ -333,7 +335,7 @@ export default function ImageGeneratorPro() {
 
         setLoading(false);
         setLoadFailed(true);
-        showToast("Generation failed. Please check network connection and retry.", "error");
+        showToast("Generation failed. Please retry.", "error");
       };
     };
 
@@ -347,634 +349,1213 @@ export default function ImageGeneratorPro() {
       const blobUrl = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = blobUrl;
-      anchor.download = `nexus_ai_${Date.now()}.png`;
+      anchor.download = `nexuss_art_${Date.now()}.png`;
       anchor.click();
       URL.revokeObjectURL(blobUrl);
       showToast("Download started! 📥");
     } catch {
       window.open(url, "_blank");
-      showToast("Opening image in new tab.");
+      showToast("Opening high-res image in new tab");
     }
   };
 
-  const clearHistory = () => {
-    if (window.confirm("Are you sure you want to clear your generation history?")) {
-      saveHistory([]);
-      setImageUrl(null);
-      setActiveResult(null);
-      showToast("History cleared.");
-    }
+  const handleCopyPrompt = (textToCopy) => {
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedPrompt(true);
+    setTimeout(() => setCopiedPrompt(false), 2000);
+    showToast("Prompt copied to clipboard! 📋");
   };
-
-  const openHistoryItem = (item) => {
-    setImageUrl(item.url);
-    setActiveResult(item);
-    setLoadFailed(false);
-  };
-
-  const reuseHistoryItem = (item, e) => {
-    e.stopPropagation();
-    setPrompt(item.prompt || "");
-    setModel(item.model || "flux");
-    setAspectRatio(item.ratio || "1:1");
-    setImageUrl(item.url);
-    setActiveResult(item);
-    setLoadFailed(false);
-    setShowAdvanced(true);
-    showToast("Loaded history prompt into generator.");
-  };
-
-  const deleteItem = (id, e) => {
-    e.stopPropagation();
-    const newHistory = history.filter(item => item.id !== id);
-    saveHistory(newHistory);
-    showToast("Removed from history.");
-    const deletedItem = history.find(item => item.id === id);
-    if (deletedItem && imageUrl === deletedItem.url) {
-      setImageUrl(null);
-      setActiveResult(null);
-    }
-  };
-
-  const filteredHistory = useMemo(() => {
-    const query = historyQuery.trim().toLowerCase();
-    if (!query) return history;
-    return history.filter(item => {
-      const promptValue = (item.prompt || "").toLowerCase();
-      const modelLabel = MODELS.find(m => m.id === item.model)?.label.toLowerCase() || "";
-      const ratio = (item.ratio || "").toLowerCase();
-      return promptValue.includes(query) || modelLabel.includes(query) || ratio.includes(query);
-    });
-  }, [history, historyQuery]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
       generateImage();
     }
   };
 
-  const promptWordCount = prompt.trim() ? prompt.trim().split(/\s+/).length : 0;
-  const promptCharCount = prompt.length;
+  const activeRatioConfig = ASPECT_RATIOS.find((r) => r.id === (activeResult?.ratio || aspectRatio)) || ASPECT_RATIOS[0];
+  const activeModelConfig = MODELS.find((m) => m.id === (activeResult?.model || model)) || MODELS[0];
 
   return (
-    <div className="page-view img-gen-page" style={{ maxWidth: "1320px", margin: "0 auto" }}>
-      {/* ── HEADER ── */}
-      <div className="img-gen-header">
-        <div>
-          <h2 className="img-gen-title">🎨 AI Image & Vision Studio</h2>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <CheckCircle2 size={15} color="#4ade80" />
-            <p className="img-gen-subtitle">
-              Free High-Quality AI Image Generator • Vision Understanding • Image-to-Image & Prompt Enhancer
-            </p>
+    <div className="studio-root">
+      {/* ── TOP HEADER / NAV BAR ── */}
+      <header className="studio-nav">
+        <div className="studio-brand">
+          <div className="studio-badge-icon">
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <h1 className="studio-title">AI Image Studio</h1>
+            <p className="studio-caption">State-of-the-Art Generative Visual Engine</p>
           </div>
         </div>
-      </div>
 
-      <div className="img-gen-workspace-grid">
-        {/* ── LEFT PANEL: CONTROLS & INPUTS ── */}
-        <div className="img-gen-panel">
-          
+        <div className="studio-header-tabs">
+          <button
+            onClick={() => setActiveTab("create")}
+            className={`studio-tab-btn ${activeTab === "create" ? "active" : ""}`}
+          >
+            <SlidersHorizontal size={14} />
+            <span>Studio</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("gallery")}
+            className={`studio-tab-btn ${activeTab === "gallery" ? "active" : ""}`}
+          >
+            <Layers size={14} />
+            <span>History ({history.length})</span>
+          </button>
+        </div>
+      </header>
 
-          {/* 2. TEXT PROMPT AREA */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
-              <label className="img-gen-label">🖊️ Image Description & Prompt</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <span className="img-gen-counter-badge">{promptWordCount} words</span>
-                <span className="img-gen-counter-badge">{promptCharCount} chars</span>
-                {prompt.trim() && (
-                  <button type="button" onClick={clearPrompt} className="img-gen-clear-btn">Clear</button>
-                )}
+      {/* ── VIEW: STUDIO CREATE ── */}
+      {activeTab === "create" && (
+        <div className="studio-grid">
+          {/* ── LEFT: WORKSPACE CONTROLS ── */}
+          <div className="studio-controls-card">
+            {/* Prompt Section */}
+            <div className="control-group">
+              <div className="group-header">
+                <span className="group-label">Description & Prompt</span>
+                <div className="prompt-actions-mini">
+                  <button
+                    type="button"
+                    onClick={handleRandomPrompt}
+                    className="ghost-pill-btn"
+                    title="Generate a random creative prompt"
+                  >
+                    <Dices size={12} />
+                    <span>Surprise Me</span>
+                  </button>
+                  {prompt.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setPrompt("")}
+                      className="ghost-pill-btn text-danger"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div style={{ position: "relative" }}>
-              <textarea
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={"Describe what you want to see... e.g. A majestic white tiger in a magical neon jungle, 8k cinematic lighting..."}
-                rows={4}
-                className="img-gen-textarea"
-              />
-            </div>
+              <div className="textarea-wrapper">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Describe your vision in detail... e.g. An astronaut exploring an ancient bioluminescent crystal city on Mars, 8k cinematic lighting, octane render..."
+                  rows={4}
+                  className="studio-textarea"
+                />
+              </div>
 
-            {/* Prompt Actions Toolbar */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-              <button
-                type="button"
-                onClick={enhancePromptWithAI}
-                disabled={isEnhancingPrompt}
-                className="img-gen-enhance-btn"
-                title="Convert prompt to 8K photorealistic English description"
-              >
-                {isEnhancingPrompt ? (
-                  <><RefreshCw size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Enhancing...</>
-                ) : (
-                  <><Wand2 size={13} /> ✨ AI Auto-Enhance Prompt</>
-                )}
-              </button>
-
-              {prompt.trim() && (
+              {/* Toolbar beneath textarea */}
+              <div className="prompt-footer-row">
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard.writeText(prompt).then(() => showToast("Prompt copied! 📋")).catch(() => showToast("Failed to copy.", "error"))}
-                  className="img-gen-chip-copy"
+                  onClick={enhancePromptWithAI}
+                  disabled={isEnhancingPrompt || !prompt.trim()}
+                  className="magic-enhance-btn"
                 >
-                  <Copy size={12} /> Copy Prompt
+                  {isEnhancingPrompt ? (
+                    <>
+                      <RefreshCw size={13} className="spin-icon" />
+                      <span>Enhancing Prompt...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 size={13} />
+                      <span>AI Magic Enhance</span>
+                    </>
+                  )}
                 </button>
+
+                <span className="char-badge">{prompt.length} chars</span>
+              </div>
+            </div>
+
+            {/* Quick Style Chips */}
+            <div className="control-group">
+              <span className="group-label">Artistic Styles</span>
+              <div className="chips-flex">
+                {STYLES.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => appendStyle(s.suffix)}
+                    className="style-chip"
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Model Selector */}
+            <div className="control-group">
+              <span className="group-label">Select Generator Model</span>
+              <div className="model-selector-grid">
+                {MODELS.map((m) => {
+                  const isSelected = model === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setModel(m.id)}
+                      className={`model-card-btn ${isSelected ? "selected" : ""}`}
+                    >
+                      <div className="model-card-top">
+                        <span className="model-name">{m.label}</span>
+                        <span className={`badge-pill ${m.badge.toLowerCase()}`}>{m.badge}</span>
+                      </div>
+                      <span className="model-sub">{m.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Aspect Ratio Selector */}
+            <div className="control-group">
+              <span className="group-label">Aspect Ratio</span>
+              <div className="ratio-selector-grid">
+                {ASPECT_RATIOS.map((r) => {
+                  const isSelected = aspectRatio === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setAspectRatio(r.id)}
+                      className={`ratio-card-btn ${isSelected ? "selected" : ""}`}
+                    >
+                      <span className="ratio-icon">{r.icon}</span>
+                      <span className="ratio-name">{r.label}</span>
+                      <span className="ratio-sub">{r.id}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Main Action Button */}
+            <button
+              type="button"
+              onClick={generateImage}
+              disabled={loading || !prompt.trim()}
+              className="generate-action-btn"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw size={18} className="spin-icon" />
+                  <span>Weaving Pixels...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={18} />
+                  <span>Generate Masterpiece</span>
+                  <span className="shortcut-hint">Ctrl + ↵</span>
+                </>
               )}
-            </div>
-
-            {/* Style Preset Filter Chips */}
-            <div>
-              <div style={{ fontSize: "11px", fontWeight: "700", color: "#9ca3af", marginBottom: "6px" }}>
-                <Palette size={12} style={{ display: "inline", marginRight: "4px" }} />
-                1-Click Style Filters:
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {STYLE_PRESETS.map((p, i) => (
-                  <button key={i} type="button" onClick={() => appendStylePreset(p.suffix)} className="img-gen-chip">
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Inspiration Suggestions */}
-            <div>
-              <div style={{ fontSize: "11px", fontWeight: "700", color: "#9ca3af", marginBottom: "6px" }}>
-                💡 Quick Inspiration:
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {SUGGESTIONS.map((s, i) => (
-                  <button key={i} type="button" onClick={() => setPrompt(s)} className="img-gen-suggestion">
-                    {s.length > 34 ? s.slice(0, 32) + "…" : s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* 3. ADVANCED SETTINGS (MODEL, ASPECT RATIO) */}
-          <button type="button" onClick={() => setShowAdvanced(prev => !prev)} className="img-gen-adv-toggle">
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Settings size={16} style={{ color: "#22d3ee" }} />
-              <span>Model & Aspect Ratio Settings ({MODELS.find(m => m.id === model)?.label.split(" (")[0]})</span>
-            </div>
-            {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-
-          {showAdvanced && (
-            <div className="img-gen-adv-panel">
-              {/* Models */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <label className="img-gen-label">🤖 Generator Model</label>
-                <div className="img-gen-model-grid">
-                  {MODELS.map(m => (
-                    <button key={m.id} type="button" onClick={() => setModel(m.id)} className={`img-gen-model-btn ${model === m.id ? "active" : ""}`}>
-                      <div className="img-gen-model-label">{m.label}</div>
-                      <div className="img-gen-model-desc">{m.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Aspect Ratio */}
-              <div className="img-gen-ratio-wrapper" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <label className="img-gen-label">📐 Aspect Ratio</label>
-                <div className="img-gen-ratio-grid">
-                  {ASPECT_RATIOS.map(ratio => (
-                    <button key={ratio.id} type="button" onClick={() => setAspectRatio(ratio.id)} className={`img-gen-ratio-btn ${aspectRatio === ratio.id ? "active" : ""}`}>
-                      <div style={{ fontSize: "16px", marginBottom: "2px" }}>{ratio.icon}</div>
-                      <div className="img-gen-ratio-label">{ratio.label}</div>
-                      <div className="img-gen-ratio-desc">{ratio.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Enhance Prompt Toggle */}
-              <div className="img-gen-enhance-row">
-                <div>
-                  <span className="img-gen-enhance-title">Deep Model Enhancement</span>
-                  <span className="img-gen-enhance-desc">Automatically optimize rendering details during generation</span>
-                </div>
-                <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
-                  <input type="checkbox" checked={enhance} onChange={e => setEnhance(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-                  <span style={{ position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: enhance ? "#06b6d4" : "rgba(255,255,255,0.1)", transition: "0.3s", borderRadius: "24px" }}>
-                    <span style={{ position: "absolute", content: '""', height: "18px", width: "18px", left: "3px", bottom: "3px", backgroundColor: "white", transition: "0.3s", borderRadius: "50%", transform: enhance ? "translateX(20px)" : "translateX(0)" }} />
-                  </span>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* 4. GENERATE BUTTON */}
-          <button
-            onClick={generateImage}
-            disabled={loading}
-            className="img-gen-main-btn"
-          >
-            {loading ? (
-              <><RefreshCw size={19} style={{ animation: "spin 0.8s linear infinite" }} /> Generating Masterpiece...</>
-            ) : (
-              <><Sparkles size={19} /> Generate Masterpiece</>
-            )}
-          </button>
-        </div>
-
-        {/* ── RIGHT PANEL: OUTPUT WORKSPACE ── */}
-        <div className="img-gen-panel img-gen-output-panel">
-          {loading && (() => {
-            const ratio = ASPECT_RATIOS.find(r => r.id === aspectRatio);
-            const shimmerAspect = ratio ? ratio.width / ratio.height : 1;
-            return (
-              <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{
-                  width: "100%",
-                  aspectRatio: shimmerAspect,
-                  borderRadius: "18px",
-                  overflow: "hidden",
-                  position: "relative",
-                  background: "linear-gradient(90deg, rgba(6,182,212,0.04) 25%, rgba(6,182,212,0.12) 50%, rgba(6,182,212,0.04) 75%)",
-                  backgroundSize: "200% 100%",
-                  animation: "shimmer 1.8s infinite",
-                  border: "2px solid rgba(6,182,212,0.25)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-                }}>
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    display: "flex", flexDirection: "column",
-                    alignItems: "center", justifyContent: "center", gap: "16px"
-                  }}>
-                    <div style={{ position: "relative", width: "72px", height: "72px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <div style={{ position: "absolute", width: "100%", height: "100%", border: "3px solid rgba(6,182,212,0.2)", borderTopColor: "#06b6d4", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                      <Sparkles size={28} color="#06b6d4" />
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <h4 className="img-gen-empty-title">Weaving High-Resolution Pixels</h4>
-                      <p className="img-gen-empty-subtitle">Using {MODELS.find(m => m.id === model)?.label.split(" (")[0] || "Flux"} • typically 5–12 seconds</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {loadFailed && !loading && (
-            <div style={{ padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", textAlign: "center" }}>
-              <AlertCircle size={48} color="#ef4444" />
-              <div>
-                <h4 style={{ color: "#f87171", fontSize: "16px", fontWeight: "700", margin: "0 0 8px 0" }}>Generation Interrupted</h4>
-                <p className="img-gen-empty-subtitle">The image generation server took too long. Let's retry with an alternate configuration.</p>
-              </div>
-              <button onClick={generateImage} style={{ background: "rgba(6,182,212,0.2)", color: "#22d3ee", border: "1px solid rgba(6,182,212,0.4)", padding: "10px 22px", borderRadius: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                <RefreshCw size={14} /> Retry Generation
-              </button>
-            </div>
-          )}
-
-          {!imageUrl && !loading && !loadFailed && (
-            <div style={{ padding: "60px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "18px", textAlign: "center" }}>
-              <div style={{ width: "90px", height: "90px", borderRadius: "50%", background: "rgba(6, 182, 212, 0.06)", border: "1px dashed rgba(6, 182, 212, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
-                <ImageIcon size={44} color="rgba(6, 182, 212, 0.5)" />
-              </div>
-              <div>
-                <h4 className="img-gen-empty-title">Output Canvas</h4>
-                <p className="img-gen-empty-subtitle">
-                  Your generated masterpiece will render here. Describe a scene or upload an image on the left to start!
-                </p>
-              </div>
-            </div>
-          )}
-
-          {imageUrl && !loading && (
-            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "20px" }}>
-              <div style={{ width: "100%", maxWidth: "100%", aspectRatio: ASPECT_RATIOS.find(r => r.id === (activeResult?.ratio || aspectRatio))?.width / ASPECT_RATIOS.find(r => r.id === (activeResult?.ratio || aspectRatio))?.height, borderRadius: "18px", overflow: "hidden", boxShadow: "0 10px 30px rgba(0, 0, 0, 0.6)", border: "2px solid rgba(6, 182, 212, 0.35)", background: "#07070d", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <img src={imageUrl} alt="AI Generated Output" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              </div>
-
-              <div className="img-gen-result-box">
-                <div className="img-gen-action-row">
-                  <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4", textTransform: "uppercase", letterSpacing: "0.5px" }}>✨ Generated Design</span>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button onClick={() => navigator.clipboard.writeText(imageUrl).then(() => showToast("Direct URL copied! 📋")).catch(() => showToast("Failed to copy URL.", "error"))} className="img-gen-link-btn">
-                      <Copy size={13} /> Copy Link
-                    </button>
-                    <button onClick={() => handleDownload(imageUrl)} className="img-gen-download-btn">
-                      <Download size={13} /> Download 8K
-                    </button>
-                  </div>
-                </div>
-
-                <div className="img-gen-result-prompt">
-                  <strong>Prompt:</strong> "<em>{activeResult?.prompt || history[0]?.prompt}</em>"
-                  <div className="img-gen-meta-row">
-                    <span>Model: {MODELS.find(m => m.id === (activeResult?.model || history[0]?.model))?.label.split(" (")[0] || "Flux"}</span>
-                    <span>Ratio: {activeResult?.ratio || history[0]?.ratio || "1:1"}</span>
-                    <span>Seed: {activeResult?.seed || history[0]?.seed}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── CREATION HISTORY SECTION ── */}
-      {history.length > 0 && (
-        <div className="img-gen-history-panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <h3 className="img-gen-history-title">📚 Creation History ({history.length})</h3>
-              <span className="img-gen-swipe-hint" style={{ fontSize: "11px", color: "#06b6d4", background: "rgba(6, 182, 212, 0.08)", padding: "4px 8px", borderRadius: "8px", fontWeight: "600" }}>← Swipe to browse →</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <div className="img-gen-history-badge">
-                <Sparkles size={13} color="#22d3ee" />
-                <span>{new Set(history.map(item => item.model).filter(Boolean)).size} models used</span>
-              </div>
-              <input value={historyQuery} onChange={e => setHistoryQuery(e.target.value)} placeholder="Search history..." aria-label="Search generation history" className="img-gen-history-search" />
-            </div>
-            <button onClick={clearHistory} className="img-gen-clear-btn">
-              <Trash2 size={13} /> Clear History
             </button>
           </div>
 
-          {historyQuery.trim() && (
-            <div style={{ marginBottom: "14px", fontSize: "12px", color: "#9ca3af" }}>Showing {filteredHistory.length} of {history.length} items for “{historyQuery.trim()}”.</div>
-          )}
-
-          <div className="img-gen-history-grid">
-            {filteredHistory.map(item => (
-              <div key={item.id} onClick={() => openHistoryItem(item)} className={`img-gen-history-card ${imageUrl === item.url ? "active" : ""}`}>
-                <img src={item.url} alt={item.prompt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0, 0, 0, 0.95))", padding: "20px 10px 8px 10px", fontSize: "11px", color: "#d1d5db", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {item.prompt}
+          {/* ── RIGHT: HERO CANVAS ── */}
+          <div className="studio-canvas-card">
+            {/* 1. Loading State */}
+            {loading && (
+              <div className="canvas-state-center">
+                <div className="render-pulse-ring">
+                  <Sparkles size={32} color="#06b6d4" />
                 </div>
-                <div className="img-gen-history-actions">
-                  <button onClick={e => reuseHistoryItem(item, e)} className="img-gen-history-action-btn" title="Reuse this prompt"><RefreshCw className="img-gen-history-icon" /></button>
-                  <button onClick={e => { e.stopPropagation(); handleDownload(item.url); }} className="img-gen-history-action-btn" title="Download image"><Download className="img-gen-history-icon" /></button>
-                  <button onClick={e => deleteItem(item.id, e)} className="img-gen-history-action-btn delete" title="Delete from history"><Trash2 className="img-gen-history-icon" /></button>
+                <h3 className="state-headline">Rendering Your Vision</h3>
+                <p className="state-sub">
+                  Synthesizing pixels using <strong style={{ color: "#22d3ee" }}>{activeModelConfig.label}</strong>
+                </p>
+                <div className="render-progress-bar">
+                  <div className="render-progress-fill" />
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* 2. Error / Failed State */}
+            {loadFailed && !loading && (
+              <div className="canvas-state-center">
+                <div className="error-icon-box">⚠️</div>
+                <h3 className="state-headline" style={{ color: "#f87171" }}>Generation Interrupted</h3>
+                <p className="state-sub">The render engine encountered a brief hiccup. Please retry.</p>
+                <button type="button" onClick={generateImage} className="retry-btn">
+                  <RefreshCw size={14} />
+                  <span>Retry Generation</span>
+                </button>
+              </div>
+            )}
+
+            {/* 3. Empty Canvas State */}
+            {!imageUrl && !loading && !loadFailed && (
+              <div className="canvas-state-center">
+                <div className="empty-sparkle-box">
+                  <ImageIcon size={44} color="#06b6d4" />
+                </div>
+                <h3 className="state-headline">Your Masterpiece Canvas</h3>
+                <p className="state-sub">
+                  Enter a prompt on the left or click <strong style={{ color: "#22d3ee" }}>"Surprise Me"</strong> to create high-resolution imagery.
+                </p>
+              </div>
+            )}
+
+            {/* 4. Loaded Active Image Result */}
+            {imageUrl && !loading && (
+              <div className="active-render-wrapper">
+                <div className="image-viewport">
+                  <img
+                    src={imageUrl}
+                    alt="AI Generated Artwork"
+                    className="rendered-image"
+                  />
+
+                  {/* Floating Action Buttons */}
+                  <div className="floating-action-bar">
+                    <button
+                      type="button"
+                      onClick={() => setLightboxOpen(true)}
+                      className="canvas-icon-btn"
+                      title="Fullscreen Preview"
+                    >
+                      <Maximize2 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPrompt(activeResult?.prompt || prompt)}
+                      className="canvas-icon-btn"
+                      title="Copy Prompt"
+                    >
+                      {copiedPrompt ? <Check size={16} color="#4ade80" /> : <Copy size={16} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={generateImage}
+                      className="canvas-icon-btn"
+                      title="Regenerate / Remix"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(imageUrl)}
+                      className="canvas-primary-btn"
+                    >
+                      <Download size={15} />
+                      <span>Download</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Details Bar */}
+                <div className="render-meta-card">
+                  <div className="meta-info-row">
+                    <div className="meta-tag">
+                      <Zap size={13} color="#22d3ee" />
+                      <span>{activeModelConfig.label}</span>
+                    </div>
+                    <div className="meta-tag">
+                      <span>{activeRatioConfig.id}</span>
+                    </div>
+                    {activeResult?.seed && (
+                      <div className="meta-tag">
+                        <span>Seed: {activeResult.seed}</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="meta-prompt-text">"{activeResult?.prompt || prompt}"</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* ── VIEW: GALLERY TAB ── */}
+      {activeTab === "gallery" && (
+        <div className="gallery-view">
+          <div className="gallery-header-row">
+            <div>
+              <h2 className="gallery-title">Your Creation History</h2>
+              <p className="gallery-subtitle">{history.length} pieces created in this workspace</p>
+            </div>
+            {history.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to clear your generation history?")) {
+                    saveHistory([]);
+                    showToast("History cleared");
+                  }
+                }}
+                className="clear-history-btn"
+              >
+                <Trash2 size={14} />
+                <span>Clear History</span>
+              </button>
+            )}
+          </div>
+
+          {history.length === 0 ? (
+            <div className="empty-gallery-state">
+              <ImageIcon size={48} color="#4b5563" />
+              <p>No creations yet. Head over to the Studio tab to create your first artwork!</p>
+              <button onClick={() => setActiveTab("create")} className="start-creating-btn">
+                Open Studio
+              </button>
+            </div>
+          ) : (
+            <div className="gallery-masonry-grid">
+              {history.map((item) => (
+                <div key={item.id} className="gallery-card">
+                  <img src={item.url} alt={item.prompt} loading="lazy" />
+                  <div className="gallery-card-overlay">
+                    <p className="gallery-card-prompt">{item.prompt}</p>
+                    <div className="gallery-card-actions">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrompt(item.prompt);
+                          setModel(item.model || "flux");
+                          setAspectRatio(item.ratio || "1:1");
+                          setImageUrl(item.url);
+                          setActiveResult(item);
+                          setActiveTab("create");
+                          showToast("Loaded artwork into Studio!");
+                        }}
+                        className="overlay-btn"
+                        title="Load into Studio"
+                      >
+                        <ArrowUpRight size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(item.url)}
+                        className="overlay-btn"
+                        title="Download"
+                      >
+                        <Download size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = history.filter((h) => h.id !== item.id);
+                          saveHistory(updated);
+                          showToast("Removed from history");
+                        }}
+                        className="overlay-btn text-danger"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── LIGHTBOX MODAL ── */}
+      {lightboxOpen && imageUrl && (
+        <div className="lightbox-backdrop" onClick={() => setLightboxOpen(false)}>
+          <button
+            type="button"
+            className="lightbox-close-btn"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <X size={24} />
+          </button>
+          <img
+            src={imageUrl}
+            alt="Enlarged Artwork"
+            className="lightbox-image"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* Toast Notification */}
       {toast && <Toast message={toast.message} type={toast.type} />}
 
-      {/* ── STYLES ── */}
+      {/* ── ULTRA-CLEAN MODERN CSS ── */}
       <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: 0.7; } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        @keyframes toastSlide {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.25); transform: scale(1); }
+          50% { box-shadow: 0 0 50px rgba(6, 182, 212, 0.55); transform: scale(1.05); }
+        }
+        @keyframes progressSlide {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(200%); }
+        }
 
-        .img-gen-page {
+        .spin-icon { animation: spin 0.8s linear infinite; }
+
+        .studio-root {
+          max-width: 1360px;
+          margin: 0 auto;
           padding: 24px 28px;
-          background-image: radial-gradient(rgba(6, 182, 212, 0.08) 1.5px, transparent 1.5px);
-          background-size: 24px 24px;
           min-height: 100vh;
-        }
-        .img-gen-header { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
-        .img-gen-title {
-          font-size: 32px; font-weight: 800;
-          background: linear-gradient(135deg, #6366f1, #06b6d4, #3b82f6);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          margin-bottom: 6px; letter-spacing: -0.5px;
-          filter: drop-shadow(0 2px 10px rgba(6, 182, 212, 0.25));
-        }
-        .img-gen-subtitle { color: #4ade80; font-size: 13px; font-weight: 600; margin: 0; }
-        .img-gen-label { font-size: 12px; font-weight: 800; color: #22d3ee; text-transform: uppercase; letter-spacing: 0.8px; }
-        .img-gen-counter-badge { font-size: 11px; color: #9ca3af; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 999px; padding: 4px 10px; }
-        .img-gen-clear-btn { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; border-radius: 10px; padding: 6px 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
-        .img-gen-clear-btn:hover { background: rgba(239, 68, 68, 0.2); }
-
-        .img-gen-workspace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 40px; }
-        .img-gen-panel {
-          background: rgba(11, 14, 26, 0.55); backdrop-filter: blur(24px);
-          border: 1px solid rgba(6, 182, 212, 0.18); border-radius: 24px;
-          padding: 26px; display: flex; flex-direction: column; gap: 22px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 0 20px rgba(6, 182, 212, 0.05);
-        }
-        .img-gen-output-panel { align-items: center; justify-content: center; min-height: 480px; position: relative; }
-
-        /* Dropzone */
-        .img-gen-dropzone {
-          border: 2px dashed rgba(6, 182, 212, 0.35); border-radius: 16px;
-          padding: 20px 16px; text-align: center; cursor: pointer;
-          background: rgba(6, 182, 212, 0.03); transition: all 0.2s;
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .img-gen-dropzone:hover, .img-gen-dropzone.dragging {
-          border-color: #06b6d4; background: rgba(6, 182, 212, 0.08); transform: translateY(-1px);
+          font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        .img-gen-uploaded-preview-box {
-          background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(6, 182, 212, 0.25);
-          border-radius: 16px; padding: 14px;
+        /* ── Header ── */
+        .studio-nav {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        .studio-brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .studio-badge-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #06b6d4, #6366f1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          box-shadow: 0 4px 18px rgba(6, 182, 212, 0.35);
+        }
+        .studio-title {
+          font-size: 22px;
+          font-weight: 800;
+          margin: 0;
+          letter-spacing: -0.4px;
+          color: #f1f5f9;
+        }
+        .studio-caption {
+          font-size: 12px;
+          color: #94a3b8;
+          margin: 2px 0 0 0;
+          font-weight: 500;
         }
 
-        .img-gen-vision-btn {
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(6, 182, 212, 0.2));
-          border: 1px solid rgba(6, 182, 212, 0.4); color: #22d3ee;
-          padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700;
-          cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
+        .studio-header-tabs {
+          display: flex;
+          background: rgba(15, 23, 42, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          padding: 4px;
+          gap: 4px;
         }
-        .img-gen-vision-btn:hover { background: rgba(6, 182, 212, 0.3); transform: scale(1.02); }
-
-        .img-gen-apply-prompt-btn {
-          background: linear-gradient(135deg, #6366f1, #06b6d4);
-          border: none; color: white;
-          padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700;
-          cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
+        .studio-tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 16px;
+          border-radius: 8px;
+          border: none;
+          background: transparent;
+          color: #94a3b8;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
         }
-        .img-gen-apply-prompt-btn:hover { opacity: 0.9; transform: scale(1.02); }
-
-        .img-gen-analysis-box {
-          margin-top: 12px; padding: 12px; border-radius: 12px;
-          background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.18);
+        .studio-tab-btn.active {
+          background: rgba(6, 182, 212, 0.15);
+          color: #22d3ee;
         }
-
-        .img-gen-textarea {
-          width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(6, 182, 212, 0.25);
-          border-radius: 16px; padding: 14px 16px; color: #f3f4f6; font-size: 14px; line-height: 1.6;
-          resize: vertical; outline: none; font-family: Outfit, Inter, sans-serif; transition: all 0.2s;
-        }
-        .img-gen-textarea:focus { border-color: rgba(6, 182, 212, 0.8); box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.15); }
-        .img-gen-textarea::placeholder { color: #9ca3af; }
-
-        .img-gen-enhance-btn {
-          background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35);
-          color: #a5b4fc; border-radius: 10px; padding: 7px 12px; font-size: 11px; font-weight: 700;
-          cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;
-        }
-        .img-gen-enhance-btn:hover { background: rgba(99, 102, 241, 0.25); border-color: #818cf8; }
-
-        .img-gen-chip {
-          background: rgba(6, 182, 212, 0.06); border: 1px solid rgba(6, 182, 212, 0.18); border-radius: 999px;
-          padding: 5px 10px; font-size: 11px; color: #22d3ee; cursor: pointer; transition: all 0.2s; font-weight: 600;
-        }
-        .img-gen-chip:hover { background: rgba(6, 182, 212, 0.18); border-color: #06b6d4; }
-
-        .img-gen-chip-copy {
-          background: rgba(255,255,255,0.04); border: 1px solid rgba(6, 182, 212, 0.18); color: #d1d5db;
-          border-radius: 10px; padding: 7px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
-          display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        .studio-tab-btn:hover:not(.active) {
+          color: #e2e8f0;
         }
 
-        .img-gen-suggestion {
-          background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 20px;
-          padding: 5px 12px; font-size: 11px; color: #94a3b8; cursor: pointer; transition: all 0.2s; font-weight: 500;
-        }
-        .img-gen-suggestion:hover { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
-
-        .img-gen-adv-toggle {
-          display: flex; align-items: center; justify-content: space-between; width: 100%;
-          background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 14px; padding: 12px 16px; color: #e5e7eb; font-size: 13px; font-weight: 700;
-          cursor: pointer; transition: all 0.2s; outline: none;
-        }
-        .img-gen-adv-toggle:hover { background: rgba(255, 255, 255, 0.06); }
-
-        .img-gen-adv-panel {
-          display: flex; flex-direction: column; gap: 18px; padding: 16px;
-          background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px;
+        /* ── Studio Layout Grid ── */
+        .studio-grid {
+          display: grid;
+          grid-template-columns: 460px 1fr;
+          gap: 24px;
+          align-items: start;
         }
 
-        .img-gen-model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .img-gen-model-btn {
-          padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: left;
-          background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .img-gen-model-btn.active {
-          background: rgba(6, 182, 212, 0.12); border: 2px solid rgba(6, 182, 212, 0.85);
-          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25);
-        }
-        .img-gen-model-label { font-size: 12px; font-weight: 700; color: #d1d5db; }
-        .img-gen-model-btn.active .img-gen-model-label { color: #22d3ee; }
-        .img-gen-model-desc { font-size: 9px; color: #9ca3af; margin-top: 2px; line-height: 1.3; }
-
-        .img-gen-ratio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .img-gen-ratio-btn {
-          padding: 8px 6px; border-radius: 10px; cursor: pointer; transition: all 0.2s; text-align: center;
-          background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .img-gen-ratio-btn.active {
-          background: rgba(6, 182, 212, 0.12); border: 2px solid rgba(6, 182, 212, 0.85);
-        }
-        .img-gen-ratio-label { font-size: 10px; font-weight: 700; color: #e5e7eb; }
-        .img-gen-ratio-desc { font-size: 8px; color: #9ca3af; margin-top: 1px; }
-
-        .img-gen-enhance-row { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); paddingTop: 14px; }
-        .img-gen-enhance-title { font-size: 13px; font-weight: 600; color: #e5e7eb; display: block; }
-        .img-gen-enhance-desc { font-size: 10px; color: #9ca3af; }
-
-        .img-gen-main-btn {
-          background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; border: none;
-          padding: 16px 20px; border-radius: 16px; font-weight: 800; font-size: 16px;
-          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
-          transition: all 0.2s; box-shadow: 0 6px 28px rgba(6,182,212,0.4); margin-top: 4px;
-        }
-        .img-gen-main-btn:disabled { background: rgba(6,182,212,0.25); cursor: not-allowed; box-shadow: none; }
-        .img-gen-main-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(6,182,212,0.6); }
-
-        .img-gen-empty-title { color: #e5e7eb; font-size: 18px; font-weight: 700; margin: 0 0 6px 0; }
-        .img-gen-empty-subtitle { color: #9ca3af; font-size: 13px; max-width: 340px; margin: 0; line-height: 1.6; }
-
-        .img-gen-result-box {
-          background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(6, 182, 212, 0.2);
-          border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;
-        }
-        .img-gen-action-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; align-items: center; }
-        .img-gen-link-btn {
-          background: rgba(255,255,255,0.03); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.25);
-          padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer;
-          display: flex; align-items: center; gap: 5px; transition: all 0.2s;
-        }
-        .img-gen-download-btn {
-          background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; border: none;
-          padding: 8px 18px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
-          display: flex; align-items: center; gap: 5px; transition: all 0.2s;
-        }
-        .img-gen-result-prompt { font-size: 12px; color: #9ca3af; border-top: 1px solid rgba(255,255,255,0.06); paddingTop: 10px; line-height: 1.5; }
-        .img-gen-result-prompt strong { color: #d1d5db; }
-        .img-gen-meta-row { margin-top: 6px; display: flex; gap: 12px; color: #8a94a6; font-size: 11px; flex-wrap: wrap; }
-
-        .img-gen-history-panel { background: rgba(11, 14, 26, 0.35); border: 1px solid rgba(6, 182, 212, 0.15); border-radius: 24px; padding: 26px; }
-        .img-gen-history-title { font-size: 18px; font-weight: 700; color: #d1d5db; margin: 0; }
-        .img-gen-history-badge { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
-        .img-gen-history-badge span { font-size: 12px; color: #e5e7eb; font-weight: 600; }
-        .img-gen-history-search { min-width: 240px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 10px; padding: 9px 12px; color: #f3f4f6; font-size: 12px; outline: none; transition: all 0.2s; }
-        
-        .img-gen-history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; }
-        .img-gen-history-card {
-          border-radius: 16px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05);
-          background: rgba(0, 0, 0, 0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; position: relative; aspect-ratio: 1/1; flex-shrink: 0;
-        }
-        .img-gen-history-card.active {
-          border: 1px solid rgba(6, 182, 212, 0.9); background: rgba(6, 182, 212, 0.08);
+        @media (max-width: 1024px) {
+          .studio-grid { grid-template-columns: 1fr; }
         }
 
-        .img-gen-swipe-hint { display: none; }
-        .img-gen-history-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 10; }
-        .img-gen-history-action-btn { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); border: none; border-radius: 8px; padding: 6px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .img-gen-history-action-btn:hover { background: rgba(6, 182, 212, 0.85); transform: scale(1.08); }
-        .img-gen-history-action-btn.delete { background: rgba(239, 68, 68, 0.8); }
-        .img-gen-history-action-btn.delete:hover { background: rgba(239, 68, 68, 0.95); }
-        .img-gen-history-icon { width: 12px; height: 12px; display: block; }
-
-        /* ── LIGHT MODE OVERRIDES ── */
-        .light-mode .img-gen-page {
-          background-color: #f0f4f8 !important;
-          background-image: radial-gradient(rgba(6, 182, 212, 0.12) 1.5px, transparent 1.5px) !important;
+        /* ── Controls Card ── */
+        .studio-controls-card {
+          background: rgba(15, 23, 42, 0.6);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 20px;
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
         }
-        .light-mode .img-gen-subtitle { color: #15803d !important; }
-        .light-mode .img-gen-panel,
-        .light-mode .img-gen-history-panel {
-          background: #ffffff !important;
-          border-color: #d1dae6 !important;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
-        }
-        .light-mode .img-gen-label { color: #0284c7 !important; }
-        .light-mode .img-gen-counter-badge { background: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #475569 !important; }
-        .light-mode .img-gen-textarea { background: #ffffff !important; border-color: #cbd5e1 !important; color: #0f172a !important; }
-        .light-mode .img-gen-textarea::placeholder { color: #94a3b8 !important; }
-        .light-mode .img-gen-chip { background: #f0f9ff !important; border-color: rgba(6, 182, 212, 0.3) !important; color: #0284c7 !important; }
-        .light-mode .img-gen-dropzone { background: #f0fdfa !important; border-color: #99f6e4 !important; }
-        .light-mode .img-gen-dropzone div { color: #0f172a !important; }
-        .light-mode .img-gen-uploaded-preview-box { background: #f8fafc !important; border-color: #cbd5e1 !important; }
-        .light-mode .img-gen-analysis-box { background: #f0fdfa !important; border-color: #ccfbf1 !important; color: #1e293b !important; }
-        .light-mode .img-gen-suggestion { background: #f0fdf4 !important; border-color: rgba(16, 185, 129, 0.3) !important; color: #047857 !important; }
-        .light-mode .img-gen-adv-toggle, .light-mode .img-gen-adv-panel { background: #f8fafc !important; border-color: #e2e8f0 !important; color: #1e293b !important; }
-        .light-mode .img-gen-model-btn, .light-mode .img-gen-ratio-btn { background: #ffffff !important; border-color: #e2e8f0 !important; }
-        .light-mode .img-gen-model-btn.active, .light-mode .img-gen-ratio-btn.active { background: rgba(6, 182, 212, 0.08) !important; border-color: #0284c7 !important; }
-        .light-mode .img-gen-model-label, .light-mode .img-gen-ratio-label { color: #1e293b !important; }
-        .light-mode .img-gen-empty-title, .light-mode .img-gen-history-title { color: #0f172a !important; }
-        .light-mode .img-gen-empty-subtitle { color: #64748b !important; }
-        .light-mode .img-gen-result-box { background: #f8fafc !important; border-color: #e2e8f0 !important; }
-        .light-mode .img-gen-history-card { background: #ffffff !important; border-color: #e2e8f0 !important; }
 
-        @media (max-width: 768px) {
-          .img-gen-page { padding: 16px 12px !important; }
-          .img-gen-title { font-size: 24px !important; text-align: center; width: 100%; }
-          .img-gen-subtitle { font-size: 11px !important; text-align: center; width: 100%; justify-content: center; }
-          .img-gen-header { justify-content: center; text-align: center; }
-          .img-gen-workspace-grid { grid-template-columns: 1fr !important; gap: 18px !important; }
-          .img-gen-panel { padding: 18px !important; gap: 18px !important; border-radius: 18px !important; }
-          .img-gen-output-panel { min-height: 300px !important; }
-          .img-gen-model-grid { grid-template-columns: 1fr !important; }
-          .img-gen-ratio-wrapper { display: none !important; }
-          .img-gen-history-panel { padding: 16px !important; border-radius: 18px !important; }
-          .img-gen-swipe-hint { display: inline-block !important; animation: pulse 2s infinite ease-in-out; }
-          .img-gen-history-grid { display: flex !important; overflow-x: auto !important; flex-wrap: nowrap !important; gap: 14px !important; padding: 10px 4px 16px 4px !important; }
-          .img-gen-history-grid > div { flex: 0 0 170px !important; height: 170px !important; }
-          .img-gen-action-row { flex-direction: column; align-items: stretch; }
-          .img-gen-action-row > div { display: flex; gap: 8px; }
-          .img-gen-action-row > div button { flex: 1; justify-content: center; }
+        .control-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .group-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .group-label {
+          font-size: 11px;
+          font-weight: 800;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+        }
+        .prompt-actions-mini {
+          display: flex;
+          gap: 6px;
+        }
+        .ghost-pill-btn {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #94a3b8;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.15s ease;
+        }
+        .ghost-pill-btn:hover {
+          background: rgba(6, 182, 212, 0.15);
+          color: #22d3ee;
+          border-color: rgba(6, 182, 212, 0.3);
+        }
+        .ghost-pill-btn.text-danger:hover {
+          background: rgba(239, 68, 68, 0.15);
+          color: #f87171;
+          border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .textarea-wrapper {
+          position: relative;
+        }
+        .studio-textarea {
+          width: 100%;
+          box-sizing: border-box;
+          background: rgba(2, 6, 23, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 14px;
+          padding: 14px;
+          color: #f8fafc;
+          font-size: 13px;
+          line-height: 1.6;
+          resize: vertical;
+          min-height: 95px;
+          outline: none;
+          font-family: inherit;
+          transition: all 0.2s ease;
+        }
+        .studio-textarea:focus {
+          border-color: #06b6d4;
+          box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+        }
+        .studio-textarea::placeholder {
+          color: #64748b;
+        }
+
+        .prompt-footer-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 2px 2px 0 2px;
+        }
+        .magic-enhance-btn {
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.15));
+          border: 1px solid rgba(6, 182, 212, 0.35);
+          color: #22d3ee;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+        .magic-enhance-btn:hover:not(:disabled) {
+          background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(6, 182, 212, 0.3));
+          border-color: #06b6d4;
+          transform: translateY(-1px);
+        }
+        .magic-enhance-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .char-badge {
+          font-size: 11px;
+          color: #64748b;
+        }
+
+        /* Style Chips */
+        .chips-flex {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .style-chip {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #cbd5e1;
+          padding: 5px 11px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .style-chip:hover {
+          background: rgba(6, 182, 212, 0.15);
+          border-color: rgba(6, 182, 212, 0.4);
+          color: #22d3ee;
+        }
+
+        /* Models Grid */
+        .model-selector-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .model-card-btn {
+          background: rgba(2, 6, 23, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 12px;
+          padding: 10px 14px;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.2s ease;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .model-card-btn:hover {
+          background: rgba(6, 182, 212, 0.06);
+          border-color: rgba(6, 182, 212, 0.3);
+        }
+        .model-card-btn.selected {
+          background: rgba(6, 182, 212, 0.12);
+          border: 1.5px solid #06b6d4;
+          box-shadow: 0 4px 20px rgba(6, 182, 212, 0.2);
+        }
+        .model-card-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .model-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: #f1f5f9;
+        }
+        .model-card-btn.selected .model-name {
+          color: #22d3ee;
+        }
+        .model-sub {
+          font-size: 11px;
+          color: #64748b;
+        }
+        .badge-pill {
+          font-size: 9px;
+          font-weight: 800;
+          padding: 2px 6px;
+          border-radius: 4px;
+          letter-spacing: 0.5px;
+        }
+        .badge-pill.popular { background: rgba(99, 102, 241, 0.25); color: #a5b4fc; }
+        .badge-pill.new { background: rgba(34, 197, 94, 0.25); color: #86efac; }
+        .badge-pill.fast { background: rgba(245, 158, 11, 0.25); color: #fde68a; }
+        .badge-pill.art { background: rgba(236, 72, 153, 0.25); color: #fbcfe8; }
+        .badge-pill.cgi { background: rgba(6, 182, 212, 0.25); color: #67e8f9; }
+
+        /* Ratio Grid */
+        .ratio-selector-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+        }
+        .ratio-card-btn {
+          background: rgba(2, 6, 23, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 12px;
+          padding: 10px 6px;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.2s ease;
+        }
+        .ratio-card-btn:hover {
+          border-color: rgba(6, 182, 212, 0.3);
+        }
+        .ratio-card-btn.selected {
+          background: rgba(6, 182, 212, 0.12);
+          border: 1.5px solid #06b6d4;
+          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
+        }
+        .ratio-icon { font-size: 16px; }
+        .ratio-name {
+          font-size: 11px;
+          font-weight: 700;
+          color: #f1f5f9;
+        }
+        .ratio-card-btn.selected .ratio-name {
+          color: #22d3ee;
+        }
+        .ratio-sub {
+          font-size: 9px;
+          color: #64748b;
+        }
+
+        /* Generate Button */
+        .generate-action-btn {
+          background: linear-gradient(135deg, #06b6d4, #6366f1);
+          color: #ffffff;
+          border: none;
+          border-radius: 14px;
+          padding: 16px;
+          font-size: 15px;
+          font-weight: 800;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          box-shadow: 0 6px 25px rgba(6, 182, 212, 0.4);
+          transition: all 0.25s ease;
+          position: relative;
+        }
+        .generate-action-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 35px rgba(6, 182, 212, 0.6);
+        }
+        .generate-action-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+        .shortcut-hint {
+          font-size: 10px;
+          background: rgba(255, 255, 255, 0.2);
+          padding: 2px 6px;
+          border-radius: 4px;
+          color: #ffffff;
+          margin-left: 6px;
+        }
+
+        /* ── Canvas Card ── */
+        .studio-canvas-card {
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 20px;
+          min-height: 520px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          overflow: hidden;
+          padding: 20px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        .canvas-state-center {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 12px;
+          max-width: 380px;
+        }
+        .render-pulse-ring {
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          background: rgba(6, 182, 212, 0.1);
+          border: 2px solid #06b6d4;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: pulseGlow 1.8s infinite ease-in-out;
+        }
+        .state-headline {
+          font-size: 18px;
+          font-weight: 700;
+          color: #f1f5f9;
+          margin: 0;
+        }
+        .state-sub {
+          font-size: 13px;
+          color: #94a3b8;
+          margin: 0;
+          line-height: 1.5;
+        }
+        .render-progress-bar {
+          width: 220px;
+          height: 4px;
+          background: rgba(255, 255, 255, 0.08);
+          border-radius: 4px;
+          overflow: hidden;
+          margin-top: 8px;
+          position: relative;
+        }
+        .render-progress-fill {
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(90deg, #06b6d4, #6366f1);
+          border-radius: 4px;
+          animation: progressSlide 1.5s infinite linear;
+        }
+
+        .empty-sparkle-box {
+          width: 76px;
+          height: 76px;
+          border-radius: 20px;
+          background: rgba(6, 182, 212, 0.06);
+          border: 1px dashed rgba(6, 182, 212, 0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 4px;
+        }
+
+        .error-icon-box {
+          font-size: 40px;
+          margin-bottom: 4px;
+        }
+        .retry-btn {
+          margin-top: 8px;
+          background: rgba(6, 182, 212, 0.15);
+          border: 1px solid rgba(6, 182, 212, 0.4);
+          color: #22d3ee;
+          padding: 8px 16px;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        /* ── Active Render Viewport ── */
+        .active-render-wrapper {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .image-viewport {
+          position: relative;
+          width: 100%;
+          max-height: 520px;
+          border-radius: 16px;
+          overflow: hidden;
+          background: #020617;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .rendered-image {
+          width: 100%;
+          height: 100%;
+          max-height: 520px;
+          object-fit: contain;
+          display: block;
+        }
+
+        /* Floating action buttons */
+        .floating-action-bar {
+          position: absolute;
+          bottom: 16px;
+          right: 16px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(15, 23, 42, 0.85);
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          padding: 6px 8px;
+          border-radius: 14px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        }
+        .canvas-icon-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #f1f5f9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .canvas-icon-btn:hover {
+          background: rgba(6, 182, 212, 0.2);
+          color: #22d3ee;
+          border-color: #06b6d4;
+        }
+        .canvas-primary-btn {
+          background: linear-gradient(135deg, #06b6d4, #6366f1);
+          color: #ffffff;
+          border: none;
+          padding: 0 16px;
+          height: 36px;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
+          transition: all 0.2s ease;
+        }
+        .canvas-primary-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
+        }
+
+        /* Render Meta Card */
+        .render-meta-card {
+          background: rgba(2, 6, 23, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 14px;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .meta-info-row {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+        .meta-tag {
+          font-size: 11px;
+          color: #cbd5e1;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 3px 8px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-weight: 600;
+        }
+        .meta-prompt-text {
+          font-size: 12px;
+          color: #94a3b8;
+          margin: 0;
+          line-height: 1.5;
+          font-style: italic;
+        }
+
+        /* ── Gallery Tab ── */
+        .gallery-view {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .gallery-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .gallery-title {
+          font-size: 20px;
+          font-weight: 800;
+          color: #f1f5f9;
+          margin: 0;
+        }
+        .gallery-subtitle {
+          font-size: 13px;
+          color: #64748b;
+          margin: 4px 0 0 0;
+        }
+        .clear-history-btn {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #f87171;
+          padding: 8px 14px;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+        .clear-history-btn:hover {
+          background: rgba(239, 68, 68, 0.2);
+        }
+
+        .gallery-masonry-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 16px;
+        }
+        .gallery-card {
+          position: relative;
+          aspect-ratio: 1 / 1;
+          border-radius: 14px;
+          overflow: hidden;
+          background: #020617;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+        .gallery-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(6, 182, 212, 0.5);
+        }
+        .gallery-card img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .gallery-card-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          padding: 12px;
+          gap: 8px;
+        }
+        .gallery-card:hover .gallery-card-overlay {
+          opacity: 1;
+        }
+        .gallery-card-prompt {
+          font-size: 11px;
+          color: #e2e8f0;
+          margin: 0;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .gallery-card-actions {
+          display: flex;
+          gap: 6px;
+        }
+        .overlay-btn {
+          width: 30px;
+          height: 30px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .overlay-btn:hover {
+          background: #06b6d4;
+        }
+        .overlay-btn.text-danger:hover {
+          background: #ef4444;
+        }
+
+        .empty-gallery-state {
+          padding: 80px 20px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          color: #64748b;
+          font-size: 14px;
+        }
+        .start-creating-btn {
+          background: linear-gradient(135deg, #06b6d4, #6366f1);
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 10px;
+          font-weight: 700;
+          cursor: pointer;
+          margin-top: 8px;
+        }
+
+        /* ── Lightbox ── */
+        .lightbox-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.92);
+          backdrop-filter: blur(16px);
+          z-index: 999999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          cursor: zoom-out;
+        }
+        .lightbox-image {
+          max-width: 90vw;
+          max-height: 90vh;
+          object-fit: contain;
+          border-radius: 12px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          cursor: default;
+        }
+        .lightbox-close-btn {
+          position: absolute;
+          top: 24px;
+          right: 24px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .lightbox-close-btn:hover {
+          background: rgba(239, 68, 68, 0.8);
+          border-color: #ef4444;
         }
       `}</style>
     </div>
