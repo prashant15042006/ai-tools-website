@@ -7,7 +7,6 @@ import {
   Mic,
   ExternalLink,
   Code2,
-  Sparkles,
   X,
   FileText,
   Wand2,
@@ -27,29 +26,6 @@ import AttachmentMenu from "./components/AttachmentMenu";
 
 // Inject table styles on component mount
 injectTableStyles();
-
-const PROMPT_SUGGESTIONS = [
-  {
-    title: "JWT Auth & RBAC API",
-    sub: "Node.js & Express REST API with bcrypt, refresh tokens, and validation",
-    prompt: "Build a production-ready Node.js Express REST API with JWT authentication, refresh tokens, role-based access control, and bcrypt password hashing. Include complete code with error handling and run instructions.",
-  },
-  {
-    title: "Modern Analytics Dashboard",
-    sub: "Responsive dashboard UI component in React with Tailwind CSS",
-    prompt: "Build a modern responsive analytics dashboard component in React with Tailwind CSS. Include metric cards, interactive filter tabs, a data table, and charts placeholder with clean styling.",
-  },
-  {
-    title: "Async Web Scraper",
-    sub: "Python script with BeautifulSoup, headers, proxy support, and retry logic",
-    prompt: "Write a complete Python web scraper using requests and BeautifulSoup with exponential retry logic, user-agent rotation, clean CLI arguments, and CSV export. Zero placeholders.",
-  },
-  {
-    title: "Realtime WebSocket Chat",
-    sub: "Frontend & backend code for live chat with typing indicator",
-    prompt: "Build a full-stack real-time chat application using React, Node.js, and Socket.io. Include room selection, typing indicators, clean UI, and connection state handling.",
-  },
-];
 
 function CodeGenerator() {
   const { ttsEnabled, addRecentChat, user, voicePreset, customVoiceUrl } = useContext(AppContext);
@@ -350,33 +326,17 @@ function CodeGenerator() {
 
   return (
     <div className="chat-container">
-      {/* ── MINIMAL TOP BAR: ONLY CLEAR BUTTON WHEN CONVERSATION EXISTS ── */}
+      {/* ── TOP BAR: ACTIVE SESSION INDICATOR & CLEAR BUTTON (when messages exist) ── */}
       {messages.length > 0 && (
-        <div style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          padding: "8px 20px 0",
-          maxWidth: "960px",
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box"
-        }}>
+        <div className="code-studio-top-bar">
+          <div className="code-session-indicator">
+            <span className="session-dot" />
+            <span>Active Code Session</span>
+          </div>
           <button
             type="button"
             onClick={handleClearChat}
-            className="nexus-code-action-btn"
-            style={{
-              color: "var(--text-secondary)",
-              borderColor: "var(--border-color)",
-              background: "rgba(255, 255, 255, 0.04)",
-              borderRadius: "8px",
-              padding: "4px 10px",
-              fontSize: "12px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              cursor: "pointer"
-            }}
+            className="code-clear-btn"
             title="Clear code conversation"
           >
             <Trash2 size={13} />
@@ -388,35 +348,37 @@ function CodeGenerator() {
       {/* ── CONVERSATION STREAM ── */}
       <div className="chat-history-scroll">
         {messages.length === 0 && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "4vh" }}>
-            <div style={{ flexShrink: 0, width: "64px", height: "64px", borderRadius: "18px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 25px rgba(16, 185, 129, 0.25)" }}>
-              <Code2 size={32} color="white" />
+          <div className="code-studio-landing">
+            <div className="code-studio-landing-badge">
+              <div className="code-studio-icon-glow">
+                <Code2 size={32} color="#10b981" />
+              </div>
             </div>
 
-            <div style={{ textAlign: "center" }}>
-              <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
-                Code Generator
-              </h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: "14px", maxWidth: "480px", marginTop: "6px", lineHeight: 1.5 }}>
-                Describe what you want to build or paste your code. Get 100% complete, production-ready code with zero placeholders.
+            <div className="code-studio-hero-text">
+              <h1 className="code-studio-title">Nexuss Code Studio</h1>
+              <p className="code-studio-subtitle">
+                Describe what you want to build or paste your code. Generates 100% complete, production-ready code with zero placeholders.
               </p>
             </div>
 
-            {/* Smart Project Starters */}
-            <div className="chat-suggestions-grid code-suggestions" style={{ marginTop: "16px" }}>
-              {PROMPT_SUGGESTIONS.map((s, i) => (
-                <div
-                  key={i}
-                  className="suggestion-card"
-                  onClick={() => sendMessage(s.prompt)}
-                >
-                  <div className="suggestion-card-content">
-                    <div className="suggestion-card-title">{s.title}</div>
-                    <div className="suggestion-card-sub">{s.sub}</div>
-                  </div>
-                  <Sparkles size={16} className="suggestion-card-icon" />
-                </div>
-              ))}
+            <div className="code-studio-feature-row">
+              <div className="code-feature-chip">
+                <span className="feature-chip-icon">⚡</span>
+                <span>Production Code</span>
+              </div>
+              <div className="code-feature-chip">
+                <span className="feature-chip-icon">🧠</span>
+                <span>Zero Placeholders</span>
+              </div>
+              <div className="code-feature-chip">
+                <span className="feature-chip-icon">🌐</span>
+                <span>All Frameworks</span>
+              </div>
+              <div className="code-feature-chip">
+                <span className="feature-chip-icon">📎</span>
+                <span>Code & File Analysis</span>
+              </div>
             </div>
           </div>
         )}
@@ -564,7 +526,7 @@ function CodeGenerator() {
               title="Enhance prompt with production-ready specifications"
             >
               <Wand2 size={14} />
-              <span>Enhance</span>
+              <span className="architect-btn-text">Enhance</span>
             </button>
           )}
 

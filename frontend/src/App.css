@@ -3266,6 +3266,7 @@ body {
   color: #d8b4fe;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .code-architect-btn:hover {
@@ -3275,6 +3276,289 @@ body {
   box-shadow: 0 4px 14px rgba(168, 85, 247, 0.25);
   transform: translateY(-1px);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   💻 NEXUSS CODE STUDIO DASHBOARD & RESPONSIVE LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+
+.code-studio-landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52vh;
+  gap: 18px;
+  text-align: center;
+  padding: 24px 16px;
+  max-width: 660px;
+  margin: 0 auto;
+}
+
+.code-studio-landing-badge {
+  position: relative;
+}
+
+.code-studio-icon-glow {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(5, 150, 105, 0.28) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.code-studio-icon-glow:hover {
+  transform: scale(1.05);
+}
+
+.code-studio-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.code-studio-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin: 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #a7f3d0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.light-mode .code-studio-title {
+  background: linear-gradient(135deg, #0f172a 0%, #047857 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.code-studio-subtitle {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+  max-width: 480px;
+}
+
+.code-studio-feature-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.code-feature-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.code-feature-chip:hover {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+.light-mode .code-feature-chip {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+.feature-chip-icon {
+  font-size: 13px;
+}
+
+/* ── Code Studio Top Bar (when messages exist) ── */
+.code-studio-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.code-session-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.code-session-indicator .session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
+.code-clear-btn {
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.code-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.light-mode .code-clear-btn {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+/* ── Code Studio Mobile Responsiveness ── */
+@media (max-width: 768px) {
+  /* Prevent code buttons from blowing up due to global mobile button rule */
+  .nexus-code-action-btn,
+  .nexus-code-copy-btn,
+  .code-architect-btn,
+  .code-clear-btn {
+    min-height: unset !important;
+    min-width: unset !important;
+  }
+
+  .code-studio-landing {
+    min-height: 45vh;
+    padding: 20px 12px;
+    gap: 14px;
+  }
+
+  .code-studio-icon-glow {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+  }
+
+  .code-studio-title {
+    font-size: 21px;
+  }
+
+  .code-studio-subtitle {
+    font-size: 13.5px;
+    padding: 0 6px;
+  }
+
+  .code-feature-chip {
+    font-size: 11px;
+    padding: 4px 9px;
+  }
+
+  /* Code Block Header on Mobile */
+  .nexus-code-card {
+    margin: 10px 0 !important;
+    border-radius: 12px !important;
+  }
+
+  .nexus-code-header {
+    padding: 8px 10px !important;
+    gap: 6px !important;
+  }
+
+  .nexus-window-dots {
+    display: none !important;
+  }
+
+  .nexus-code-tab {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nexus-code-header-actions {
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .nexus-code-action-btn {
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .nexus-code-action-btn .btn-label-desktop {
+    display: none !important;
+  }
+
+  .nexus-code-copy-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    gap: 4px !important;
+  }
+
+  .line-numbers-col {
+    padding: 10px 6px 10px 6px !important;
+    min-width: 28px !important;
+    font-size: 11px !important;
+  }
+
+  .code-text-col,
+  .code-plain-pre {
+    padding: 10px 12px !important;
+  }
+
+  .code-architect-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+  }
+
+  .code-studio-top-bar {
+    padding: 6px 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .architect-btn-text {
+    display: none !important;
+  }
+
+  .code-architect-btn {
+    padding: 6px 8px !important;
+    border-radius: 8px !important;
+  }
+
+  .nexus-code-tab {
+    max-width: 90px;
+  }
+}
+
 
 
 

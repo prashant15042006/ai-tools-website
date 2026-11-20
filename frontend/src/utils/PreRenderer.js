@@ -236,12 +236,12 @@ export const PreRenderer = ({ children, className = "", ...props }) => {
             {copied ? (
               <>
                 <Check size={13} color="#10b981" />
-                <span>Copied! ✨</span>
+                <span className="copy-label">Copied!</span>
               </>
             ) : (
               <>
                 <Copy size={13} />
-                <span>Copy Code</span>
+                <span className="copy-label">Copy</span>
               </>
             )}
           </button>
