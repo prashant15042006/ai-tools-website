@@ -13,7 +13,6 @@ import {
   Wand2,
   Trash2,
   Terminal,
-  Cpu,
 } from "lucide-react";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -29,32 +28,27 @@ import AttachmentMenu from "./components/AttachmentMenu";
 // Inject table styles on component mount
 injectTableStyles();
 
-const TECH_STACKS = [
-  { id: "auto", label: "Auto-Detect", icon: "⚡" },
-  { id: "react", label: "React / Next.js", icon: "⚛️" },
-  { id: "python", label: "Python", icon: "🐍" },
-  { id: "node", label: "Node.js / Express", icon: "🟢" },
-  { id: "html", label: "HTML & Tailwind", icon: "🎨" },
-  { id: "ts", label: "TypeScript", icon: "🔷" },
-  { id: "sql", label: "SQL & DB", icon: "🗄️" },
-  { id: "cpp", label: "C++ / Java", icon: "☕" },
-  { id: "mobile", label: "Flutter / Mobile", icon: "📱" },
-];
-
-const ENGINEERING_GOALS = [
-  { id: "full_app", label: "Full Production App", prompt: "Build a 100% complete, fully working production application. Provide every single file with imports, state, error handling, and terminal run commands. Zero placeholders." },
-  { id: "debug", label: "Bug Fix & Debug", prompt: "Deeply inspect the code for bugs, edge cases, or logical flaws. Clearly explain the root cause and provide the complete fixed production code." },
-  { id: "refactor", label: "Refactor & Clean", prompt: "Refactor for clean architecture, SOLID principles, high performance, and modularity. Provide full refactored code." },
-  { id: "api", label: "REST / Backend API", prompt: "Build robust backend API endpoints with schema validation, status codes, error middleware, and database integration." },
-  { id: "component", label: "UI Component", prompt: "Build a modern, accessible, beautiful UI component with responsive design, smooth transitions, and clean props." },
-  { id: "script", label: "Automation Script", prompt: "Write a high-performance automation script with CLI arguments, logging, and error retry logic." },
-];
-
 const PROMPT_SUGGESTIONS = [
-  { title: "JWT Auth & RBAC API", sub: "Node.js + Express + bcrypt + refresh tokens", stack: "node", goal: "api" },
-  { title: "Modern Analytics Dashboard", sub: "React + Tailwind CSS + responsive charts", stack: "react", goal: "component" },
-  { title: "Async Web Scraper", sub: "Python + BeautifulSoup + proxy & retry logic", stack: "python", goal: "script" },
-  { title: "Realtime WebSocket Chat", sub: "React + Socket.io + typing indicators", stack: "react", goal: "full_app" },
+  {
+    title: "JWT Auth & RBAC API",
+    sub: "Node.js & Express REST API with bcrypt, refresh tokens, and validation",
+    prompt: "Build a production-ready Node.js Express REST API with JWT authentication, refresh tokens, role-based access control, and bcrypt password hashing. Include complete code with error handling and run instructions.",
+  },
+  {
+    title: "Modern Analytics Dashboard",
+    sub: "Responsive dashboard UI component in React with Tailwind CSS",
+    prompt: "Build a modern responsive analytics dashboard component in React with Tailwind CSS. Include metric cards, interactive filter tabs, a data table, and charts placeholder with clean styling.",
+  },
+  {
+    title: "Async Web Scraper",
+    sub: "Python script with BeautifulSoup, headers, proxy support, and retry logic",
+    prompt: "Write a complete Python web scraper using requests and BeautifulSoup with exponential retry logic, user-agent rotation, clean CLI arguments, and CSV export. Zero placeholders.",
+  },
+  {
+    title: "Realtime WebSocket Chat",
+    sub: "Frontend & backend code for live chat with typing indicator",
+    prompt: "Build a full-stack real-time chat application using React, Node.js, and Socket.io. Include room selection, typing indicators, clean UI, and connection state handling.",
+  },
 ];
 
 function CodeGenerator() {
@@ -78,8 +72,6 @@ function CodeGenerator() {
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isArchitecting, setIsArchitecting] = useState(false);
-  const [selectedTech, setSelectedTech] = useState("auto");
-  const [selectedGoal, setSelectedGoal] = useState("full_app");
   const [imagePreview, setImagePreview] = useState(null);
   const [fileAttachment, setFileAttachment] = useState(null);
 
@@ -106,26 +98,17 @@ function CodeGenerator() {
     await voiceSpeak(text, { voicePreset, customVoiceUrl, ttsEnabledRef });
   };
 
-  // AI Architect Wand: Expands user prompt into a senior architectural specification
+  // AI Architect Wand: Expands user prompt into a complete production-grade specification
   const handleArchitectPrompt = () => {
     if (!input.trim()) return;
     setIsArchitecting(true);
-
-    const activeStackObj = TECH_STACKS.find((s) => s.id === selectedTech);
-    const activeGoalObj = ENGINEERING_GOALS.find((g) => g.id === selectedGoal);
-
     const base = input.trim();
-    const stackPart = activeStackObj && activeStackObj.id !== "auto" ? ` in ${activeStackObj.label}` : "";
-    const goalPart = activeGoalObj ? ` [Objective: ${activeGoalObj.label}]` : "";
-
-    const enriched = `Build a production-ready, fully working ${base}${stackPart}.${goalPart}
-Include complete error handling, all imports, clean modular architecture, and step-by-step setup and execution instructions. Do not use placeholders.`;
-
+    const enriched = `Build a 100% production-ready, fully working implementation of: ${base}. Include complete code with all imports, state management, error handling, edge-case coverage, and terminal setup/run commands. Zero placeholders.`;
     setInput(enriched);
     setIsArchitecting(false);
   };
 
-  const sendMessage = async (text = input, overrideStack = null, overrideGoal = null) => {
+  const sendMessage = async (text = input) => {
     const rawText = text.trim();
     if ((!rawText && !imagePreview && !fileAttachment) || loading) return;
 
@@ -133,11 +116,6 @@ Include complete error handling, all imports, clean modular architecture, and st
     setFileAttachment(null);
     const imageToBeSent = imagePreview;
     setImagePreview(null);
-
-    const currentStack = overrideStack || selectedTech;
-    const currentGoal = overrideGoal || selectedGoal;
-    const stackObj = TECH_STACKS.find((s) => s.id === currentStack);
-    const goalObj = ENGINEERING_GOALS.find((g) => g.id === currentGoal);
 
     const displayPrompt = rawText || (fileToBeSent ? `Analyze and review code file: ${fileToBeSent.name}` : "");
     addRecentChat("Code: " + displayPrompt);
@@ -156,8 +134,6 @@ Include complete error handling, all imports, clean modular architecture, and st
         sender: "user",
         image: imageToBeSent || null,
         fileName: fileToBeSent ? fileToBeSent.name : null,
-        tech: stackObj?.label || "Auto",
-        goal: goalObj?.label || "Production",
       },
       { id: aiMsgId, text: "", sender: "ai" }
     ]);
@@ -168,14 +144,8 @@ Include complete error handling, all imports, clean modular architecture, and st
       content: msg.text
     })).filter((msg) => msg.content);
 
-    // Build the high-specification architectural prompt
+    // Build complete production prompt directive
     let finalPrompt = `Generate code: ${displayPrompt}`;
-    if (currentStack && currentStack !== "auto" && stackObj) {
-      finalPrompt += `\n[Target Technology Stack: ${stackObj.label}]`;
-    }
-    if (goalObj && goalObj.prompt) {
-      finalPrompt += `\n[Engineering Goal: ${goalObj.label} - ${goalObj.prompt}]`;
-    }
     finalPrompt += `\n[Requirement: Provide 100% complete, fully working, copy-pasteable production code with all imports, state, error handling, and terminal run instructions. Zero placeholders.]`;
 
     if (fileToBeSent) {
@@ -361,7 +331,7 @@ Include complete error handling, all imports, clean modular architecture, and st
   };
 
   const handleClearChat = () => {
-    if (messages.length > 0 && window.confirm("Clear Code Studio workspace conversation?")) {
+    if (messages.length > 0 && window.confirm("Clear Code conversation?")) {
       setMessages([]);
       stopSpeaking();
     }
@@ -380,91 +350,65 @@ Include complete error handling, all imports, clean modular architecture, and st
 
   return (
     <div className="chat-container">
-      {/* ── TOP DEVELOPER BAR (Tech Stack & Architecture Goal) ── */}
-      <div className="code-studio-bar">
-        {/* Technology Stack Selector Pills */}
-        <div className="code-pill-row">
-          {TECH_STACKS.map((stack) => (
-            <button
-              key={stack.id}
-              type="button"
-              onClick={() => setSelectedTech(stack.id)}
-              className={`code-tech-pill ${selectedTech === stack.id ? "active" : ""}`}
-            >
-              <span>{stack.icon}</span>
-              <span>{stack.label}</span>
-            </button>
-          ))}
-          <span style={{ width: "1px", height: "18px", background: "rgba(255, 255, 255, 0.15)", margin: "0 4px" }} />
-          {ENGINEERING_GOALS.map((goal) => (
-            <button
-              key={goal.id}
-              type="button"
-              onClick={() => setSelectedGoal(goal.id)}
-              className={`code-tech-pill ${selectedGoal === goal.id ? "active" : ""}`}
-              style={selectedGoal === goal.id ? { borderColor: "#a855f7", color: "#d8b4fe", background: "rgba(168, 85, 247, 0.2)" } : {}}
-            >
-              <span>{goal.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Clear Workspace Button */}
-        {messages.length > 0 && (
+      {/* ── MINIMAL TOP BAR: ONLY CLEAR BUTTON WHEN CONVERSATION EXISTS ── */}
+      {messages.length > 0 && (
+        <div style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          padding: "8px 20px 0",
+          maxWidth: "960px",
+          margin: "0 auto",
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
           <button
             type="button"
             onClick={handleClearChat}
             className="nexus-code-action-btn"
-            style={{ color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.3)" }}
+            style={{
+              color: "var(--text-secondary)",
+              borderColor: "var(--border-color)",
+              background: "rgba(255, 255, 255, 0.04)",
+              borderRadius: "8px",
+              padding: "4px 10px",
+              fontSize: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              cursor: "pointer"
+            }}
             title="Clear code conversation"
           >
             <Trash2 size={13} />
-            <span>Clear Workspace</span>
+            <span>Clear Chat</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── CONVERSATION STREAM ── */}
       <div className="chat-history-scroll">
         {messages.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "4vh" }}>
-            <div style={{ flexShrink: 0, width: "68px", height: "68px", borderRadius: "18px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 30px rgba(16, 185, 129, 0.3)" }}>
-              <Code2 size={36} color="white" />
+            <div style={{ flexShrink: 0, width: "64px", height: "64px", borderRadius: "18px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 25px rgba(16, 185, 129, 0.25)" }}>
+              <Code2 size={32} color="white" />
             </div>
 
             <div style={{ textAlign: "center" }}>
-              <h2 style={{ fontSize: "26px", fontWeight: "700", color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
-                Nexuss Code Studio
+              <h2 style={{ fontSize: "24px", fontWeight: "700", color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
+                Code Generator
               </h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: "14px", maxWidth: "520px", marginTop: "6px", lineHeight: 1.5 }}>
-                Production-ready code architecture with zero placeholders. Ask for full apps, APIs, algorithms, or attach files to debug.
+              <p style={{ color: "var(--text-secondary)", fontSize: "14px", maxWidth: "480px", marginTop: "6px", lineHeight: 1.5 }}>
+                Describe what you want to build or paste your code. Get 100% complete, production-ready code with zero placeholders.
               </p>
             </div>
 
-            {/* Senior Architect Badge */}
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              background: "rgba(16, 185, 129, 0.12)",
-              border: "1px solid rgba(16, 185, 129, 0.3)",
-              padding: "6px 14px",
-              borderRadius: "20px",
-              fontSize: "12px",
-              color: "#6ee7b7",
-              fontWeight: 600,
-            }}>
-              <Cpu size={14} />
-              <span>⚡ Powered by NVIDIA Nemotron & Llama 3.3 70B • Production Standards</span>
-            </div>
-
             {/* Smart Project Starters */}
-            <div className="chat-suggestions-grid code-suggestions" style={{ marginTop: "18px" }}>
+            <div className="chat-suggestions-grid code-suggestions" style={{ marginTop: "16px" }}>
               {PROMPT_SUGGESTIONS.map((s, i) => (
                 <div
                   key={i}
                   className="suggestion-card"
-                  onClick={() => sendMessage(`Build a production-ready ${s.title}: ${s.sub}. Provide complete files with imports, error handling, and run instructions.`, s.stack, s.goal)}
+                  onClick={() => sendMessage(s.prompt)}
                 >
                   <div className="suggestion-card-content">
                     <div className="suggestion-card-title">{s.title}</div>
@@ -486,13 +430,8 @@ Include complete error handling, all imports, clean modular architecture, and st
                 ) : <Terminal size={20} color="white" />}
               </div>
               <div className="message-body">
-                <div className="message-sender" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="message-sender">
                   <span>{msg.sender === "user" ? "You" : "Nexuss Code AI"}</span>
-                  {msg.sender === "user" && msg.tech && (
-                    <span style={{ fontSize: "11px", background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
-                      {msg.tech}
-                    </span>
-                  )}
                 </div>
                 <div className={`message-content ${msg.sender === "user" ? "user-text" : ""}`}>
                   {msg.sender === "user" ? (
@@ -615,17 +554,17 @@ Include complete error handling, all imports, clean modular architecture, and st
             <ClipboardPaste size={20} />
           </button>
 
-          {/* AI Architect Prompt Enhancer Button */}
+          {/* AI Enhance Prompt Wand Button */}
           {input.trim() && (
             <button
               type="button"
               onClick={handleArchitectPrompt}
               disabled={isArchitecting}
               className="code-architect-btn"
-              title="Enhance prompt with senior developer specifications"
+              title="Enhance prompt with production-ready specifications"
             >
               <Wand2 size={14} />
-              <span>Architect</span>
+              <span>Enhance</span>
             </button>
           )}
 
@@ -640,7 +579,7 @@ Include complete error handling, all imports, clean modular architecture, and st
               fileAttachment
                 ? `Ask anything about ${fileAttachment.name} (e.g. fix bugs, optimize performance)...`
                 : imagePreview
-                ? "Ask to convert this UI into React / Tailwind code..."
+                ? "Ask to convert this UI into frontend code..."
                 : (isListening ? "Listening..." : "Describe what you want to code (e.g. 'Build a React auth modal with Zod validation')...")
             }
             rows="1"
