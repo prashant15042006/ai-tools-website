@@ -541,6 +541,21 @@ const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
     prompt += "\n\n- FORMAT NOTE: The user asked for a table/list. Use clean Markdown tables with pipes (|) and dashes (-).";
   }
 
+  const isCodeRequest = /code|function|react|python|script|component|api|html|css|javascript|node|backend|frontend|sql|class|method|algorithm|program|app|bug|fix|developer|develop/i.test(userMessage) || userMessage.toLowerCase().startsWith("generate code:") || userMessage.toLowerCase().startsWith("code:");
+  if (isCodeRequest) {
+    prompt += `\n\n## 🚀 CRITICAL SENIOR ARCHITECT CODE GENERATION DIRECTIVE (STRICT ENFORCEMENT)
+When generating, reviewing, or fixing code:
+1. 100% COMPLETE & PRODUCTION READY: NEVER write placeholders like "// your code here", "// implement logic here", "// add remaining styles", or "// TODO". Write the full, robust implementation from first import to last export line.
+2. ZERO MISSING PIECES: Include EVERY required import, dependency, hook, type definition, helper function, and configuration. The code MUST compile and run immediately without any undefined variables or missing dependencies.
+3. ERROR HANDLING & RESILIENCE: Include defensive coding practices, comprehensive try/catch blocks, null-safety checks, and fallback states.
+4. LABELED CODE BLOCKS: Use markdown code blocks with the exact language and filename comment on the first line (e.g. \`\`\`jsx /* App.jsx */ or \`\`\`python # app.py). If multiple files are needed, output each in its own distinct block.
+5. STEP-BY-STEP SETUP GUIDE: Immediately following the code, always provide:
+   - Required dependency installation commands (e.g. \`npm install ...\` or \`pip install ...\`)
+   - How to run or integrate the code
+   - Expected output or verification step.
+6. THE CODE MUST BE IMMEDIATELY COPY-PASTEABLE DIRECTLY INTO A PRODUCTION WORKSPACE.`;
+  }
+
   return prompt;
 };
 

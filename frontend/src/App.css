@@ -2906,4 +2906,375 @@ body {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25) !important;
 }
 
+/* ================================================================
+   💻 NEXUSS IDE CODE BLOCK & CODE STUDIO ENHANCEMENTS
+   ================================================================ */
+
+.nexus-code-card {
+  position: relative;
+  margin: 16px 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #0e131f 0%, #080b12 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nexus-code-card:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5), 0 0 20px rgba(16, 185, 129, 0.08);
+}
+
+/* Light mode support */
+.light-mode .nexus-code-card {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── IDE Top Header ── */
+.nexus-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.light-mode .nexus-code-header {
+  background: #ffffff !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.nexus-code-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Mac window dots */
+.nexus-window-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nexus-window-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.nexus-window-dots .dot.red { background: #ff5f56; }
+.nexus-window-dots .dot.yellow { background: #ffbd2e; }
+.nexus-window-dots .dot.green { background: #27c93f; }
+
+/* Language / Filename Tab */
+.nexus-code-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 3px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #38bdf8;
+  letter-spacing: 0.3px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.light-mode .nexus-code-tab {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0284c7 !important;
+}
+
+/* Header Action Buttons */
+.nexus-code-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.nexus-code-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.nexus-code-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.nexus-code-action-btn.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #34d399;
+}
+
+.nexus-code-action-btn.font-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
+.nexus-code-action-btn.font-btn:hover {
+  background: rgba(167, 139, 250, 0.15);
+  color: #c084fc;
+}
+
+.light-mode .nexus-code-action-btn {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.light-mode .nexus-code-action-btn:hover {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Primary Copy Button */
+.nexus-code-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3));
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6ee7b7;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+.nexus-code-copy-btn:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.5));
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+.nexus-code-copy-btn.copied {
+  background: rgba(16, 185, 129, 0.95);
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+/* ── Viewport & Code Body ── */
+.nexus-code-viewport {
+  position: relative;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, 'Courier New', monospace !important;
+  letter-spacing: -0.2px;
+}
+
+.nexus-code-viewport.scroll-active pre {
+  white-space: pre !important;
+  overflow-x: auto !important;
+  word-wrap: normal !important;
+}
+
+.nexus-code-viewport.wrap-active pre {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-x: hidden !important;
+}
+
+.code-plain-pre {
+  margin: 0 !important;
+  padding: 16px 20px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #e2e8f0;
+}
+
+.light-mode .code-plain-pre {
+  color: #0f172a !important;
+}
+
+.code-plain-pre code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Line numbers layout */
+.nexus-numbered-code {
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+
+.line-numbers-col {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 10px 16px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+  text-align: right;
+  min-width: 44px;
+}
+
+.light-mode .line-numbers-col {
+  background: #f1f5f9 !important;
+  border-right-color: #e2e8f0 !important;
+}
+
+.line-numbers-col .line-num {
+  color: #64748b;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.code-text-col {
+  flex: 1;
+  margin: 0 !important;
+  padding: 16px 20px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #e2e8f0;
+}
+
+.light-mode .code-text-col {
+  color: #0f172a !important;
+}
+
+.code-text-col code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* ── Code Studio Toolbar & Filter Pills ── */
+.code-studio-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.light-mode .code-studio-bar {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+.code-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.code-pill-row::-webkit-scrollbar {
+  display: none;
+}
+
+.code-tech-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.code-tech-pill:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.code-tech-pill.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35));
+  border-color: rgba(16, 185, 129, 0.6);
+  color: #34d399;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
+}
+
+.light-mode .code-tech-pill {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.light-mode .code-tech-pill.active {
+  background: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #059669 !important;
+}
+
+/* Architect Wand Button */
+.code-architect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(99, 102, 241, 0.25));
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  border-radius: 9px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d8b4fe;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.code-architect-btn:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(99, 102, 241, 0.45));
+  color: #ffffff;
+  border-color: rgba(168, 85, 247, 0.7);
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.25);
+  transform: translateY(-1px);
+}
+
+
 
