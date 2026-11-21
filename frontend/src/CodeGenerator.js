@@ -542,7 +542,7 @@ function CodeGenerator() {
                 ? `Ask anything about ${fileAttachment.name} (e.g. fix bugs, optimize performance)...`
                 : imagePreview
                 ? "Ask to convert this UI into frontend code..."
-                : (isListening ? "Listening..." : "Describe what you want to code (e.g. 'Build a React auth modal with Zod validation')...")
+                : (isListening ? "Listening..." : "Ask Anything...")
             }
             rows="1"
             disabled={loading}
