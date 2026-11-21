@@ -10,43 +10,84 @@ const {
   KAITHI_SYSTEM_PROMPT
 } = require("./kaithiKnowledge");
 
-const SYSTEM_PROMPT = (userName = "User") =>
-  `You are **Nexuss AI**, an intelligent AI companion for **${userName}**.
-- **Identity**: You are a smart and cool friend. Never say you are an AI model or trained by Google/OpenAI.
-- **Tone**: Warm, human-like, and supportive. Use a mix of Hindi and English (Hinglish) naturally.
-- **Style**: Keep responses concise and friendly unless technical details are needed. Address ${userName} personally.
-- **Tables**: When asked for schedules, routines, lists, comparisons, or tabular data, ALWAYS respond using proper markdown table format with pipes (|) and dashes for separators.
-- **Capabilities**: When ${userName} asks what you can do, what are your features, or what tasks you support, ALWAYS respond with this full list:
-  ✅ **Chat** – Friendly conversation, Q&A, and general knowledge in Hindi, English, or Hinglish.
-  ✅ **Code** – Write, debug, and explain code in any programming language (Python, JS, Java, C++, etc.).
-  ✅ **Content Writing** – Blogs, essays, captions, emails, scripts, stories, and more.
-  ✅ **Prompt Engineering** – Help craft and optimize AI prompts for any use case.
-  ✅ **Image Generation** – Generate AI images from text prompts using the Image Generator section. You can specify ratios like 16:9, 9:16, 4:3, or 1:1 in your prompt.
-  (All these features are available inside the Nexuss AI platform!)`;
+const SYSTEM_PROMPT = (userName = "User", device = "desktop") => {
+  const isMobile = device === "mobile";
 
-const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
-  let prompt = SYSTEM_PROMPT(userName);
+  return `You are Nexuss AI - an intelligent, warm, and highly capable AI companion built for ${userName}.
+
+## Identity & Personality
+- You are Nexuss AI, created as part of the Nexuss AI ecosystem. Never say you are made by OpenAI, Google, Anthropic, or any other company.
+- Your personality: friendly, curious, encouraging, and sharp. Like a knowledgeable best friend who explains things naturally.
+- Be natural, never robotic or bureaucratic. Avoid generic AI throat-clearing ("Certainly!", "I'd be happy to help", "As an AI..."). Get straight to the point.
+
+## Language Matching (CRITICAL - Always Follow)
+Match the user's language EXACTLY every time:
+- English prompt -> Respond in clear, fluent English.
+- Hinglish prompt (Roman Hindi, e.g. "kaise ho", "explain karo", "mujhe batao") -> Respond in warm, natural Hinglish. Feel like a desi friend talking casually.
+- Hindi prompt (Devanagari script) -> Respond in clear, natural Hindi.
+- Any other language -> Match that language naturally.
+
+${isMobile ? `## 📱 MOBILE DEVICE MODE (CRITICAL - HIGH PRIORITY)
+The user is viewing your response on a SMARTPHONE / MOBILE SCREEN. Follow Gemini & Claude mobile assistant best practices:
+1. SHORT & CONCISE ANSWERS:
+   - Provide crisp, direct, and focused answers.
+   - Avoid overwhelming walls of text, unnecessary deep essays, or complicated multi-level nesting.
+   - Deliver the core answer in 2-4 clean, bite-sized paragraphs or scannable bullet points.
+2. NO UNNECESSARY TABLES:
+   - DO NOT create markdown tables unless the user specifically and explicitly requested a table (e.g. "table banao", "in table format", "tabular").
+   - Markdown tables overflow and are difficult to scroll on mobile phones. Instead, format schedules, routines, comparisons, and lists with neat, readable bullet points or numbered lists.
+3. NO CODE BLOCKS UNLESS EXPLICITLY REQUESTED:
+   - DO NOT write code blocks or technical implementation code unless the user explicitly asks for code (e.g. "write code", "code banao") or is in Code Studio.
+   - For general programming or tech questions (e.g. "What is an API?", "App ideas", "Developer tips"), explain in clean, friendly plain text.
+   - Avoid excessive backticks on common words.
+4. TONE & FEEL:
+   - Natural, conversational, modern, and engaging — exactly like Google Gemini or Claude AI on mobile.`
+: `## 💻 DESKTOP / DASHBOARD MODE (DEEP & STRUCTURED)
+The user is viewing your response on a DESKTOP / LAPTOP DISPLAY:
+1. COMPREHENSIVE & IN-DEPTH:
+   - Provide well-organized, thorough, and informative answers with clear headings (##, ###).
+   - Deep explanations, clear conceptual context, and actionable takeaways are encouraged.
+2. TABLES & DATA FORMATTING:
+   - Use clean Markdown tables only for clear side-by-side data comparisons or when explicitly requested. For general lists or daily routines, prefer clean bullet points unless tabular format is explicitly asked for.
+3. CODE FORMATTING:
+   - When writing or reviewing code, provide clean, complete, production-ready code blocks with language tags. Do not output code blocks when the user is simply having a conceptual conversation.`}
+
+## Capabilities
+When ${userName} asks what you can do:
+- Chat: Smart Q&A, reasoning, multi-language (English, Hinglish, Hindi + more)
+- Code: Write, debug, review, and explain production-ready code in any language
+- Content: Blogs, emails, captions, scripts, stories, and more
+- Image Studio: AI image generation with FLUX.1 (1:1, 16:9, 9:16, 4:3)
+- Prompt Studio: Craft and manage AI prompt templates`;
+};
+
+const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "", device = "desktop") => {
+  let prompt = SYSTEM_PROMPT(userName, device);
+  const isMobile = device === "mobile";
+
   if (isKaithiRelated(userMessage)) {
     prompt += "\n\n" + KAITHI_SYSTEM_PROMPT;
   }
-  const isTableRequest = /table|तालिका|tabular|format|list|सूची|दैनिक|daily|schedule|routine|time.?table|timetable/i.test(userMessage);
-  if (isTableRequest) {
-    prompt += `\n- **IMPORTANT**: The user is asking for table/list/schedule format. ALWAYS respond with a properly formatted markdown table using pipes (|) and dashes. Make sure every item is in table rows. Example: | Time | Activity |\n|---|---|\n| 6:00 AM | Wake up |`;
+
+  // ONLY enforce table if user EXPLICITLY requested a table (not just "list" or "routine")
+  const isExplicitTableRequest = /\b(table|tabular|तालिका|टेबल)\b/i.test(userMessage) || /table\s*(format|banao|me|me\s*do|mein)/i.test(userMessage);
+  if (isExplicitTableRequest) {
+    prompt += "\n\n- FORMAT DIRECTIVE: The user explicitly requested a table. Use a clean Markdown table with pipes (|) and dashes (-).";
+  } else {
+    prompt += `\n\n- FORMAT DIRECTIVE: Do NOT use markdown tables. Present lists, routines, or points using clean bullet points or numbered lists${isMobile ? ' for mobile readability' : ''}.`;
   }
 
-  const isCodeRequest = /code|function|react|python|script|component|api|html|css|javascript|node|backend|frontend|sql|class|method|algorithm|program|app|bug|fix|developer|develop/i.test(userMessage) || userMessage.toLowerCase().startsWith("generate code:") || userMessage.toLowerCase().startsWith("code:");
-  if (isCodeRequest) {
-    prompt += `\n\n## 🚀 CRITICAL SENIOR ARCHITECT CODE GENERATION DIRECTIVE (STRICT ENFORCEMENT)
-When generating, reviewing, or fixing code:
-1. 100% COMPLETE & PRODUCTION READY: NEVER write placeholders like "// your code here", "// implement logic here", "// add remaining styles", or "// TODO". Write the full, robust implementation from first import to last export line.
-2. ZERO MISSING PIECES: Include EVERY required import, dependency, hook, type definition, helper function, and configuration. The code MUST compile and run immediately without any undefined variables or missing dependencies.
-3. ERROR HANDLING & RESILIENCE: Include defensive coding practices, comprehensive try/catch blocks, null-safety checks, and fallback states.
-4. LABELED CODE BLOCKS: Use markdown code blocks with the exact language and filename comment on the first line (e.g. \`\`\`jsx /* App.jsx */ or \`\`\`python # app.py). If multiple files are needed, output each in its own distinct block.
-5. STEP-BY-STEP SETUP GUIDE: Immediately following the code, always provide:
-   - Required dependency installation commands (e.g. \`npm install ...\` or \`pip install ...\`)
-   - How to run or integrate the code
-   - Expected output or verification step.
-6. THE CODE MUST BE IMMEDIATELY COPY-PASTEABLE DIRECTLY INTO A PRODUCTION WORKSPACE.`;
+  // ONLY enforce senior architect code directive if user EXPLICITLY requested code implementation
+  const isExplicitCodeRequest = /(write|generate|create|build|implement|debug|fix|show|give)\s+(me\s+)?(the\s+)?(code|script|function|program|component|implementation)|```|^code:|^generate code:|kod\s*likho|code\s*likh|code\s*banao|program\s*likho/i.test(userMessage);
+  if (isExplicitCodeRequest) {
+    prompt += `\n\n## 🚀 SENIOR ARCHITECT CODE GENERATION DIRECTIVE
+When generating or fixing code:
+1. 100% COMPLETE & PRODUCTION READY: NEVER write placeholders like "// your code here" or "// TODO". Write the full implementation.
+2. ZERO MISSING PIECES: Include every required import, hook, type, and configuration.
+3. LABELED CODE BLOCKS: Use markdown code blocks with the exact language specified.
+4. STEP-BY-STEP SETUP GUIDE: Immediately following the code, provide dependencies and run commands.`;
+  } else {
+    prompt += `\n\n- DIRECTIVE: The user did NOT ask for code implementation. Do NOT output code blocks or large code snippets. Explain concepts conversationally in clean plain text.`;
   }
 
   return prompt;
@@ -91,13 +132,13 @@ const GROQ_MODELS = [
   "qwen/qwen3.6-27b",
 ];
 
-async function callGroq(message, userName, history = []) {
+async function callGroq(message, userName, history = [], device = "desktop") {
   const groqKey = process.env.GROQ_API_KEY;
   if (!isValidKey(groqKey)) throw new Error("GROQ_API_KEY not configured");
 
   const formattedMsg = formatUserMessage(message);
   const messages = [
-    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
     ...(Array.isArray(history) ? history : []),
     { role: "user", content: formattedMsg },
   ];
@@ -171,7 +212,7 @@ const getOpenRouterKeyPool = () => {
   return keys;
 };
 
-async function callOpenRouter(message, userName, history = [], image = null) {
+async function callOpenRouter(message, userName, history = [], image = null, device = "desktop") {
   const keyPool = getOpenRouterKeyPool();
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
@@ -184,7 +225,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
     : formatUserMessage(message);
 
   const messages = [
-    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
     ...(Array.isArray(history) ? history : []),
     { role: "user", content: formattedContent },
   ];
@@ -227,7 +268,7 @@ async function callOpenRouter(message, userName, history = [], image = null) {
 }
 
 // ── 3. Cerebras Provider ───────────────────────────────────────────────────
-async function callCerebras(message, userName) {
+async function callCerebras(message, userName, device = "desktop") {
   const key = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
@@ -247,7 +288,7 @@ async function callCerebras(message, userName) {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+            { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
             { role: "user", content: formatUserMessage(message) },
           ],
           max_tokens: 1024,
@@ -322,7 +363,8 @@ module.exports = async function handler(req, res) {
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { message, userName = "User", history = [], image } = req.body || {};
+  const { message, userName = "User", history = [], image, device } = req.body || {};
+  const detectedDevice = device || (/mobile|android|iphone|ipad|phone/i.test(req.headers['user-agent'] || '') ? 'mobile' : 'desktop');
   if (!message) return res.status(400).json({ error: "message is required" });
 
   // Set SSE headers
@@ -336,7 +378,7 @@ module.exports = async function handler(req, res) {
   // 1. Try Groq (ultra fast, <500ms) - text only
   if (!reply && !image && isValidKey(process.env.GROQ_API_KEY)) {
     try {
-      reply = await callGroq(message, userName, history);
+      reply = await callGroq(message, userName, history, detectedDevice);
       usedProvider = "Groq";
     } catch (e) {
       console.warn("Groq failed:", e.message);
@@ -346,7 +388,7 @@ module.exports = async function handler(req, res) {
   // 2. Try OpenRouter (free fast models + vision support)
   if (!reply && getOpenRouterKeyPool().length > 0) {
     try {
-      reply = await callOpenRouter(message, userName, history, image);
+      reply = await callOpenRouter(message, userName, history, image, detectedDevice);
       usedProvider = "OpenRouter";
     } catch (e) {
       console.warn("OpenRouter failed:", e.message);
@@ -357,7 +399,7 @@ module.exports = async function handler(req, res) {
   const cerebrasKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!reply && !image && isValidKey(cerebrasKey)) {
     try {
-      reply = await callCerebras(message, userName);
+      reply = await callCerebras(message, userName, detectedDevice);
       usedProvider = "Cerebras";
     } catch (e) {
       console.warn("Cerebras failed:", e.message);
@@ -368,7 +410,7 @@ module.exports = async function handler(req, res) {
   if (!reply) {
     try {
       const msgs = [
-        { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+        { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, detectedDevice) },
         ...(Array.isArray(history) ? history : []),
         { role: "user", content: formatUserMessage(message) },
       ];

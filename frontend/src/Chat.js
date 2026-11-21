@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText, Trash2 } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
-import { detectRatioFromPrompt, cleanFrontendResponse } from "./utils/helpers";
+import { detectRatioFromPrompt, cleanFrontendResponse, getClientDevice } from "./utils/helpers";
 
 import { useLocation } from "react-router-dom";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
@@ -315,6 +315,7 @@ function Chat() {
       userName: displayName,
       userEmail: user?.email || localStorage.getItem("nexus_mock_user") || "Anonymous",
       history: history,
+      device: getClientDevice(),
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
 
@@ -549,6 +550,22 @@ function Chat() {
     recognition.start();
   };
 
+  const handleClearChat = () => {
+    if (messages.length > 0 && window.confirm("Clear Chat conversation?")) {
+      setMessages([]);
+      stopSpeaking();
+      try {
+        const saved = localStorage.getItem('nexus_chats');
+        if (saved) {
+          const chats = JSON.parse(saved);
+          if (chats.length > 0) {
+            localStorage.removeItem(`nexus_chat_msgs_${chats[0].id}`);
+          }
+        }
+      } catch (e) {}
+    }
+  };
+
   const LinkRenderer = ({ href, children }) => (
     <a
       href={href}
@@ -562,6 +579,25 @@ function Chat() {
 
   return (
     <div className="chat-container">
+      {/* ── TOP BAR: ACTIVE SESSION INDICATOR & CLEAR BUTTON (when messages exist) ── */}
+      {messages.length > 0 && (
+        <div className="chat-studio-top-bar">
+          <div className="chat-session-indicator">
+            <span className="session-dot" />
+            <span>Active Chat Session</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearChat}
+            className="chat-clear-btn"
+            title="Clear chat conversation"
+          >
+            <Trash2 size={13} />
+            <span>Clear Chat</span>
+          </button>
+        </div>
+      )}
+
       {IS_MISCONFIGURED && (
         <div style={{ background: '#ef444422', border: '1px solid #ef444444', padding: '12px', margin: '16px', borderRadius: '12px', color: '#f87171', fontSize: '13px', textAlign: 'center' }}>
           <strong>⚠️ Backend URL not set!</strong> Please add <code>REACT_APP_BACKEND_URL</code> in Vercel settings.
@@ -569,11 +605,38 @@ function Chat() {
       )}
       <div className="chat-history-scroll">
         {messages.length === 0 && (
-          <div className="chat-watermark-bg">
-            <div className="watermark-logo-circle">
-              <Sparkles size={44} color="white" />
+          <div className="chat-studio-landing">
+            <div className="chat-studio-landing-badge">
+              <div className="chat-studio-icon-glow">
+                <Sparkles size={32} color="#818cf8" />
+              </div>
             </div>
-            <span className="watermark-title">Nexuss</span>
+
+            <div className="chat-studio-hero-text">
+              <h1 className="chat-studio-title">Nexuss AI Assistant</h1>
+              <p className="chat-studio-subtitle">
+                Smart conversations, instant answers, and everyday intelligence tailored for you.
+              </p>
+            </div>
+
+            <div className="chat-studio-feature-row">
+              <div className="chat-feature-chip" onClick={() => sendMessage("Explain in simple terms: how does AI actually work?")}>
+                <span className="feature-chip-icon">⚡</span>
+                <span>Instant Answers</span>
+              </div>
+              <div className="chat-feature-chip" onClick={() => sendMessage("Help me brainstorm 5 creative and high-impact ideas")}>
+                <span className="feature-chip-icon">💡</span>
+                <span>Smart Reasoning</span>
+              </div>
+              <div className="chat-feature-chip" onClick={() => sendMessage("Mujhe ek realistic daily productivity routine batao")}>
+                <span className="feature-chip-icon">🌐</span>
+                <span>Hinglish & Hindi</span>
+              </div>
+              <div className="chat-feature-chip" onClick={() => { if (textareaRef.current) textareaRef.current.focus(); }}>
+                <span className="feature-chip-icon">📎</span>
+                <span>File & Image Analysis</span>
+              </div>
+            </div>
           </div>
         )}
 

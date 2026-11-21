@@ -3,6 +3,19 @@
 // ============================================================
 
 /**
+ * Detects whether client is on a mobile device or desktop.
+ * Returns 'mobile' or 'desktop'.
+ */
+export function getClientDevice() {
+  if (typeof window === "undefined") return "desktop";
+  const isMobileScreen = window.innerWidth <= 768;
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+    navigator.userAgent || ""
+  );
+  return isMobileScreen || isMobileUA ? "mobile" : "desktop";
+}
+
+/**
  * Detects aspect ratio keywords from a prompt string.
  * Used by both Chat.js (inline image gen) and ImageGeneratorPro.js.
  */

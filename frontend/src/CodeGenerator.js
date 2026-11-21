@@ -21,7 +21,7 @@ import API_BASE_URL from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
 import { cacheResponseForOffline } from "./utils/responseCache";
-import { cleanFrontendResponse } from "./utils/helpers";
+import { cleanFrontendResponse, getClientDevice } from "./utils/helpers";
 import AttachmentMenu from "./components/AttachmentMenu";
 
 // Inject table styles on component mount
@@ -132,6 +132,7 @@ function CodeGenerator() {
       message: finalPrompt,
       userName: displayName,
       history: history,
+      device: getClientDevice(),
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
 

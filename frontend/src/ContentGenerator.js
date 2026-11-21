@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, ClipboardPaste, Mic, ExternalLink, PenTool, Sparkles, X, FileText } from "lucide-react";
+import { Send, ClipboardPaste, Mic, ExternalLink, PenTool, X, FileText, Trash2 } from "lucide-react";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
 import { AppContext } from "./App";
@@ -10,7 +10,7 @@ import API_BASE_URL from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
 import { cacheResponseForOffline } from "./utils/responseCache";
-import { cleanFrontendResponse } from "./utils/helpers";
+import { cleanFrontendResponse, getClientDevice } from "./utils/helpers";
 import AttachmentMenu from "./components/AttachmentMenu";
 
 // Inject table styles on component mount
@@ -104,6 +104,7 @@ function ContentGenerator() {
       message: finalPrompt,
       userName: displayName,
       history: history,
+      device: getClientDevice(),
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
     // ── Resilient Endpoint List (Handles both fast and slow networks) ──
@@ -296,6 +297,13 @@ function ContentGenerator() {
     recognition.start();
   };
 
+  const handleClearChat = () => {
+    if (messages.length > 0 && window.confirm("Clear Content conversation?")) {
+      setMessages([]);
+      stopSpeaking();
+    }
+  };
+
   const LinkRenderer = ({ href, children }) => (
     <a
       href={href}
@@ -309,35 +317,70 @@ function ContentGenerator() {
 
   return (
     <div className="chat-container">
+      {/* ── TOP BAR: ACTIVE SESSION INDICATOR & CLEAR BUTTON (when messages exist) ── */}
+      {messages.length > 0 && (
+        <div className="content-studio-top-bar">
+          <div className="content-session-indicator">
+            <span className="session-dot" />
+            <span>Active Content Session</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearChat}
+            className="content-clear-btn"
+            title="Clear content conversation"
+          >
+            <Trash2 size={13} />
+            <span>Clear Chat</span>
+          </button>
+        </div>
+      )}
+
       <div className="chat-history-scroll">
         {messages.length === 0 && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "16px", marginTop: "8vh" }}>
-            <div style={{ flexShrink: 0, width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #f59e0b, #ef4444)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
-              <PenTool size={32} color="white" />
+          <div className="content-studio-landing">
+            <div className="content-studio-landing-badge">
+              <div className="content-studio-icon-glow">
+                <PenTool size={32} color="#c084fc" />
+              </div>
             </div>
-            <h2 style={{ fontSize: "28px", fontWeight: "700", color: "var(--text-primary)" }}>Writing Assistant</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "16px", maxWidth: "480px", textAlign: "center" }}>
-              Draft emails, blogs, essays and more. Professional content at your fingertips.
-            </p>
-            <div className="chat-suggestions-grid content-suggestions" style={{ marginTop: "16px" }}>
-              {[
-                { title: "Professional Email", sub: "requesting for a leave" },
-                { title: "Tech Blog Post", sub: "about AI trends in 2024" },
-                { title: "Product Description", sub: "for a premium smartwatch" },
-                { title: "Short Story", sub: "set in a cyberpunk city" },
-              ].map((s, i) => (
-                <div
-                  key={i}
-                  className="suggestion-card"
-                  onClick={() => sendMessage("Write: " + s.title + " " + s.sub)}
-                >
-                  <div className="suggestion-card-content">
-                    <div className="suggestion-card-title">{s.title}</div>
-                    <div className="suggestion-card-sub">{s.sub}</div>
-                  </div>
-                  <Sparkles size={16} className="suggestion-card-icon" />
-                </div>
-              ))}
+
+            <div className="content-studio-hero-text">
+              <h1 className="content-studio-title">Nexuss Content Studio</h1>
+              <p className="content-studio-subtitle">
+                Draft professional emails, viral articles, captions, and creative stories with ease.
+              </p>
+            </div>
+
+            <div className="content-studio-feature-row">
+              <div
+                className="content-feature-chip"
+                onClick={() => sendMessage("Write: A professional email requesting for 2 days leave due to personal work")}
+              >
+                <span className="feature-chip-icon">📧</span>
+                <span>Professional Email</span>
+              </div>
+              <div
+                className="content-feature-chip"
+                onClick={() => sendMessage("Write: An engaging and informative blog post about modern AI advancements")}
+              >
+                <span className="feature-chip-icon">✍️</span>
+                <span>Tech Blog Post</span>
+              </div>
+              <div
+                className="content-feature-chip"
+                onClick={() => sendMessage("Write: 3 viral Instagram and LinkedIn captions with hashtags for a new tech launch")}
+              >
+                <span className="feature-chip-icon">🚀</span>
+                <span>Viral Captions</span>
+              </div>
+              <div
+                className="content-feature-chip"
+                onClick={() => sendMessage("Write: A compelling short story outline set in a futuristic cyberpunk city")}
+              >
+                <span className="feature-chip-icon">📖</span>
+                <span>Creative Story</span>
+              </div>
             </div>
           </div>
         )}

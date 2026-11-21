@@ -466,12 +466,15 @@ const getLanguageInstruction = (lang) => {
 // ===============================
 // 🔥 COMMON AI SYSTEM PROMPT
 // ===============================
-const SYSTEM_PROMPT = (userName = "User") => `You are Nexuss AI - a smart, warm, and highly capable AI companion built for ${userName}.
+const SYSTEM_PROMPT = (userName = "User", device = "desktop") => {
+  const isMobile = device === "mobile";
+
+  return `You are Nexuss AI - a smart, warm, and highly capable AI companion built for ${userName}.
 
 ## Identity & Personality
 - You are Nexuss AI, created as part of the Nexuss AI ecosystem. Never say you are made by OpenAI, Google, Anthropic, or any other company.
-- Your personality: friendly, curious, encouraging, and always helpful. Like a knowledgeable best friend who explains things clearly.
-- Be natural, not robotic. Use a conversational, human tone always.
+- Your personality: friendly, curious, encouraging, and sharp. Like a knowledgeable best friend who explains things naturally.
+- Be natural, never robotic or bureaucratic. Avoid generic AI throat-clearing ("Certainly!", "I'd be happy to help", "As an AI..."). Get straight to the point.
 
 ## Language Matching (CRITICAL - Always Follow)
 Match the user's language EXACTLY every time:
@@ -482,28 +485,35 @@ Match the user's language EXACTLY every time:
 
 Hinglish tone guide: Be friendly and conversational. Use words like "yaar", "dekho", "samajh lo", "basically", "matlab" naturally. Do NOT be too formal in Hinglish.
 
-## Response Structure & Formatting
+${isMobile ? `## 📱 MOBILE DEVICE MODE (CRITICAL - HIGH PRIORITY)
+The user is viewing your response on a SMARTPHONE / MOBILE SCREEN. Follow Gemini & Claude mobile assistant best practices:
+1. SHORT & CONCISE ANSWERS:
+   - Provide crisp, direct, and focused answers.
+   - Avoid overwhelming walls of text, unnecessary deep essays, or complicated multi-level nesting.
+   - Deliver the core answer in 2-4 clean, bite-sized paragraphs or scannable bullet points.
+2. NO UNNECESSARY TABLES:
+   - DO NOT create markdown tables unless the user specifically and explicitly requested a table (e.g. "table banao", "in table format", "tabular").
+   - Markdown tables overflow and are difficult to scroll on mobile phones. Instead, format schedules, routines, comparisons, and lists with neat, readable bullet points or numbered lists.
+3. NO CODE BLOCKS UNLESS EXPLICITLY REQUESTED:
+   - DO NOT write code blocks or technical implementation code unless the user explicitly asks for code (e.g. "write code", "code banao") or is in Code Studio.
+   - For general programming or tech questions (e.g. "What is an API?", "App ideas", "Developer tips"), explain in clean, friendly plain text.
+   - Avoid excessive backticks on common words.
+4. TONE & FEEL:
+   - Natural, conversational, modern, and engaging — exactly like Google Gemini or Claude AI on mobile.`
+: `## 💻 DESKTOP / DASHBOARD MODE (DEEP & STRUCTURED)
+The user is viewing your response on a DESKTOP / LAPTOP DISPLAY:
+1. COMPREHENSIVE & IN-DEPTH:
+   - Provide well-organized, thorough, and informative answers with clear headings (##, ###).
+   - Deep explanations, clear conceptual context, and actionable takeaways are encouraged.
+2. TABLES & DATA FORMATTING:
+   - Use clean Markdown tables only for clear side-by-side data comparisons or when explicitly requested. For general lists or daily routines, prefer clean bullet points unless tabular format is explicitly asked for.
+3. CODE FORMATTING:
+   - When writing or reviewing code, provide clean, complete, production-ready code blocks with language tags. Do not output code blocks when the user is simply having a conceptual conversation.`}
 
-Always follow this structure:
-1. Opening (1-2 lines): Acknowledge the question naturally. For simple questions, skip straight to the answer.
-2. Main Content: Well-organized with headings, bullets, or numbered steps as needed.
-3. Summary/Takeaway (optional): Only for long or complex answers - a brief key takeaway at the end.
-
-Formatting Rules:
-- Use ## Headings for major sections, ### Sub-headings for sub-sections.
-- Use **bold** to highlight key terms, important facts, or critical warnings.
-- Use bullet points for lists of features, pros/cons, options.
-- Use numbered lists for steps, instructions, or ordered processes.
-- Use inline code formatting for technical terms, commands, file names.
-- Use code blocks with language tag for ALL code samples.
-- Use markdown tables for comparisons, schedules, data, or structured lists.
-- Use blockquotes (>) for important tips, warnings, or highlighted notes.
-- Add relevant emojis sparingly to make responses visually scannable - not on every line.
-
-Length Calibration:
-- Simple question (e.g., "What is Python?") -> 3-5 sentences, maybe one small list. Keep it crisp.
-- Medium question (e.g., "Explain machine learning") -> 2-4 sections with clear headings.
-- Complex question (e.g., "Build a full REST API") -> Full detailed response, step by step, with code.
+## General Formatting Rules
+- Use clean Markdown formatting.
+- Bold key terms or important takeaways.
+- Add relevant emojis sparingly to make responses visually scannable.
 - NEVER truncate or end with "let me know if you want me to continue." Always complete your answer.
 
 ## Nexuss AI Capabilities
@@ -520,40 +530,39 @@ When ${userName} asks what you can do:
 - Do not repeat the user's question back to them verbatim.
 - Do not use filler phrases like "Certainly!", "Of course!", "Great question!" - just get to the point.
 - Do not mix languages when the user is clearly writing in one language.`;
+};
 
-
-
-
-
-const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "") => {
+const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "", device = "desktop") => {
   const lang = detectLanguage(userMessage);
   const langInstruction = getLanguageInstruction(lang);
+  const isMobile = device === "mobile";
 
   // Prepend the hard language rule at the very TOP so AI always sees it first
-  let prompt = langInstruction + "\n\n" + SYSTEM_PROMPT(userName);
+  let prompt = langInstruction + "\n\n" + SYSTEM_PROMPT(userName, device);
 
   if (lang === "kaithi" || isKaithiRelated(userMessage)) {
     prompt += "\n\n" + KAITHI_SYSTEM_PROMPT;
   }
 
-  const isTableRequest = /table|tabular|format|list|daily|schedule|routine/i.test(userMessage);
-  if (isTableRequest) {
-    prompt += "\n\n- FORMAT NOTE: The user asked for a table/list. Use clean Markdown tables with pipes (|) and dashes (-).";
+  // ONLY format as markdown table if user EXPLICITLY requested a table (not for generic "list" or "routine")
+  const isExplicitTableRequest = /\b(table|tabular|तालिका|टेबल)\b/i.test(userMessage) || /table\s*(format|banao|me|me\s*do|mein)/i.test(userMessage);
+  if (isExplicitTableRequest) {
+    prompt += "\n\n- FORMAT DIRECTIVE: The user explicitly requested a table. Use a clean Markdown table with pipes (|) and dashes (-).";
+  } else {
+    prompt += `\n\n- FORMAT DIRECTIVE: Do NOT use markdown tables. Present lists, routines, or points using clean bullet points or numbered lists${isMobile ? ' for mobile readability' : ''}.`;
   }
 
-  const isCodeRequest = /code|function|react|python|script|component|api|html|css|javascript|node|backend|frontend|sql|class|method|algorithm|program|app|bug|fix|developer|develop/i.test(userMessage) || userMessage.toLowerCase().startsWith("generate code:") || userMessage.toLowerCase().startsWith("code:");
-  if (isCodeRequest) {
-    prompt += `\n\n## 🚀 CRITICAL SENIOR ARCHITECT CODE GENERATION DIRECTIVE (STRICT ENFORCEMENT)
-When generating, reviewing, or fixing code:
-1. 100% COMPLETE & PRODUCTION READY: NEVER write placeholders like "// your code here", "// implement logic here", "// add remaining styles", or "// TODO". Write the full, robust implementation from first import to last export line.
-2. ZERO MISSING PIECES: Include EVERY required import, dependency, hook, type definition, helper function, and configuration. The code MUST compile and run immediately without any undefined variables or missing dependencies.
-3. ERROR HANDLING & RESILIENCE: Include defensive coding practices, comprehensive try/catch blocks, null-safety checks, and fallback states.
-4. LABELED CODE BLOCKS: Use markdown code blocks with the exact language and filename comment on the first line (e.g. \`\`\`jsx /* App.jsx */ or \`\`\`python # app.py). If multiple files are needed, output each in its own distinct block.
-5. STEP-BY-STEP SETUP GUIDE: Immediately following the code, always provide:
-   - Required dependency installation commands (e.g. \`npm install ...\` or \`pip install ...\`)
-   - How to run or integrate the code
-   - Expected output or verification step.
-6. THE CODE MUST BE IMMEDIATELY COPY-PASTEABLE DIRECTLY INTO A PRODUCTION WORKSPACE.`;
+  // ONLY enforce senior architect code directive if user EXPLICITLY requested code implementation
+  const isExplicitCodeRequest = /(write|generate|create|build|implement|debug|fix|show|give)\s+(me\s+)?(the\s+)?(code|script|function|program|component|implementation)|```|^code:|^generate code:|kod\s*likho|code\s*likh|code\s*banao|program\s*likho/i.test(userMessage);
+  if (isExplicitCodeRequest) {
+    prompt += `\n\n## 🚀 SENIOR ARCHITECT CODE GENERATION DIRECTIVE
+When generating or fixing code:
+1. 100% COMPLETE & PRODUCTION READY: NEVER write placeholders like "// your code here" or "// TODO". Write the full implementation.
+2. ZERO MISSING PIECES: Include every required import, hook, type, and configuration.
+3. LABELED CODE BLOCKS: Use markdown code blocks with the exact language (e.g. \`\`\`jsx or \`\`\`python).
+4. STEP-BY-STEP SETUP GUIDE: Immediately following the code, provide dependencies and run commands.`;
+  } else {
+    prompt += `\n\n- DIRECTIVE: The user did NOT ask for code implementation. Do NOT output code blocks or large code snippets. Explain concepts conversationally in clean plain text.`;
   }
 
   return prompt;
@@ -675,7 +684,7 @@ const callPollinationsFallback = async (messages) => {
 
 
 // ── Non-streaming AI call (used by /api/code, /api/content, /api/chat/complete) ──
-const callZAI = async (message, userName = "User", image = null) => {
+const callZAI = async (message, userName = "User", image = null, device = "desktop") => {
   let enrichedMessage = message;
   if (typeof message === "string" && /[\u{11080}-\u{110CF}]/u.test(message)) {
     const translit = kaithiToDevanagari(message);
@@ -693,14 +702,14 @@ const callZAI = async (message, userName = "User", image = null) => {
     const key = process.env[envKey];
     for (const model of models) {
       try {
-        console.log(`🚀 [${name}] Requesting model: ${model}`);
+        console.log(`🚀 [${name}] Requesting model: ${model} [Device: ${device}]`);
         const response = await fetch(baseUrl, {
           method: "POST",
           headers: getHeaders(key),
           body: JSON.stringify({
             model,
             messages: [
-              { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+              { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
               { role: "user", content: userContent }
             ],
             max_tokens: 4096,
@@ -744,7 +753,7 @@ const callZAI = async (message, userName = "User", image = null) => {
   // ── Emergency Pollinations fallback ──────────────────────────────────────
   try {
     return await callPollinationsFallback([
-      { role: "system", content: SYSTEM_PROMPT(userName) },
+      { role: "system", content: SYSTEM_PROMPT(userName, device) },
       { role: "user", content: message }
     ]);
   } catch (err) {
@@ -795,7 +804,7 @@ const saveChatMetadata = async ({ question, userName, userEmail, model, provider
 
 // callGeminiDirect and callGeminiDirectStream removed — Gemini API disabled by user
 
-const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null) => {
+const callZAIStream = async (message, res, userName = "User", userEmail = "", history = [], image = null, device = "desktop") => {
   let enrichedMessage = message;
   if (typeof message === "string" && /[\u{11080}-\u{110CF}]/u.test(message)) {
     const translit = kaithiToDevanagari(message);
@@ -813,9 +822,9 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
     const key = process.env[envKey];
     for (const model of models) {
       try {
-        console.log(`🚀 [STREAM] [${name}] Attempting model: ${model}`);
+        console.log(`🚀 [STREAM] [${name}] Attempting model: ${model} [Device: ${device}]`);
         const apiMessages = [
-          { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message) },
+          { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
           ...history,
           { role: "user", content: userContent }
         ];
@@ -924,7 +933,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
   console.log("🌸 [STREAM] All keyed providers failed. Falling back to Pollinations...");
   try {
     const apiMessages = [
-      { role: "system", content: SYSTEM_PROMPT(userName) },
+      { role: "system", content: SYSTEM_PROMPT(userName, device) },
       ...history,
       { role: "user", content: message }
     ];
@@ -961,7 +970,8 @@ const validateMessage = (message) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, userName, userEmail, history, image } = req.body;
+    const { message, userName, userEmail, history, image, device } = req.body;
+    const detectedDevice = device || (/mobile|android|iphone|ipad|phone/i.test(req.headers['user-agent'] || '') ? 'mobile' : 'desktop');
     const validationError = validateMessage(message);
     if (validationError) return res.status(400).json({ error: validationError });
 
@@ -1002,7 +1012,7 @@ app.post("/api/chat", async (req, res) => {
     // Use unified providers (Groq -> OpenRouter -> Pollinations)
     if (getActiveProviders().length > 0) {
       const reply = await tryStreamProvider("AIProvider", async () => {
-        await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage);
+        await callZAIStream(dynamicMessage, res, userName, userEmail, history, dynamicImage, detectedDevice);
         return true;
       });
       if (reply) return;
@@ -1011,7 +1021,7 @@ app.post("/api/chat", async (req, res) => {
     // Fallback directly to Pollinations if no active keyed providers
     try {
       const apiMessages = [
-        { role: "system", content: SYSTEM_PROMPT(userName) },
+        { role: "system", content: SYSTEM_PROMPT(userName, detectedDevice) },
         ...(Array.isArray(history) ? history : []),
         { role: "user", content: dynamicMessage }
       ];
@@ -1051,11 +1061,12 @@ app.post("/api/chat", async (req, res) => {
 // ===============================
 // 💬 CHAT API (COMPLETE - non-streaming)
 // Uses Groq/OpenRouter by default (fast replies). Falls back to Pollinations.
-// Body: { message, userName, history }
+// Body: { message, userName, history, device }
 // ===============================
 app.post("/api/chat/complete", async (req, res) => {
   try {
-    const { message, userName, userEmail, history, image } = req.body;
+    const { message, userName, userEmail, history, image, device } = req.body;
+    const detectedDevice = device || (/mobile|android|iphone|ipad|phone/i.test(req.headers['user-agent'] || '') ? 'mobile' : 'desktop');
     if (!message) return res.status(400).json({ error: "Message required" });
 
     let dynamicMessage = message;
@@ -1078,7 +1089,7 @@ app.post("/api/chat/complete", async (req, res) => {
     // Use unified providers
     if (getActiveProviders().length > 0) {
       try {
-        const reply = await callZAI(dynamicMessage, userName, dynamicImage);
+        const reply = await callZAI(dynamicMessage, userName, dynamicImage, detectedDevice);
         await saveChatMetadata({ question: message, userName, userEmail, model: "ai-unified", provider: "Nexuss" });
         return res.json({ success: true, model: 'nexuss-ai', reply });
       } catch (err) {
@@ -1089,7 +1100,7 @@ app.post("/api/chat/complete", async (req, res) => {
     // Emergency Pollinations fallback
     try {
       const fallbackReply = await callPollinationsFallback([
-        { role: "system", content: SYSTEM_PROMPT(userName) },
+        { role: "system", content: SYSTEM_PROMPT(userName, detectedDevice) },
         { role: "user", content: dynamicMessage }
       ]);
       return res.json({ success: true, model: 'pollinations', reply: fallbackReply });
