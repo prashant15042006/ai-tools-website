@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText, Trash2 } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText, Trash2, Copy, Check, Volume2 } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -43,10 +43,22 @@ function Chat() {
     }
   }, [location.state]);
   const [loading, setLoading] = useState(false);
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const [fileAttachment, setFileAttachment] = useState(null); // { name, content }
   const textareaRef = useRef(null);
+
+  const copyToClipboard = (text, id) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedMsgId(id);
+      setTimeout(() => setCopiedMsgId(null), 2000);
+    } catch (e) {
+      console.warn("Clipboard copy failed:", e);
+    }
+  };
 
   // Auto-focus textarea as soon as Chat opens so the mobile/desktop keyboard is ready
   useEffect(() => {
@@ -125,14 +137,21 @@ function Chat() {
 
   // prompt modal moved to dedicated Prompt Manager page
   const messagesEndRef = useRef(null);
+  const latestAiMsgRef = useRef(null);
+  const latestUserMsgRef = useRef(null);
+  const prevMsgCountRef = useRef(0);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Scroll to the START of latest user question (so answer reads naturally below it)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
+    const currentCount = messages.length;
+    if (currentCount > prevMsgCountRef.current) {
+      // New message(s) added — scroll to the user question that was just asked
+      setTimeout(() => {
+        latestUserMsgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+    prevMsgCountRef.current = currentCount;
+  }, [messages]);
 
   const handleSpeak = async (text) => {
     await voiceSpeak(text, { voicePreset, customVoiceUrl, ttsEnabledRef });
@@ -640,9 +659,14 @@ function Chat() {
           </div>
         )}
 
-        {messages.map((msg, index) => (
+        {messages.map((msg, index) => {
+          const isLatestUser = msg.sender === "user" && index === messages.length - 2;
+          const isLatestAi   = msg.sender === "ai"   && index === messages.length - 1;
+          return (
           <React.Fragment key={index}>
-            <div className={`chat-message-row ${msg.sender === "user" ? "user-row" : "ai-row"}`}>
+            <div
+              ref={isLatestUser ? latestUserMsgRef : isLatestAi ? latestAiMsgRef : null}
+              className={`chat-message-row ${msg.sender === "user" ? "user-row" : "ai-row"}`}>
               <div className={`message-avatar ${msg.sender === "user" ? "user-av" : "ai-av"}`} style={msg.sender === "user" ? { padding: 0, overflow: 'hidden' } : {}}>
                 {msg.sender === "user" ? (
                   <img src={user?.photoURL || "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayName)} alt="You" style={{ width: '100%', height: '100%' }} />
@@ -724,11 +748,41 @@ function Chat() {
                     </div>
                   )}
                 </div>
+                {msg.sender === "ai" && msg.text && !msg.isImageResult && !loading && (
+                  <div className="message-action-bar">
+                    <button
+                      className="msg-action-btn"
+                      onClick={() => copyToClipboard(msg.text, msg.id || index)}
+                      title="Copy response"
+                    >
+                      {copiedMsgId === (msg.id || index) ? (
+                        <>
+                          <Check size={13} color="#10b981" />
+                          <span style={{ color: "#10b981", fontWeight: 600 }}>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={13} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="msg-action-btn"
+                      onClick={() => handleSpeak(msg.text)}
+                      title="Listen to response"
+                    >
+                      <Volume2 size={13} />
+                      <span>Listen</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <hr className="message-divider" />
           </React.Fragment>
-        ))}
+          );
+        })}
 
         <div ref={messagesEndRef} />
       </div>
