@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText, Trash2, Copy, Check, Volume2 } from "lucide-react";
+import { Send, Bot, ClipboardPaste, Mic, ExternalLink, Sparkles, X, Download, FileText, Trash2 } from "lucide-react";
 import { AppContext } from "./App";
 import { tableComponents } from "./utils/TableRenderer";
 import { injectTableStyles } from "./utils/tableStyles";
@@ -43,22 +43,10 @@ function Chat() {
     }
   }, [location.state]);
   const [loading, setLoading] = useState(false);
-  const [copiedMsgId, setCopiedMsgId] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const [fileAttachment, setFileAttachment] = useState(null); // { name, content }
   const textareaRef = useRef(null);
-
-  const copyToClipboard = (text, id) => {
-    if (!text) return;
-    try {
-      navigator.clipboard.writeText(text);
-      setCopiedMsgId(id);
-      setTimeout(() => setCopiedMsgId(null), 2000);
-    } catch (e) {
-      console.warn("Clipboard copy failed:", e);
-    }
-  };
 
   // Auto-focus textarea as soon as Chat opens so the mobile/desktop keyboard is ready
   useEffect(() => {
@@ -338,12 +326,25 @@ function Chat() {
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
 
-    // ── Resilient Endpoint List (Handles both fast and slow networks) ──
+    // ── Ultra-Fast Endpoint Routing ──
+    // In production (Vercel), same-origin /api/chat is instant (<300ms) with zero container spin-up lag.
+    const isLocalHost = typeof window !== "undefined" && (
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"
+    );
+
     const endpoints = [];
-    if (API_BASE_URL) {
-      endpoints.push(`${API_BASE_URL}/api/chat`);
+    if (!isLocalHost) {
+      endpoints.push("/api/chat");
+      if (API_BASE_URL && API_BASE_URL !== window.location.origin) {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
+    } else {
+      if (API_BASE_URL) {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
+      endpoints.push("/api/chat");
     }
-    endpoints.push("/api/chat");
 
     // ── Instant Offline Check ──
     if (!navigator.onLine) {
@@ -365,8 +366,8 @@ function Chat() {
     let lastErr = "";
     let aiReply = "";
 
-    // High resilience timeout: 35s for text (slow network friendly), 90s for images
-    const timeoutMs = imageToBeSent ? 90000 : 35000;
+    // Fast initial connect timeout: 7s for text streaming (fails fast to next endpoint if sluggish), 90s for images
+    const timeoutMs = imageToBeSent ? 90000 : 7000;
 
     for (const endpoint of endpoints) {
       try {
@@ -748,35 +749,6 @@ function Chat() {
                     </div>
                   )}
                 </div>
-                {msg.sender === "ai" && msg.text && !msg.isImageResult && !loading && (
-                  <div className="message-action-bar">
-                    <button
-                      className="msg-action-btn"
-                      onClick={() => copyToClipboard(msg.text, msg.id || index)}
-                      title="Copy response"
-                    >
-                      {copiedMsgId === (msg.id || index) ? (
-                        <>
-                          <Check size={13} color="#10b981" />
-                          <span style={{ color: "#10b981", fontWeight: 600 }}>Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={13} />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      className="msg-action-btn"
-                      onClick={() => handleSpeak(msg.text)}
-                      title="Listen to response"
-                    >
-                      <Volume2 size={13} />
-                      <span>Listen</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
             <hr className="message-divider" />

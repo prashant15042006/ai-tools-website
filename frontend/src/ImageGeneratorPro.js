@@ -1305,6 +1305,130 @@ export default function ImageGeneratorPro() {
           border-color: #ef4444;
         }
 
+        /* ══════════════════════════════════════════════
+           LIGHT MODE OVERRIDES FOR AI IMAGE STUDIO
+           ══════════════════════════════════════════════ */
+        .light-mode .beast-title {
+          color: #0f172a !important;
+        }
+        .light-mode .beast-subtitle {
+          color: #64748b !important;
+        }
+        .light-mode .beast-command-card {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        }
+        .light-mode .beast-command-card:focus-within {
+          border-color: #06b6d4 !important;
+          box-shadow: 0 10px 35px rgba(6, 182, 212, 0.15) !important;
+        }
+        .light-mode .beast-textarea {
+          color: #0f172a !important;
+        }
+        .light-mode .beast-textarea::placeholder {
+          color: #94a3b8 !important;
+        }
+        .light-mode .beast-command-footer {
+          border-top-color: #e2e8f0 !important;
+        }
+        .light-mode .auto-ratio-badge {
+          background: #ecfeff !important;
+          border-color: #a5f3fc !important;
+          color: #0891b2 !important;
+        }
+        .light-mode .auto-ratio-badge strong {
+          color: #0e7490 !important;
+        }
+        .light-mode .beast-tool-btn {
+          background: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #334155 !important;
+        }
+        .light-mode .beast-tool-btn:hover:not(:disabled) {
+          background: #cffafe !important;
+          color: #0891b2 !important;
+          border-color: #06b6d4 !important;
+        }
+        .light-mode .beast-tool-btn.danger:hover {
+          background: #fee2e2 !important;
+          color: #dc2626 !important;
+          border-color: #f87171 !important;
+        }
+        .light-mode .beast-canvas-box {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+        }
+        .light-mode .empty-halo-icon {
+          background: #ecfeff !important;
+          border-color: #a5f3fc !important;
+        }
+        .light-mode .canvas-state-title {
+          color: #0f172a !important;
+        }
+        .light-mode .canvas-state-desc {
+          color: #475569 !important;
+        }
+        .light-mode .canvas-progress-track {
+          background: #e2e8f0 !important;
+        }
+        .light-mode .prompt-tip-chip {
+          background: #ecfeff !important;
+          border-color: #a5f3fc !important;
+          color: #0e7490 !important;
+        }
+        .light-mode .beast-image-container {
+          background: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08) !important;
+        }
+        .light-mode .canvas-floating-toolbar {
+          background: rgba(255, 255, 255, 0.95) !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+        }
+        .light-mode .floating-action-btn {
+          background: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          color: #334155 !important;
+        }
+        .light-mode .floating-action-btn:hover {
+          background: #cffafe !important;
+          color: #0891b2 !important;
+          border-color: #06b6d4 !important;
+        }
+        .light-mode .beast-details-ribbon {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+        }
+        .light-mode .ribbon-tag {
+          background: #ecfeff !important;
+          border-color: #a5f3fc !important;
+          color: #0891b2 !important;
+        }
+        .light-mode .ribbon-prompt {
+          color: #334155 !important;
+        }
+        .light-mode .section-title {
+          color: #0f172a !important;
+        }
+        .light-mode .section-sub {
+          color: #64748b !important;
+        }
+        .light-mode .gallery-thumb-card {
+          background: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        }
+        .light-mode .beast-gallery-section {
+          border-top-color: #e2e8f0 !important;
+        }
+        .light-mode .beast-lightbox-backdrop {
+          background: rgba(15, 23, 42, 0.88) !important;
+        }
+
         /* ── Responsive Mobile ── */
         @media (max-width: 640px) {
           .beast-command-footer {

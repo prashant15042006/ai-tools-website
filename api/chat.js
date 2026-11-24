@@ -13,26 +13,34 @@ const {
 const SYSTEM_PROMPT = (userName = "User", device = "desktop") => {
   const isMobile = device === "mobile";
 
-  return `You are Nexuss AI - an intelligent, warm, and highly capable AI companion built for ${userName}.
+  return `You are Nexuss AI - an ultra-intelligent, sharp, and highly capable AI companion built for ${userName}.
 
-## Identity & Personality
+## Identity & Core Mission
 - You are Nexuss AI, created as part of the Nexuss AI ecosystem. Never say you are made by OpenAI, Google, Anthropic, or any other company.
-- Your personality: friendly, curious, encouraging, and sharp. Like a knowledgeable best friend who explains things naturally.
-- Be natural, never robotic or bureaucratic. Avoid generic AI throat-clearing ("Certainly!", "I'd be happy to help", "As an AI..."). Get straight to the point.
+- Your mission: Deliver world-class, exceptionally high-quality, unique, and deeply insightful responses with zero generic fluff.
+- Personality: Razor-sharp, genuinely helpful, curious, and encouraging. Like an elite mentor or senior architect who explains complex things with remarkable clarity.
+- Absolute zero throat-clearing: Never start with "Certainly!", "I'd be glad to help", "As an AI...", "Sure thing!", or repetitive pleasantries. Jump straight into the highest-value insights immediately.
+
+## 💎 Maximum Depth & Uniqueness (CRITICAL DIRECTIVE)
+- NO GENERIC ANSWERS: Avoid textbook definitions or surface-level summaries that standard AIs produce. Deliver nuanced perspectives, practical trade-offs, and underlying mechanics.
+- MULTI-DIMENSIONAL ANALYSIS: When answering questions or solving problems, evaluate performance, scalability, edge cases, security implications, and design trade-offs (e.g. Option A vs Option B).
+- ARCHITECTURAL CONTEXT: Explain the "why" and "how" behind solutions, not just the "what". Provide actionable, future-proof guidance with real-world industry best practices.
 
 ## Language Matching (CRITICAL - Always Follow)
 Match the user's language EXACTLY every time:
-- English prompt -> Respond in clear, fluent English.
-- Hinglish prompt (Roman Hindi, e.g. "kaise ho", "explain karo", "mujhe batao") -> Respond in warm, natural Hinglish. Feel like a desi friend talking casually.
-- Hindi prompt (Devanagari script) -> Respond in clear, natural Hindi.
-- Any other language -> Match that language naturally.
+- English prompt -> Respond in clear, fluent, articulate English. Do NOT mix Hindi or Hinglish words.
+- Hinglish prompt (Roman Hindi, e.g. "kaise ho", "explain karo", "mujhe batao", "kya ye sahi hai") -> Respond in warm, natural, and sharp Hinglish. Speak like a brilliant desi mentor talking casually ("yaar", "dekho", "samajh lo", "basically", "matlab"). Keep it friendly, clear, and highly intelligent without sounding overly formal or robotic.
+- Hindi prompt (Devanagari script) -> Respond in clear, expressive, and natural Hindi.
+- Any other language -> Match that language accurately and naturally.
+
+Hinglish tone guide: Be friendly and conversational. Use words like "yaar", "dekho", "samajh lo", "basically", "matlab" naturally. Do NOT be too formal in Hinglish.
 
 ## 🎨 Rich Visual Structure & Formatting (CRITICAL)
 - Always deliver answers with engaging visual structure — never a flat, boring wall of text!
-- Use clear markdown subheadings (### 💡 Insight, ### ⚡ Steps, ### 📌 Summary) with relevant emojis.
+- Use clear markdown subheadings (### 💡 Deep Insight, ### ⚡ Practical Steps, ### 🔍 Architectural Breakdown, ### 📌 Key Takeaway) with relevant emojis.
 - Highlight key terms, definitions, metrics, and core concepts in **bold** so the user can easily scan.
-- For lists and steps, use structured bullet points with bold lead-ins (e.g. • **Speed**: ...).
-- For important tips or caveats, use markdown callout blockquotes (> 💡 **Pro-Tip**: ...).
+- For lists and steps, use structured bullet points with bold lead-ins (e.g. • **Performance**: ...).
+- For high-impact tips or critical warnings, use markdown callout blockquotes (> 💡 **Pro-Tip**: ... or > ⚠️ **Key Trade-off**: ...).
 - Conclude multi-step or complex answers with a crisp, actionable takeaway.
 
 ${isMobile ? `## 📱 MOBILE DEVICE MODE (CRITICAL - HIGH PRIORITY)
@@ -132,15 +140,82 @@ const cleanAIResponse = (text) => {
     .trim();
 };
 
-// ── 1. Groq Provider (Ultra-Fast < 500ms) ──────────────────────────────────
+// ── Stream helper: pipe upstream SSE delta chunks directly to client ───────
+async function streamFromFetchResponse(upstreamRes, res) {
+  let streamStarted = false;
+  let fullReply = "";
+
+  if (upstreamRes.body && typeof upstreamRes.body.getReader === "function") {
+    const reader = upstreamRes.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data: ")) continue;
+        const dataStr = trimmed.slice(6);
+        if (dataStr === "[DONE]") continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+          const content = parsed.choices?.[0]?.delta?.content || "";
+          if (content) {
+            streamStarted = true;
+            fullReply += content;
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+            if (typeof res.flush === "function") res.flush();
+          }
+        } catch (e) {}
+      }
+    }
+  } else if (upstreamRes.body && typeof upstreamRes.body[Symbol.asyncIterator] === "function") {
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    for await (const chunk of upstreamRes.body) {
+      buffer += typeof chunk === "string" ? chunk : decoder.decode(chunk, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data: ")) continue;
+        const dataStr = trimmed.slice(6);
+        if (dataStr === "[DONE]") continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+          const content = parsed.choices?.[0]?.delta?.content || "";
+          if (content) {
+            streamStarted = true;
+            fullReply += content;
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+            if (typeof res.flush === "function") res.flush();
+          }
+        } catch (e) {}
+      }
+    }
+  }
+
+  return { streamStarted, fullReply };
+}
+
+// ── 1. Groq Provider (Ultra-Fast streaming, TTFT < 200ms) ───────────────────
 const GROQ_MODELS = [
   "llama-3.3-70b-versatile",
   "llama-3.1-8b-instant",
-  "mixtral-8x7b-32768",
   "gemma2-9b-it",
 ];
 
-async function callGroq(message, userName, history = [], device = "desktop") {
+async function streamGroq(res, message, userName, history = [], device = "desktop") {
   const groqKey = process.env.GROQ_API_KEY;
   if (!isValidKey(groqKey)) throw new Error("GROQ_API_KEY not configured");
 
@@ -155,8 +230,8 @@ async function callGroq(message, userName, history = [], device = "desktop") {
   for (const model of GROQ_MODELS) {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const timer = setTimeout(() => controller.abort(), 12000);
+      const upstreamRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${groqKey}`,
@@ -165,19 +240,24 @@ async function callGroq(message, userName, history = [], device = "desktop") {
         body: JSON.stringify({
           model,
           messages,
+          stream: true,
           max_tokens: 2048,
         }),
         signal: controller.signal,
       });
       clearTimeout(timer);
-      const data = await res.json();
-      if (!res.ok) {
-        lastErr = data.error?.message || `${res.status}`;
+
+      if (!upstreamRes.ok) {
+        const errJson = await upstreamRes.json().catch(() => ({}));
+        lastErr = errJson.error?.message || `${upstreamRes.status}`;
         continue;
       }
-      const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
-      if (!text?.trim()) { lastErr = "Empty response"; continue; }
-      return cleanAIResponse(text);
+
+      const { streamStarted, fullReply } = await streamFromFetchResponse(upstreamRes, res);
+      if (streamStarted && fullReply.trim()) {
+        return true;
+      }
+      lastErr = "Empty response";
     } catch (e) {
       lastErr = e.message;
     }
@@ -185,21 +265,20 @@ async function callGroq(message, userName, history = [], device = "desktop") {
   throw new Error(`Groq all models failed: ${lastErr}`);
 }
 
-// ── 2. OpenRouter Provider ──────────────────────────────────────────────────
+// ── 2. OpenRouter Provider (Streaming) ──────────────────────────────────────
 const OPENROUTER_VISION_MODELS = [
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "openrouter/free",
-  "inclusionai/ling-3.0-flash-vl:free",
-  "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
+  "qwen/qwen-2.5-vl-72b-instruct:free",
+  "meta-llama/llama-3.2-11b-vision-instruct:free",
 ];
 
 const OPENROUTER_TEXT_MODELS = [
-  "nvidia/nemotron-nano-12b-v2-vl:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "nvidia/nemotron-3-nano-30b-a3b:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "openai/gpt-oss-20b:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "qwen/qwen-2.5-72b-instruct:free",
+  "deepseek/deepseek-r1:free",
+  "deepseek/deepseek-chat:free",
+  "mistralai/mistral-small-24b-instruct-2501:free",
+  "meta-llama/llama-3.1-8b-instruct:free",
   "openrouter/free",
 ];
 
@@ -220,7 +299,7 @@ const getOpenRouterKeyPool = () => {
   return keys;
 };
 
-async function callOpenRouter(message, userName, history = [], image = null, device = "desktop") {
+async function streamOpenRouter(res, message, userName, history = [], image = null, device = "desktop") {
   const keyPool = getOpenRouterKeyPool();
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
@@ -244,7 +323,7 @@ async function callOpenRouter(message, userName, history = [], image = null, dev
       try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 18000);
-        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const upstreamRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${key}`,
@@ -252,21 +331,25 @@ async function callOpenRouter(message, userName, history = [], image = null, dev
             "HTTP-Referer": "https://nexuss-ai.io",
             "X-Title": "Nexuss Workspace",
           },
-          body: JSON.stringify({ model, messages, max_tokens: 2048 }),
+          body: JSON.stringify({ model, messages, stream: true, max_tokens: 2048 }),
           signal: controller.signal,
         });
         clearTimeout(timer);
-        const data = await res.json();
-        if (!res.ok) {
-          lastErr = data.error?.message || `${res.status}`;
-          if (res.status === 429 || res.status === 402 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
+
+        if (!upstreamRes.ok) {
+          const errJson = await upstreamRes.json().catch(() => ({}));
+          lastErr = errJson.error?.message || `${upstreamRes.status}`;
+          if (upstreamRes.status === 429 || upstreamRes.status === 402 || lastErr.toLowerCase().includes("credit") || lastErr.toLowerCase().includes("rate limit")) {
             break;
           }
           continue;
         }
-        const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
-        if (!text?.trim()) { lastErr = "Empty response"; continue; }
-        return cleanAIResponse(text);
+
+        const { streamStarted, fullReply } = await streamFromFetchResponse(upstreamRes, res);
+        if (streamStarted && fullReply.trim()) {
+          return true;
+        }
+        lastErr = "Empty response";
       } catch (e) {
         lastErr = e.message;
       }
@@ -275,19 +358,19 @@ async function callOpenRouter(message, userName, history = [], image = null, dev
   throw new Error(`OpenRouter all models/keys failed. Last error: ${lastErr}`);
 }
 
-// ── 3. Cerebras Provider ───────────────────────────────────────────────────
-async function callCerebras(message, userName, device = "desktop") {
+// ── 3. Cerebras Provider (Streaming) ───────────────────────────────────────
+async function streamCerebras(res, message, userName, device = "desktop") {
   const key = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
-  const models = ["gpt-oss-120b", "gemma-4-31b"];
+  const models = ["llama-3.3-70b", "llama3.1-70b", "llama3.1-8b"];
   let lastErr = "Unknown error";
 
   for (const model of models) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 6000);
-      const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+      const upstreamRes = await fetch("https://api.cerebras.ai/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${key}`,
@@ -295,6 +378,7 @@ async function callCerebras(message, userName, device = "desktop") {
         },
         body: JSON.stringify({
           model,
+          stream: true,
           messages: [
             { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
             { role: "user", content: formatUserMessage(message) },
@@ -304,14 +388,18 @@ async function callCerebras(message, userName, device = "desktop") {
         signal: controller.signal,
       });
       clearTimeout(timer);
-      const data = await res.json();
-      if (!res.ok) {
-        lastErr = data.error?.message || `${res.status}`;
+
+      if (!upstreamRes.ok) {
+        const errJson = await upstreamRes.json().catch(() => ({}));
+        lastErr = errJson.error?.message || `${upstreamRes.status}`;
         continue;
       }
-      const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text;
-      if (!text?.trim()) { lastErr = "Empty response"; continue; }
-      return cleanAIResponse(text);
+
+      const { streamStarted, fullReply } = await streamFromFetchResponse(upstreamRes, res);
+      if (streamStarted && fullReply.trim()) {
+        return true;
+      }
+      lastErr = "Empty response";
     } catch(e) {
       lastErr = e.message;
     }
@@ -349,6 +437,7 @@ async function callPollinationsFallback(messages) {
 // ── Helper: write SSE ───────────────────────────────────────────────────────
 function sseWrite(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+  if (typeof res.flush === "function") res.flush();
 }
 
 // ── Main handler ───────────────────────────────────────────────────────────
@@ -375,73 +464,70 @@ module.exports = async function handler(req, res) {
   const detectedDevice = device || (/mobile|android|iphone|ipad|phone/i.test(req.headers['user-agent'] || '') ? 'mobile' : 'desktop');
   if (!message) return res.status(400).json({ error: "message is required" });
 
-  // Set SSE headers
+  // Set SSE headers immediately so client receives 200 OK with zero TTFT delay
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  if (typeof res.flushHeaders === "function") res.flushHeaders();
 
-  let reply = null;
-  let usedProvider = "";
+  let handled = false;
 
-  // 1. Try Groq (ultra fast, <500ms) - text only
-  if (!reply && !image && isValidKey(process.env.GROQ_API_KEY)) {
+  // 1. Try Groq (ultra fast streaming, TTFT < 200ms) - text only
+  if (!handled && !image && isValidKey(process.env.GROQ_API_KEY)) {
     try {
-      reply = await callGroq(message, userName, history, detectedDevice);
-      usedProvider = "Groq";
+      handled = await streamGroq(res, message, userName, history, detectedDevice);
+      if (handled) console.log("✅ /api/chat streamed via Groq");
     } catch (e) {
-      console.warn("Groq failed:", e.message);
+      console.warn("Groq streaming failed:", e.message);
     }
   }
 
-  // 2. Try OpenRouter (free fast models + vision support)
-  if (!reply && getOpenRouterKeyPool().length > 0) {
+  // 2. Try OpenRouter (fast free models + vision support)
+  if (!handled && getOpenRouterKeyPool().length > 0) {
     try {
-      reply = await callOpenRouter(message, userName, history, image, detectedDevice);
-      usedProvider = "OpenRouter";
+      handled = await streamOpenRouter(res, message, userName, history, image, detectedDevice);
+      if (handled) console.log("✅ /api/chat streamed via OpenRouter");
     } catch (e) {
-      console.warn("OpenRouter failed:", e.message);
+      console.warn("OpenRouter streaming failed:", e.message);
     }
   }
 
-  // 3. Try Cerebras
+  // 3. Try Cerebras (~2000 tokens/sec)
   const cerebrasKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
-  if (!reply && !image && isValidKey(cerebrasKey)) {
+  if (!handled && !image && isValidKey(cerebrasKey)) {
     try {
-      reply = await callCerebras(message, userName, detectedDevice);
-      usedProvider = "Cerebras";
+      handled = await streamCerebras(res, message, userName, detectedDevice);
+      if (handled) console.log("✅ /api/chat streamed via Cerebras");
     } catch (e) {
-      console.warn("Cerebras failed:", e.message);
+      console.warn("Cerebras streaming failed:", e.message);
     }
   }
 
   // 4. Try Pollinations AI (keyless - no API key needed)
-  if (!reply) {
+  if (!handled) {
     try {
       const msgs = [
         { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, detectedDevice) },
         ...(Array.isArray(history) ? history : []),
         { role: "user", content: formatUserMessage(message) },
       ];
-      reply = await callPollinationsFallback(msgs);
-      usedProvider = "Pollinations";
+      const reply = await callPollinationsFallback(msgs);
+      if (reply) {
+        sseWrite(res, { content: reply });
+        handled = true;
+        console.log("✅ /api/chat replied via Pollinations fallback");
+      }
     } catch (e) {
       console.warn("Pollinations fallback failed:", e.message);
     }
   }
 
-  // 5. All providers failed — return 503 so the client can fall through to next endpoint
-  if (!reply) {
+  // 5. Complete response
+  if (handled) {
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } else {
     res.writeHead(503, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "All AI providers are currently unavailable. Please try again." }));
-    return;
   }
-
-  // ── Send successful SSE response ──────────────────────────────────────────
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  console.log(`✅ /api/chat responded via ${usedProvider}`);
-  sseWrite(res, { content: cleanAIResponse(reply) });
-  res.write("data: [DONE]\n\n");
-  res.end();
 };

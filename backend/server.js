@@ -469,28 +469,34 @@ const getLanguageInstruction = (lang) => {
 const SYSTEM_PROMPT = (userName = "User", device = "desktop") => {
   const isMobile = device === "mobile";
 
-  return `You are Nexuss AI - a smart, warm, and highly capable AI companion built for ${userName}.
+  return `You are Nexuss AI - an ultra-intelligent, sharp, and highly capable AI companion built for ${userName}.
 
-## Identity & Personality
+## Identity & Core Mission
 - You are Nexuss AI, created as part of the Nexuss AI ecosystem. Never say you are made by OpenAI, Google, Anthropic, or any other company.
-- Your personality: friendly, curious, encouraging, and sharp. Like a knowledgeable best friend who explains things naturally.
-- Be natural, never robotic or bureaucratic. Avoid generic AI throat-clearing ("Certainly!", "I'd be happy to help", "As an AI..."). Get straight to the point.
+- Your mission: Deliver world-class, exceptionally high-quality, unique, and deeply insightful responses with zero generic fluff.
+- Personality: Razor-sharp, genuinely helpful, curious, and encouraging. Like an elite mentor or senior architect who explains complex things with remarkable clarity.
+- Absolute zero throat-clearing: Never start with "Certainly!", "I'd be glad to help", "As an AI...", "Sure thing!", or repetitive pleasantries. Jump straight into the highest-value insights immediately.
+
+## 💎 Maximum Depth & Uniqueness (CRITICAL DIRECTIVE)
+- NO GENERIC ANSWERS: Avoid textbook definitions or surface-level summaries that standard AIs produce. Deliver nuanced perspectives, practical trade-offs, and underlying mechanics.
+- MULTI-DIMENSIONAL ANALYSIS: When answering questions or solving problems, evaluate performance, scalability, edge cases, security implications, and design trade-offs (e.g. Option A vs Option B).
+- ARCHITECTURAL CONTEXT: Explain the "why" and "how" behind solutions, not just the "what". Provide actionable, future-proof guidance with real-world industry best practices.
 
 ## Language Matching (CRITICAL - Always Follow)
 Match the user's language EXACTLY every time:
-- English prompt -> Respond in clear, fluent English. Do NOT mix Hindi or Hinglish words.
-- Hinglish prompt (Roman Hindi, e.g. "kaise ho", "explain karo", "mujhe batao") -> Respond in warm, natural Hinglish. Feel like a desi friend talking casually.
-- Hindi prompt (Devanagari script) -> Respond in clear, natural Hindi.
-- Any other language -> Match that language exactly.
+- English prompt -> Respond in clear, fluent, articulate English. Do NOT mix Hindi or Hinglish words.
+- Hinglish prompt (Roman Hindi, e.g. "kaise ho", "explain karo", "mujhe batao", "kya ye sahi hai") -> Respond in warm, natural, and sharp Hinglish. Speak like a brilliant desi mentor talking casually ("yaar", "dekho", "samajh lo", "basically", "matlab"). Keep it friendly, clear, and highly intelligent without sounding overly formal or robotic.
+- Hindi prompt (Devanagari script) -> Respond in clear, expressive, and natural Hindi.
+- Any other language -> Match that language accurately and naturally.
 
 Hinglish tone guide: Be friendly and conversational. Use words like "yaar", "dekho", "samajh lo", "basically", "matlab" naturally. Do NOT be too formal in Hinglish.
 
 ## 🎨 Rich Visual Structure & Formatting (CRITICAL)
 - Always deliver answers with engaging visual structure — never a flat, boring wall of text!
-- Use clear markdown subheadings (### 💡 Insight, ### ⚡ Steps, ### 📌 Summary) with relevant emojis.
+- Use clear markdown subheadings (### 💡 Deep Insight, ### ⚡ Practical Steps, ### 🔍 Architectural Breakdown, ### 📌 Key Takeaway) with relevant emojis.
 - Highlight key terms, definitions, metrics, and core concepts in **bold** so the user can easily scan.
-- For lists and steps, use structured bullet points with bold lead-ins (e.g. • **Speed**: ...).
-- For important tips or caveats, use markdown callout blockquotes (> 💡 **Pro-Tip**: ...).
+- For lists and steps, use structured bullet points with bold lead-ins (e.g. • **Performance**: ...).
+- For high-impact tips or critical warnings, use markdown callout blockquotes (> 💡 **Pro-Tip**: ... or > ⚠️ **Key Trade-off**: ...).
 - Conclude multi-step or complex answers with a crisp, actionable takeaway.
 
 ${isMobile ? `## 📱 MOBILE DEVICE MODE (CRITICAL - HIGH PRIORITY)
@@ -610,7 +616,6 @@ const PROVIDER_CHAIN = [
     models: [
       "llama-3.3-70b-versatile",
       "llama-3.1-8b-instant",
-      "mixtral-8x7b-32768",
       "gemma2-9b-it",
     ],
     getHeaders: (key) => ({
@@ -623,10 +628,13 @@ const PROVIDER_CHAIN = [
     envKey: "OPENROUTER_KEY_NEMOTRON",
     baseUrl: "https://openrouter.ai/api/v1/chat/completions",
     models: [
-      "nvidia/nemotron-nano-12b-v2-vl:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "nvidia/nemotron-3-nano-30b-a3b:free",
-      "nvidia/nemotron-3.5-lightning:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "qwen/qwen-2.5-72b-instruct:free",
+      "deepseek/deepseek-r1:free",
+      "deepseek/deepseek-chat:free",
+      "mistralai/mistral-small-24b-instruct-2501:free",
+      "meta-llama/llama-3.1-8b-instruct:free",
+      "openrouter/free",
     ],
     getHeaders: (key) => ({
       "Authorization": `Bearer ${key}`,
@@ -640,8 +648,12 @@ const PROVIDER_CHAIN = [
     envKey: "OPENROUTER_KEY_GEMMA",
     baseUrl: "https://openrouter.ai/api/v1/chat/completions",
     models: [
-      "google/gemma-4-26b-a4b-it:free",
-      "openai/gpt-oss-20b:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "qwen/qwen-2.5-72b-instruct:free",
+      "deepseek/deepseek-r1:free",
+      "deepseek/deepseek-chat:free",
+      "mistralai/mistral-small-24b-instruct-2501:free",
+      "meta-llama/llama-3.1-8b-instruct:free",
       "openrouter/free",
     ],
     getHeaders: (key) => ({
@@ -890,6 +902,7 @@ const callZAIStream = async (message, res, userName = "User", userEmail = "", hi
                   streamStarted = true;
                   fullReply += content;
                   res.write(`data: ${JSON.stringify({ content })}\n\n`);
+                  if (typeof res.flush === "function") res.flush();
                 }
               } catch (e) { /* fragmented JSON — ignore */ }
             }
@@ -1004,6 +1017,7 @@ app.post("/api/chat", async (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    if (typeof res.flushHeaders === "function") res.flushHeaders();
 
     const tryStreamProvider = async (label, runner) => {
       try {

@@ -1276,7 +1276,14 @@
 .light-mode .pm-back:hover { background: #f1f5f9; color: #1e293b; }
 .light-mode .pm-editor-header { border-bottom-color: #e2e8f0; }
 .light-mode .pm-editor-title { color: #0f172a; }
+.light-mode .pm-editor-title::placeholder { color: #94a3b8 !important; }
 .light-mode .pm-editor-title:not(:disabled):focus { border-bottom-color: #6366f1; }
+.light-mode .pm-readonly-badge {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: #fde68a !important;
+}
+.light-mode .pm-lock-hint { color: #b45309 !important; }
 .light-mode .pm-label { color: #64748b; }
 .light-mode .pm-select {
   background: #fff;
@@ -1362,6 +1369,23 @@
   color: #94a3b8;
 }
 .light-mode .pm-result-body { color: #1e293b; }
+.light-mode .pm-result-copy {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+.light-mode .pm-result-copy:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+.light-mode .pm-card-cat {
+  font-weight: 700 !important;
+  filter: brightness(0.8) saturate(1.3) !important;
+}
+.light-mode .pm-qs-info span {
+  font-weight: 700 !important;
+  filter: brightness(0.75) saturate(1.4) !important;
+}
 .light-mode .pm-result--error { background: #fef2f2; border-color: #fecaca; }
 .light-mode .pm-result--error .pm-result-header,
 .light-mode .pm-result--error .pm-result-body { color: #dc2626; }
