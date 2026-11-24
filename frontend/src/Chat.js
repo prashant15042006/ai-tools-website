@@ -8,7 +8,7 @@ import { injectTableStyles } from "./utils/tableStyles";
 import { speak as voiceSpeak, stopSpeaking, startKeepAlive, stopKeepAlive } from "./utils/voiceEngine";
 import API_BASE_URL, { IS_MISCONFIGURED } from "./apiConfig";
 import { PreRenderer } from "./utils/PreRenderer";
-import { detectRatioFromPrompt, cleanFrontendResponse, getClientDevice } from "./utils/helpers";
+import { detectRatioFromPrompt, cleanFrontendResponse, formatStructuredMarkdown, getClientDevice } from "./utils/helpers";
 
 import { useLocation } from "react-router-dom";
 import { generateOfflineResponse } from "./utils/offlineAiEngine";
@@ -740,7 +740,7 @@ function Chat() {
                       <span>{msg.text}</span>
                     )
                   ) : msg.text ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{formatStructuredMarkdown(msg.text)}</ReactMarkdown>
                   ) : (
                     <div className="typing-indicator">
                       <div className="typing-dot"></div>

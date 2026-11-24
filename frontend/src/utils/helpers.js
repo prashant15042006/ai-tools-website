@@ -50,18 +50,56 @@ export function detectRatioFromPrompt(promptText) {
 }
 
 /**
- * Strips safety-rating labels injected by some AI models into responses.
- * e.g. "User Safety: safe\nResponse Safety: safe"
+ * Formats and normalizes markdown text to ensure proper paragraph,
+ * heading, and list item spacing so points never merge onto the same line.
+ */
+export function formatStructuredMarkdown(text) {
+  if (!text) return text;
+  let s = text.replace(/\r\n/g, "\n");
+
+  // 1. Normalize non-standard unicode bullets to markdown dash list marker
+  s = s.replace(/^[ \t]*[•◦▪▫‣⁃]\s+/gm, "- ");
+
+  // 2. Break inline numbered points or bullets chained on the same line after punctuation
+  // e.g. "Sentence complete. 1. Next point" -> "Sentence complete.\n\n1. Next point"
+  s = s.replace(/([.:!?।])\s+([0-9]+\.\s+)/g, "$1\n\n$2");
+  s = s.replace(/([.:!?।])\s+([-*•]\s+)/g, "$1\n\n$2");
+  s = s.replace(/([.:!?।])\s+(\*{1,2}[0-9]+\.\*{0,2}\s+)/g, "$1\n\n$2");
+  s = s.replace(/([.:!?।])\s+(\*{1,2}[-*•]\*{0,2}\s+)/g, "$1\n\n$2");
+
+  // 3. Break inline bold headers starting after punctuation (e.g. "Intro text. **Key Point:** Details")
+  s = s.replace(/([.:!?।])\s+(\*\*[A-Z\u0900-\u097F][^:\n*]{1,40}\*\*[:-]\s*)/g, "$1\n\n$2");
+
+  // 4. Ensure an empty line before lists start after a normal text line
+  s = s.replace(/([^\n])\n([0-9]+\.\s+)/g, "$1\n\n$2");
+  s = s.replace(/([^\n])\n([-*]\s+)/g, "$1\n\n$2");
+
+  // 5. Ensure empty line before and after markdown headers (#, ##, ###, ####)
+  s = s.replace(/([^\n])\n(#{1,6}\s+)/g, "$1\n\n$2");
+  s = s.replace(/(#{1,6}[^\n]+)\n([^\n#])/g, "$1\n\n$2");
+
+  // 6. Ensure clean spacing around blockquotes
+  s = s.replace(/([^\n])\n(>\s*)/g, "$1\n\n$2");
+
+  // 7. Clean up excessive blank lines (more than 2 consecutive newlines)
+  s = s.replace(/\n{3,}/g, "\n\n");
+
+  return s;
+}
+
+/**
+ * Strips safety-rating labels and thinking tags, while preserving
+ * proper paragraph and point layout structure.
  */
 export function cleanFrontendResponse(text) {
   if (!text) return text;
-  return text
+  const stripped = text
     .replace(/<think>[\s\S]*?<\/think>/gi, "")
     .replace(/<think>[\s\S]*/gi, "")
     .replace(/^(User Safety|Response Safety|Content Safety|Safety Rating|Input Safety|Output Safety)\s*:\s*.+$/gim, "")
-    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "")
-    .replace(/^\s*[\r\n]/gm, "")
-    .trim();
+    .replace(/\{?\s*"?(user_safety|response_safety|content_filter|safety_rating)"?\s*:\s*"?\w+"?\s*\}?,?/gi, "");
+
+  return formatStructuredMarkdown(stripped).trim();
 }
 
 /**
