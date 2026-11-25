@@ -2341,3 +2341,334 @@ body {
   .bottom-nav-item span { display: none; }
   .bottom-nav-item { font-size: 0; }
 }
+
+
+/* ================================================================
+   GROK-STYLE THINKING & WEB SEARCH ANIMATIONS
+   Rotating orb while AI thinks → Globe when web searching
+================================================================ */
+
+/* ── Thinking Orb Container ── */
+.nexuss-thinking-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+/* ── Rotating Orb (Grok cube-like sphere) ── */
+.nexuss-orb {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.nexuss-orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  animation: nexussOrbSpin 1.6s linear infinite;
+}
+
+.nexuss-orb-ring:nth-child(1) {
+  border-top-color: #818cf8;
+  border-right-color: rgba(129,140,248,0.3);
+  animation-duration: 1.4s;
+}
+
+.nexuss-orb-ring:nth-child(2) {
+  inset: 5px;
+  border-top-color: #a78bfa;
+  border-left-color: rgba(167,139,250,0.3);
+  animation-duration: 1.0s;
+  animation-direction: reverse;
+}
+
+.nexuss-orb-ring:nth-child(3) {
+  inset: 10px;
+  border-top-color: #c084fc;
+  border-right-color: rgba(192,132,252,0.4);
+  animation-duration: 0.8s;
+}
+
+.nexuss-orb-core {
+  position: absolute;
+  inset: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #a78bfa, #6366f1);
+  box-shadow: 0 0 10px rgba(167,139,250,0.6);
+  animation: nexussOrbPulse 2s ease-in-out infinite;
+}
+
+@keyframes nexussOrbSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes nexussOrbPulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.15); }
+}
+
+/* ── Thinking label row ── */
+.nexuss-thinking-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nexuss-thinking-text {
+  font-size: 0.82rem;
+  color: #a78bfa;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  animation: nexussThinkFade 1.8s ease-in-out infinite;
+}
+
+@keyframes nexussThinkFade {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+/* ── Thinking dots row ── */
+.nexuss-think-dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding-left: 2px;
+}
+
+.nexuss-think-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  animation: nexussDotBounce 1.4s ease-in-out infinite both;
+}
+
+.nexuss-think-dot:nth-child(1) { animation-delay: 0s; }
+.nexuss-think-dot:nth-child(2) { animation-delay: 0.18s; }
+.nexuss-think-dot:nth-child(3) { animation-delay: 0.36s; }
+.nexuss-think-dot:nth-child(4) { animation-delay: 0.54s; }
+
+@keyframes nexussDotBounce {
+  0%, 80%, 100% { transform: translateY(0) scale(0.75); opacity: 0.4; }
+  40%            { transform: translateY(-6px) scale(1);  opacity: 1; }
+}
+
+/* ── Web Search Globe Section ── */
+.nexuss-search-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+  animation: nexussSearchFadeIn 0.4s ease;
+}
+
+@keyframes nexussSearchFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Globe spinner ── */
+.nexuss-globe {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.nexuss-globe-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 35%,
+    #60a5fa 0%, #3b82f6 40%, #1d4ed8 70%, #1e3a8a 100%);
+  box-shadow:
+    inset -4px -4px 8px rgba(0,0,0,0.35),
+    inset 2px 2px 6px rgba(255,255,255,0.15),
+    0 0 14px rgba(59,130,246,0.5);
+  animation: nexussGlobeRotate 3s linear infinite;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Latitude lines on globe */
+.nexuss-globe-circle::before,
+.nexuss-globe-circle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120%;
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+.nexuss-globe-circle::before { top: 30%; }
+.nexuss-globe-circle::after  { top: 60%; }
+
+/* Longitude sweep line */
+.nexuss-globe-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(90deg,
+    transparent 40%,
+    rgba(255,255,255,0.12) 60%,
+    transparent 70%);
+  animation: nexussGlobeSweep 3s linear infinite;
+}
+
+@keyframes nexussGlobeRotate {
+  from { box-shadow: inset -4px -4px 8px rgba(0,0,0,0.35), inset 2px 2px 6px rgba(255,255,255,0.15), 0 0 14px rgba(59,130,246,0.5); }
+  50%  { box-shadow: inset 4px -4px 8px rgba(0,0,0,0.3), inset -2px 2px 6px rgba(255,255,255,0.1), 0 0 20px rgba(59,130,246,0.7); }
+  to   { box-shadow: inset -4px -4px 8px rgba(0,0,0,0.35), inset 2px 2px 6px rgba(255,255,255,0.15), 0 0 14px rgba(59,130,246,0.5); }
+}
+
+@keyframes nexussGlobeSweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Ping rings around globe */
+.nexuss-globe-ping {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(59,130,246,0.5);
+  animation: nexussGlobePing 1.8s ease-out infinite;
+}
+
+.nexuss-globe-ping:nth-child(2) {
+  animation-delay: 0.6s;
+  border-color: rgba(99,102,241,0.4);
+}
+
+@keyframes nexussGlobePing {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ── Search label row ── */
+.nexuss-search-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nexuss-search-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #60a5fa;
+  letter-spacing: 0.01em;
+  animation: nexussThinkFade 1.5s ease-in-out infinite;
+}
+
+.nexuss-search-query {
+  font-size: 0.75rem;
+  color: rgba(96,165,250,0.7);
+  font-style: italic;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Search progress bar ── */
+.nexuss-search-bar-wrap {
+  height: 2px;
+  width: 180px;
+  background: rgba(99,102,241,0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.nexuss-search-bar {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #6366f1, #818cf8, #a78bfa);
+  border-radius: 2px;
+  animation: nexussSearchBar 1.4s ease-in-out infinite;
+}
+
+@keyframes nexussSearchBar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* ── Sources Banner (bottom bar) ── */
+.nexuss-sources-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: rgba(59, 130, 246, 0.06);
+  border-top: 1px solid rgba(99, 102, 241, 0.18);
+  flex-wrap: wrap;
+  font-size: 0.74rem;
+  animation: nexussSearchFadeIn 0.5s ease;
+}
+
+.nexuss-sources-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #60a5fa;
+  font-weight: 700;
+  font-size: 0.74rem;
+}
+
+.nexuss-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.22);
+  border-radius: 20px;
+  padding: 2px 10px;
+  color: #818cf8;
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nexuss-source-chip:hover {
+  background: rgba(99,102,241,0.22);
+  color: #a5b4fc;
+}
+
+/* Light mode overrides */
+.light-mode .nexuss-thinking-text { color: #6366f1; }
+.light-mode .nexuss-search-text   { color: #2563eb; }
+.light-mode .nexuss-search-query  { color: rgba(37,99,235,0.6); }
+.light-mode .nexuss-sources-label { color: #2563eb; }
+.light-mode .nexuss-source-chip   { color: #4f46e5; border-color: rgba(79,70,229,0.3); background: rgba(79,70,229,0.08); }
+.light-mode .nexuss-search-bar-wrap { background: rgba(99,102,241,0.1); }
+
+/* ── Live Thinking / Search Seconds Timer Badge (appears at 3s+) ── */
+.nexuss-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(129, 140, 248, 0.14);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  color: #a5b4fc;
+  animation: nexussSearchFadeIn 0.25s ease;
+}
+
+.light-mode .nexuss-timer-badge {
+  background: rgba(79, 70, 229, 0.1);
+  border-color: rgba(79, 70, 229, 0.25);
+  color: #4f46e5;
+}

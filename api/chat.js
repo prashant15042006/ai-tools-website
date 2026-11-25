@@ -533,7 +533,7 @@ module.exports = async function handler(req, res) {
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { message, userName = "User", history = [], image, device } = req.body || {};
+  const { message, userName = "User", history = [], image, device, forceWebSearch = false } = req.body || {};
   const detectedDevice = device || (/mobile|android|iphone|ipad|phone/i.test(req.headers['user-agent'] || '') ? 'mobile' : 'desktop');
   if (!message) return res.status(400).json({ error: "message is required" });
 
@@ -543,14 +543,14 @@ module.exports = async function handler(req, res) {
   res.setHeader("Connection", "keep-alive");
   if (typeof res.flushHeaders === "function") res.flushHeaders();
 
-  // ── Web Search: auto-trigger for real-time/factual queries ───────────────
+  // ── Web Search: auto-trigger for real-time/factual queries or >5s fallback ─
   let webContext = null;
-  const shouldSearch = needsWebSearch(message);
+  const shouldSearch = forceWebSearch || needsWebSearch(message);
 
   if (shouldSearch) {
     try {
       // Send a "searching..." indicator to frontend
-      sseWrite(res, { type: "search_start", message: "🔍 Searching the web..." });
+      sseWrite(res, { type: "search_start", query: message, message: "🔍 Searching the web..." });
 
       const searchResults = await Promise.race([
         webSearch(message),

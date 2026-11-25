@@ -46,8 +46,22 @@ function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const [fileAttachment, setFileAttachment] = useState(null); // { name, content }
-  const [webSearchState, setWebSearchState] = useState(null); // { status: 'searching'|'done', sources: [] }
+  const [webSearchState, setWebSearchState] = useState(null); // { status: 'searching'|'done', query?: string, sources: [] }
+  const [thinkingSeconds, setThinkingSeconds] = useState(0);
   const textareaRef = useRef(null);
+
+  // Grok-style live thinking timer (counts seconds while loading)
+  useEffect(() => {
+    if (!loading) {
+      setThinkingSeconds(0);
+      return;
+    }
+    setThinkingSeconds(0);
+    const interval = setInterval(() => {
+      setThinkingSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   // Auto-focus textarea as soon as Chat opens so the mobile/desktop keyboard is ready
   useEffect(() => {
@@ -150,6 +164,7 @@ function Chat() {
     const rawText = text.trim();
     if ((!rawText && !imagePreview && !fileAttachment) || loading) return;
     setLoading(true);
+    setWebSearchState(null);
     setInput("");
     setTimeout(() => { if (textareaRef.current) textareaRef.current.style.height = '40px'; }, 0);
     const imageToBeSent = imagePreview;
@@ -367,37 +382,20 @@ function Chat() {
     let lastErr = "";
     let aiReply = "";
 
-    // Fast initial connect timeout: 4s for text streaming (fails fast to next endpoint if sluggish), 90s for images
-    const timeoutMs = imageToBeSent ? 90000 : 4000;
+    // Initial connect timeout: 12s for text streaming (allows 5s slow-search detection), 90s for images
+    const timeoutMs = imageToBeSent ? 90000 : 12000;
 
-    for (const endpoint of endpoints) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        const r = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        });
-        clearTimeout(timer);
-        if (r.ok) { response = r; break; }
-        lastErr = `${endpoint} failed (${r.status})`;
-        if (r.status >= 400 && r.status < 500) break;
-      } catch (e) {
-        lastErr = e.message;
-        console.warn(`⚠️ Endpoint failed: ${endpoint} —`, e.message);
-      }
-    }
-
-    try {
-      if (!response) {
-        throw new Error(lastErr || "All streaming endpoints failed.");
-      }
-
-      const reader = response.body.getReader();
+    const readSseStream = async (resStream, signal) => {
+      const reader = resStream.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let searchTriggeredByBackend = false;
+
+      if (signal) {
+        signal.addEventListener("abort", () => {
+          try { reader.cancel(); } catch (e) {}
+        }, { once: true });
+      }
 
       while (true) {
         const { done, value } = await reader.read();
@@ -410,7 +408,7 @@ function Chat() {
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed || !trimmed.startsWith("data: ")) continue;
-          
+
           const dataStr = trimmed.slice(6);
           if (dataStr === "[DONE]") continue;
 
@@ -420,7 +418,8 @@ function Chat() {
 
             // ── Web Search events ──────────────────────────────────────
             if (data.type === "search_start") {
-              setWebSearchState({ status: "searching", sources: [] });
+              searchTriggeredByBackend = true;
+              setWebSearchState({ status: "searching", query: data.query || displayPrompt, sources: [] });
               continue;
             }
             if (data.type === "search_done") {
@@ -435,15 +434,79 @@ function Chat() {
                 prev.map(msg => msg.id === aiMsgId ? { ...msg, text: cleaned } : msg)
               );
             } else if (data.content) {
-                const content = data.content;
-                aiReply += content;
-                const displayText = cleanFrontendResponse(aiReply);
-                setMessages((prev) => 
-                  prev.map(msg => msg.id === aiMsgId ? { ...msg, text: displayText } : msg)
-                );
-              }
+              const content = data.content;
+              aiReply += content;
+              const displayText = cleanFrontendResponse(aiReply);
+              setMessages((prev) =>
+                prev.map(msg => msg.id === aiMsgId ? { ...msg, text: displayText } : msg)
+              );
+            }
           } catch (e) { }
         }
+      }
+      return { searchTriggeredByBackend };
+    };
+
+    const fetchStreamingEndpoint = async (reqPayload, externalSignal) => {
+      for (const endpoint of endpoints) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
+          if (externalSignal) {
+            if (externalSignal.aborted) { clearTimeout(timer); return null; }
+            externalSignal.addEventListener("abort", () => controller.abort(), { once: true });
+          }
+          const r = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(reqPayload),
+            signal: controller.signal,
+          });
+          clearTimeout(timer);
+          if (r.ok) return r;
+          lastErr = `${endpoint} failed (${r.status})`;
+          if (r.status >= 400 && r.status < 500) break;
+        } catch (e) {
+          lastErr = e.message;
+          if (externalSignal?.aborted) break;
+          console.warn(`⚠️ Endpoint failed: ${endpoint} —`, e.message);
+        }
+      }
+      return null;
+    };
+
+    try {
+      const slowAbortController = new AbortController();
+      let timedOutForWebSearch = false;
+      let slowSearchTimer = null;
+
+      if (!imageToBeSent) {
+        // If AI hasn't produced any answer within 5 seconds, switch to Web Search!
+        slowSearchTimer = setTimeout(() => {
+          if (!aiReply) {
+            timedOutForWebSearch = true;
+            setWebSearchState((prev) => prev || { status: "searching", query: displayPrompt, sources: [] });
+            slowAbortController.abort();
+          }
+        }, 5000);
+      }
+
+      response = await fetchStreamingEndpoint(payload, slowAbortController.signal);
+      if (response) {
+        await readSseStream(response, slowAbortController.signal).catch(() => {});
+      }
+      if (slowSearchTimer) clearTimeout(slowSearchTimer);
+
+      // If 5s elapsed without an answer, retry immediately with forceWebSearch: true
+      if (timedOutForWebSearch && !aiReply) {
+        setWebSearchState({ status: "searching", query: displayPrompt, sources: [] });
+        const searchPayload = { ...payload, forceWebSearch: true };
+        const searchRes = await fetchStreamingEndpoint(searchPayload, null);
+        if (searchRes) {
+          await readSseStream(searchRes, null);
+        }
+      } else if (!response && !timedOutForWebSearch) {
+        throw new Error(lastErr || "All streaming endpoints failed.");
       }
 
       if (aiReply && aiReply.trim()) {
@@ -465,7 +528,7 @@ function Chat() {
           } catch(e) {}
           return prev;
         });
-        setWebSearchState(null); // clear search indicator after reply is done
+        setWebSearchState((prev) => (prev?.status === "done" && prev.sources?.length > 0 ? prev : null));
         setLoading(false);
         return;
       }
@@ -754,23 +817,56 @@ function Chat() {
                     )
                   ) : msg.text ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{formatStructuredMarkdown(msg.text)}</ReactMarkdown>
-                  ) : webSearchState?.status === "searching" ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#7c8cf8", fontSize: "0.85rem", fontWeight: 500 }}>
-                        <span style={{ display: "inline-block", animation: "spin 1.2s linear infinite" }}>🌐</span>
-                        <span>Web search kar raha hoon...</span>
+                  ) : (webSearchState?.status === "searching" || thinkingSeconds >= 5) ? (
+                    /* ── Grok-style Web Search Globe (triggers on search or >5s) ── */
+                    <div className="nexuss-search-wrap">
+                      <div className="nexuss-search-label">
+                        <div className="nexuss-globe">
+                          <div className="nexuss-globe-circle">
+                            <div className="nexuss-globe-sweep" />
+                          </div>
+                          <div className="nexuss-globe-ping" />
+                          <div className="nexuss-globe-ping" style={{ animationDelay: "0.6s" }} />
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span className="nexuss-search-text">Web searching...</span>
+                            {thinkingSeconds >= 3 && (
+                              <span className="nexuss-timer-badge">{thinkingSeconds}s</span>
+                            )}
+                          </div>
+                          {webSearchState?.query && (
+                            <span className="nexuss-search-query">"{webSearchState.query}"</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="typing-indicator">
-                        <div className="typing-dot"></div>
-                        <div className="typing-dot"></div>
-                        <div className="typing-dot"></div>
+                      <div className="nexuss-search-bar-wrap">
+                        <div className="nexuss-search-bar" />
                       </div>
                     </div>
                   ) : (
-                    <div className="typing-indicator">
-                      <div className="typing-dot"></div>
-                      <div className="typing-dot"></div>
-                      <div className="typing-dot"></div>
+                    /* ── Grok-style Thinking Orb (shows live timer after 3s) ── */
+                    <div className="nexuss-thinking-wrap">
+                      <div className="nexuss-thinking-label">
+                        <div className="nexuss-orb">
+                          <div className="nexuss-orb-ring" />
+                          <div className="nexuss-orb-ring" />
+                          <div className="nexuss-orb-ring" />
+                          <div className="nexuss-orb-core" />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span className="nexuss-thinking-text">Thinking...</span>
+                          {thinkingSeconds >= 3 && (
+                            <span className="nexuss-timer-badge">{thinkingSeconds}s</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="nexuss-think-dots">
+                        <div className="nexuss-think-dot" />
+                        <div className="nexuss-think-dot" />
+                        <div className="nexuss-think-dot" />
+                        <div className="nexuss-think-dot" />
+                      </div>
                     </div>
                   )}
                 </div>
