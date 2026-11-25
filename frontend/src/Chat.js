@@ -46,6 +46,7 @@ function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null); // base64 data URL for preview & sending
   const [fileAttachment, setFileAttachment] = useState(null); // { name, content }
+  const [webSearchState, setWebSearchState] = useState(null); // { status: 'searching'|'done', sources: [] }
   const textareaRef = useRef(null);
 
   // Auto-focus textarea as soon as Chat opens so the mobile/desktop keyboard is ready
@@ -416,6 +417,17 @@ function Chat() {
           try {
             const data = JSON.parse(dataStr);
             if (data.error) throw new Error(data.error);
+
+            // ── Web Search events ──────────────────────────────────────
+            if (data.type === "search_start") {
+              setWebSearchState({ status: "searching", sources: [] });
+              continue;
+            }
+            if (data.type === "search_done") {
+              setWebSearchState({ status: "done", sources: data.sources || [] });
+              continue;
+            }
+
             if (data.replace) {
               const cleaned = cleanFrontendResponse(data.replace);
               aiReply = cleaned;
@@ -453,6 +465,7 @@ function Chat() {
           } catch(e) {}
           return prev;
         });
+        setWebSearchState(null); // clear search indicator after reply is done
         setLoading(false);
         return;
       }
@@ -741,6 +754,18 @@ function Chat() {
                     )
                   ) : msg.text ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{formatStructuredMarkdown(msg.text)}</ReactMarkdown>
+                  ) : webSearchState?.status === "searching" ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#7c8cf8", fontSize: "0.85rem", fontWeight: 500 }}>
+                        <span style={{ display: "inline-block", animation: "spin 1.2s linear infinite" }}>🌐</span>
+                        <span>Web search kar raha hoon...</span>
+                      </div>
+                      <div className="typing-indicator">
+                        <div className="typing-dot"></div>
+                        <div className="typing-dot"></div>
+                        <div className="typing-dot"></div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="typing-indicator">
                       <div className="typing-dot"></div>
@@ -758,6 +783,50 @@ function Chat() {
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* 🌐 Web Search Sources Banner */}
+      {webSearchState?.status === "done" && webSearchState.sources?.length > 0 && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "6px 16px",
+          background: "rgba(99, 102, 241, 0.08)",
+          borderTop: "1px solid rgba(99, 102, 241, 0.2)",
+          flexWrap: "wrap",
+          fontSize: "0.75rem",
+          color: "var(--text-muted, #9ca3af)",
+        }}>
+          <span style={{ color: "#7c8cf8", fontWeight: 600 }}>🌐 Sources:</span>
+          {webSearchState.sources.map((s, i) => (
+            s.url ? (
+              <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" style={{
+                color: "#818cf8",
+                textDecoration: "none",
+                background: "rgba(99,102,241,0.12)",
+                borderRadius: "6px",
+                padding: "2px 8px",
+                border: "1px solid rgba(99,102,241,0.25)",
+                whiteSpace: "nowrap",
+                maxWidth: "180px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {s.source || s.title || `Source ${i+1}`}
+              </a>
+            ) : (
+              <span key={i} style={{
+                background: "rgba(99,102,241,0.12)",
+                borderRadius: "6px",
+                padding: "2px 8px",
+                border: "1px solid rgba(99,102,241,0.25)",
+              }}>
+                {s.source || s.title}
+              </span>
+            )
+          ))}
+        </div>
+      )}
 
       {/* Prompt editing moved to the Prompts page in the sidebar */}
 

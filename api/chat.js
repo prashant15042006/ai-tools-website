@@ -2,6 +2,7 @@
 // Vercel Serverless Function: /api/chat
 // Handles AI chat with full provider fallback chain:
 //   Groq (ultra-fast <500ms) → OpenRouter (fast free models) → Cerebras → Pollinations → static
+// Web Search: Auto-triggered for real-time/factual queries (DuckDuckGo - free)
 // ================================================================
 
 const {
@@ -9,6 +10,62 @@ const {
   isKaithiRelated,
   KAITHI_SYSTEM_PROMPT
 } = require("./kaithiKnowledge");
+
+const { webSearch } = require("./search");
+
+// ── Web Search: Detect if query needs real-time/web data ────────────────────
+function needsWebSearch(message) {
+  const msg = message.toLowerCase();
+
+  // Current events, news, prices, sports, weather
+  const realtimePatterns = [
+    /\b(today|abhi|aaj|abhi tak|kal|yesterday|this week|is week|is mahine|this month)\b/i,
+    /\b(latest|recent|new|current|live|trending|viral|breaking)\b/i,
+    /\b(news|khabar|samachar)\b/i,
+    /\b(price|cost|rate|kimat|dam|value)\b/i,
+    /\b(weather|mausam|temperature|tapman)\b/i,
+    /\b(score|match|game|cricket|ipl|football|tournament|result)\b/i,
+    /\b(stock|share market|sensex|nifty|crypto|bitcoin|ethereum)\b/i,
+    /\b(winner|champion|award|oscar|grammy|nobel)\b/i,
+    /\b(election|vote|sarkar|government|pm|president|cm)\b/i,
+    /\b(movie release|film release|show|series|episode)\b/i,
+    /\b(launched|released|announced|upcoming)\b/i,
+    /\b(who is|kaun hai|what is the|kya hai|tell me about)\b.*\b(2024|2025|2026)\b/i,
+    /\b(2024|2025|2026)\b.*\b(winner|result|event|update)\b/i,
+  ];
+
+  // Direct web/search intent
+  const searchIntentPatterns = [
+    /\b(search|google|dhundh|find|khojo|batao latest)\b/i,
+    /\b(web mein|internet par|online)\b/i,
+  ];
+
+  for (const pattern of [...realtimePatterns, ...searchIntentPatterns]) {
+    if (pattern.test(msg)) return true;
+  }
+  return false;
+}
+
+// ── Format search results into a concise context string for AI ──────────────
+function formatSearchContext(results, query) {
+  if (!results || results.length === 0) return null;
+
+  const lines = [`[WEB SEARCH RESULTS for: "${query}"]`];
+  let count = 0;
+
+  for (const r of results) {
+    if (!r.snippet) continue;
+    const src = r.source ? ` (${r.source})` : "";
+    lines.push(`- ${r.title}${src}: ${r.snippet.substring(0, 400)}`);
+    if (r.url) lines.push(`  URL: ${r.url}`);
+    count++;
+    if (count >= 4) break;
+  }
+
+  if (count === 0) return null;
+  lines.push(`[Use above web data to give an accurate, up-to-date answer]`);
+  return lines.join("\n");
+}
 
 const SYSTEM_PROMPT = (userName = "User", device = "desktop") => {
   const isMobile = device === "mobile";
@@ -42,8 +99,8 @@ Hinglish tone guide: Be friendly and conversational. Use words like "yaar", "dek
   * NEVER write "sentence completed. 1. Next point" or "Point A - Point B" on the same line.
   * Always leave a blank line (double newline \n\n) before starting any list, and between distinct paragraphs.
 - STANDARD MARKDOWN BULLETS ONLY:
-  * Always use `- ` (dash) or `1. `, `2. ` for lists.
-  * NEVER use unicode symbols like `• ` or `▪ ` or `◦ ` as list markers, as they break Markdown rendering.
+  * Always use "- " (dash) or numbered lists like "1. ", "2. " for lists.
+  * NEVER use unicode symbols like bullet (•), small square (▪), or circle (◦) as list markers, as they break Markdown rendering.
   * For lists and steps, use structured bullet points with bold lead-ins (e.g. - **Performance**: ...).
   * Keep bullet items tight and compact — DO NOT leave empty blank lines between consecutive bullet items.
 - SUBHEADINGS & SPACING:
@@ -88,8 +145,13 @@ When ${userName} asks what you can do:
 - Prompt Studio: Craft and manage AI prompt templates`;
 };
 
-const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "", device = "desktop") => {
+const ENHANCED_TABLE_SYSTEM_PROMPT = (userName = "User", userMessage = "", device = "desktop", webContext = null) => {
   let prompt = SYSTEM_PROMPT(userName, device);
+
+  // Inject web search results at top if available
+  if (webContext) {
+    prompt += `\n\n## 🌐 REAL-TIME WEB DATA (Use this for accurate answer)\n${webContext}\nIMPORTANT: Prioritize this web data for factual accuracy. Cite sources where relevant.`;
+  }
   const isMobile = device === "mobile";
 
   if (isKaithiRelated(userMessage)) {
@@ -227,13 +289,13 @@ const GROQ_MODELS = [
   "allam-2-7b",
 ];
 
-async function streamGroq(res, message, userName, history = [], device = "desktop") {
+async function streamGroq(res, message, userName, history = [], device = "desktop", webContext = null) {
   const groqKey = process.env.GROQ_API_KEY;
   if (!isValidKey(groqKey)) throw new Error("GROQ_API_KEY not configured");
 
   const formattedMsg = formatUserMessage(message);
   const messages = [
-    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device, webContext) },
     ...(Array.isArray(history) ? history : []),
     { role: "user", content: formattedMsg },
   ];
@@ -310,7 +372,7 @@ const getOpenRouterKeyPool = () => {
   return keys;
 };
 
-async function streamOpenRouter(res, message, userName, history = [], image = null, device = "desktop") {
+async function streamOpenRouter(res, message, userName, history = [], image = null, device = "desktop", webContext = null) {
   const keyPool = getOpenRouterKeyPool();
   if (keyPool.length === 0) throw new Error("No OpenRouter keys configured");
 
@@ -323,7 +385,7 @@ async function streamOpenRouter(res, message, userName, history = [], image = nu
     : formatUserMessage(message);
 
   const messages = [
-    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
+    { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device, webContext) },
     ...(Array.isArray(history) ? history : []),
     { role: "user", content: formattedContent },
   ];
@@ -370,7 +432,7 @@ async function streamOpenRouter(res, message, userName, history = [], image = nu
 }
 
 // ── 3. Cerebras Provider (Streaming) ───────────────────────────────────────
-async function streamCerebras(res, message, userName, device = "desktop") {
+async function streamCerebras(res, message, userName, device = "desktop", webContext = null) {
   const key = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!isValidKey(key)) throw new Error("Cerebras key not configured");
 
@@ -391,7 +453,7 @@ async function streamCerebras(res, message, userName, device = "desktop") {
           model,
           stream: true,
           messages: [
-            { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device) },
+            { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, device, webContext) },
             { role: "user", content: formatUserMessage(message) },
           ],
           max_tokens: 1024,
@@ -481,12 +543,38 @@ module.exports = async function handler(req, res) {
   res.setHeader("Connection", "keep-alive");
   if (typeof res.flushHeaders === "function") res.flushHeaders();
 
+  // ── Web Search: auto-trigger for real-time/factual queries ───────────────
+  let webContext = null;
+  const shouldSearch = needsWebSearch(message);
+
+  if (shouldSearch) {
+    try {
+      // Send a "searching..." indicator to frontend
+      sseWrite(res, { type: "search_start", message: "🔍 Searching the web..." });
+
+      const searchResults = await Promise.race([
+        webSearch(message),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Search timeout")), 7000)),
+      ]);
+
+      if (searchResults && searchResults.length > 0) {
+        webContext = formatSearchContext(searchResults, message);
+        // Tell frontend search is done
+        sseWrite(res, { type: "search_done", sources: searchResults.filter(r => r.url).map(r => ({ title: r.title, url: r.url, source: r.source })).slice(0, 4) });
+        console.log(`🌐 Web search done for: "${message}" — ${searchResults.length} results`);
+      }
+    } catch (e) {
+      console.warn("[Search] Auto-search failed:", e.message);
+      // Continue without search results — AI will answer from its knowledge
+    }
+  }
+
   let handled = false;
 
   // 1. Try Groq (ultra fast streaming, TTFT < 200ms) - text only
   if (!handled && !image && isValidKey(process.env.GROQ_API_KEY)) {
     try {
-      handled = await streamGroq(res, message, userName, history, detectedDevice);
+      handled = await streamGroq(res, message, userName, history, detectedDevice, webContext);
       if (handled) console.log("✅ /api/chat streamed via Groq");
     } catch (e) {
       console.warn("Groq streaming failed:", e.message);
@@ -496,7 +584,7 @@ module.exports = async function handler(req, res) {
   // 2. Try OpenRouter (fast free models + vision support)
   if (!handled && getOpenRouterKeyPool().length > 0) {
     try {
-      handled = await streamOpenRouter(res, message, userName, history, image, detectedDevice);
+      handled = await streamOpenRouter(res, message, userName, history, image, detectedDevice, webContext);
       if (handled) console.log("✅ /api/chat streamed via OpenRouter");
     } catch (e) {
       console.warn("OpenRouter streaming failed:", e.message);
@@ -507,7 +595,7 @@ module.exports = async function handler(req, res) {
   const cerebrasKey = process.env.CEREBRAS_API_KEY || process.env.CEREBRAS;
   if (!handled && !image && isValidKey(cerebrasKey)) {
     try {
-      handled = await streamCerebras(res, message, userName, detectedDevice);
+      handled = await streamCerebras(res, message, userName, detectedDevice, webContext);
       if (handled) console.log("✅ /api/chat streamed via Cerebras");
     } catch (e) {
       console.warn("Cerebras streaming failed:", e.message);
@@ -518,7 +606,7 @@ module.exports = async function handler(req, res) {
   if (!handled) {
     try {
       const msgs = [
-        { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, detectedDevice) },
+        { role: "system", content: ENHANCED_TABLE_SYSTEM_PROMPT(userName, message, detectedDevice, webContext) },
         ...(Array.isArray(history) ? history : []),
         { role: "user", content: formatUserMessage(message) },
       ];
