@@ -136,11 +136,25 @@ function CodeGenerator() {
       ...(imageToBeSent ? { image: imageToBeSent } : {})
     };
 
+    // ── Ultra-Fast Endpoint Routing (same as Chat) ──
+    // In production (Vercel), same-origin /api/chat is instant (<300ms) with zero container spin-up lag.
+    const isLocalHost = typeof window !== "undefined" && (
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"
+    );
+
     const endpoints = [];
-    if (API_BASE_URL) {
-      endpoints.push(`${API_BASE_URL}/api/chat`);
+    if (!isLocalHost) {
+      endpoints.push("/api/chat");
+      if (API_BASE_URL && API_BASE_URL !== window.location.origin) {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
+    } else {
+      if (API_BASE_URL) {
+        endpoints.push(`${API_BASE_URL}/api/chat`);
+      }
+      endpoints.push("/api/chat");
     }
-    endpoints.push("/api/chat");
 
     if (!navigator.onLine) {
       const offlineReply = generateOfflineResponse(text, "code");
@@ -155,7 +169,8 @@ function CodeGenerator() {
     let response = null;
     let lastErr = "";
     let aiReply = "";
-    const timeoutMs = imageToBeSent ? 90000 : 45000;
+    // Fast initial connect timeout: 4s (fails fast to next endpoint if sluggish), 90s for images
+    const timeoutMs = imageToBeSent ? 90000 : 4000;
 
     for (const endpoint of endpoints) {
       try {
@@ -229,14 +244,21 @@ function CodeGenerator() {
       console.warn("Code streaming fallback to complete:", error.message);
 
       const completeEndpoints = [];
-      if (API_BASE_URL) completeEndpoints.push(`${API_BASE_URL}/api/chat/complete`);
-      completeEndpoints.push("/api/chat/complete");
+      if (!isLocalHost) {
+        completeEndpoints.push("/api/chat/complete");
+        if (API_BASE_URL && API_BASE_URL !== window.location.origin) {
+          completeEndpoints.push(`${API_BASE_URL}/api/chat/complete`);
+        }
+      } else {
+        if (API_BASE_URL) completeEndpoints.push(`${API_BASE_URL}/api/chat/complete`);
+        completeEndpoints.push("/api/chat/complete");
+      }
 
       let completeSuccess = false;
       for (const compEndpoint of completeEndpoints) {
         try {
           const compController = new AbortController();
-          const compTimer = setTimeout(() => compController.abort(), timeoutMs);
+          const compTimer = setTimeout(() => compController.abort(), 15000); // 15s for complete fallback
           const compRes = await fetch(compEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
