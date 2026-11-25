@@ -61,18 +61,21 @@ export function formatStructuredMarkdown(text) {
   s = s.replace(/^[ \t]*[•◦▪▫‣⁃]\s+/gm, "- ");
 
   // 2. Break inline numbered points or bullets chained on the same line after punctuation
-  // e.g. "Sentence complete. 1. Next point" -> "Sentence complete.\n\n1. Next point"
-  s = s.replace(/([.:!?।])\s+([0-9]+\.\s+)/g, "$1\n\n$2");
-  s = s.replace(/([.:!?।])\s+([-*•]\s+)/g, "$1\n\n$2");
-  s = s.replace(/([.:!?।])\s+(\*{1,2}[0-9]+\.\*{0,2}\s+)/g, "$1\n\n$2");
-  s = s.replace(/([.:!?।])\s+(\*{1,2}[-*•]\*{0,2}\s+)/g, "$1\n\n$2");
+  // Note: Using [ \t]+ so we ONLY match on the same line, not across existing line breaks!
+  s = s.replace(/([.:!?।])[ \t]+([0-9]+\.[ \t]+)/g, "$1\n\n$2");
+  s = s.replace(/([.:!?।])[ \t]+([-*][ \t]+)/g, "$1\n\n$2");
+  s = s.replace(/([.:!?।])[ \t]+(\*{1,2}[0-9]+\.\*{0,2}[ \t]+)/g, "$1\n\n$2");
+  s = s.replace(/([.:!?।])[ \t]+(\*{1,2}[-*]\*{0,2}[ \t]+)/g, "$1\n\n$2");
 
-  // 3. Break inline bold headers starting after punctuation (e.g. "Intro text. **Key Point:** Details")
-  s = s.replace(/([.:!?।])\s+(\*\*[A-Z\u0900-\u097F][^:\n*]{1,40}\*\*[:-]\s*)/g, "$1\n\n$2");
+  // 3. Break inline bold headers starting after punctuation on the same line
+  s = s.replace(/([.:!?।])[ \t]+(\*\*[A-Z\u0900-\u097F][^:\n*]{1,40}\*\*[:-][ \t]*)/g, "$1\n\n$2");
 
-  // 4. Ensure an empty line before lists start after a normal text line
-  s = s.replace(/([^\n])\n([0-9]+\.\s+)/g, "$1\n\n$2");
-  s = s.replace(/([^\n])\n([-*]\s+)/g, "$1\n\n$2");
+  // 4. Ensure an empty line ONLY before a list starts after a regular paragraph (not between list items)
+  s = s.replace(/(^[ \t]*[^-\s*0-9#>\n][^\n]*)\n([0-9]+\.\s+|[-*]\s+)/gm, "$1\n\n$2");
+
+  // Ensure consecutive list items stay tight without blank lines between them
+  s = s.replace(/(^|\n)([ \t]*[-*]|\d+\.)([^\n]+)\n\n+([ \t]*)([-*]|\d+\.\s+)/g, "$1$2$3\n$4$5");
+  s = s.replace(/(^|\n)([ \t]*[-*]|\d+\.)([^\n]+)\n\n+([ \t]*)([-*]|\d+\.\s+)/g, "$1$2$3\n$4$5");
 
   // 5. Ensure empty line before and after markdown headers (#, ##, ###, ####)
   s = s.replace(/([^\n])\n(#{1,6}\s+)/g, "$1\n\n$2");

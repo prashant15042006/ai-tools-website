@@ -29,16 +29,19 @@
 @layer components {
   /* Markdown Styles */
   .prose h1, .prose h2, .prose h3 {
-    @apply text-slate-100 font-semibold mt-6 mb-2;
+    @apply text-slate-100 font-semibold mt-4 mb-1.5;
   }
   .prose p {
-    @apply mb-4 leading-relaxed;
+    @apply mb-2 leading-normal;
   }
   .prose ul {
-    @apply list-disc pl-6 mb-4;
+    @apply list-disc pl-5 mb-2;
   }
   .prose ol {
-    @apply list-decimal pl-6 mb-4;
+    @apply list-decimal pl-5 mb-2;
+  }
+  .prose li {
+    @apply mb-1 leading-normal;
   }
   .prose code {
     @apply bg-slate-900 px-1 rounded font-mono text-sm;

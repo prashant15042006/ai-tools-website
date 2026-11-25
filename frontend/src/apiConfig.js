@@ -25,11 +25,11 @@ const getLocalBackendUrl = () => {
 // REACT_APP_BACKEND_URL is set to your Render backend URL in Vercel dashboard env vars
 const API_BASE_URL = IS_PROD
   ? (process.env.REACT_APP_BACKEND_URL || "https://ai-tools-website-80u7.onrender.com")
-  : (process.env.REACT_APP_BACKEND_URL || getLocalBackendUrl());
+  : (process.env.REACT_APP_FORCE_REMOTE === "true" ? (process.env.REACT_APP_BACKEND_URL || getLocalBackendUrl()) : getLocalBackendUrl());
 
 const CLEAN_API_URL = API_BASE_URL.endsWith("/") ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
 
 const IS_MISCONFIGURED = false;
 
-export { CLEAN_API_URL as default, IS_MISCONFIGURED, IS_PROD };
+export { CLEAN_API_URL as default, IS_MISCONFIGURED, IS_PROD, getLocalBackendUrl };
 

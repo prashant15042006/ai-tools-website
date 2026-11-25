@@ -501,6 +501,7 @@ Hinglish tone guide: Be friendly and conversational. Use words like "yaar", "dek
   * Always use `- ` (dash) or `1. `, `2. ` for lists.
   * NEVER use unicode symbols like `• ` or `▪ ` or `◦ ` as list markers, as they break Markdown rendering.
   * For lists and steps, use structured bullet points with bold lead-ins (e.g. - **Performance**: ...).
+  * Keep bullet items tight and compact — DO NOT leave empty blank lines between consecutive bullet items.
 - SUBHEADINGS & SPACING:
   * Use clear markdown subheadings (### 💡 Core Concept, ### ⚡ Practical Steps, ### 🔍 Deep Breakdown, ### 📌 Key Takeaway) with relevant emojis.
   * Always leave an empty blank line before and after any subheading.
@@ -624,9 +625,10 @@ const PROVIDER_CHAIN = [
     envKey: "GROQ_API_KEY",
     baseUrl: "https://api.groq.com/openai/v1/chat/completions",
     models: [
-      "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant",
-      "gemma2-9b-it",
+      "qwen/qwen3.8-27b",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b",
+      "allam-2-7b",
     ],
     getHeaders: (key) => ({
       "Authorization": `Bearer ${key}`,
@@ -638,12 +640,11 @@ const PROVIDER_CHAIN = [
     envKey: "OPENROUTER_KEY_NEMOTRON",
     baseUrl: "https://openrouter.ai/api/v1/chat/completions",
     models: [
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "qwen/qwen-2.5-72b-instruct:free",
-      "deepseek/deepseek-r1:free",
-      "deepseek/deepseek-chat:free",
-      "mistralai/mistral-small-24b-instruct-2501:free",
-      "meta-llama/llama-3.1-8b-instruct:free",
+      "nvidia/nemotron-3.5-lightning:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "google/gemma-4-31b-it:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "inclusionai/ling-3.2-flash:free",
       "openrouter/free",
     ],
     getHeaders: (key) => ({
@@ -658,12 +659,11 @@ const PROVIDER_CHAIN = [
     envKey: "OPENROUTER_KEY_GEMMA",
     baseUrl: "https://openrouter.ai/api/v1/chat/completions",
     models: [
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "qwen/qwen-2.5-72b-instruct:free",
-      "deepseek/deepseek-r1:free",
-      "deepseek/deepseek-chat:free",
-      "mistralai/mistral-small-24b-instruct-2501:free",
-      "meta-llama/llama-3.1-8b-instruct:free",
+      "nvidia/nemotron-3.5-lightning:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "google/gemma-4-31b-it:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "inclusionai/ling-3.2-flash:free",
       "openrouter/free",
     ],
     getHeaders: (key) => ({

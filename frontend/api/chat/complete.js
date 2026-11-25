@@ -47,10 +47,10 @@ const cleanAIResponse = (text) => {
 
 // ── 1. Groq Provider ────────────────────────────────────────────────────────
 const GROQ_MODELS = [
+  "qwen/qwen3.8-27b",
   "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
-  "groq/compound-mini",
-  "qwen/qwen3.6-27b",
+  "allam-2-7b",
 ];
 
 async function callGroq(message, userName, history = []) {

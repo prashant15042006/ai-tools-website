@@ -366,8 +366,8 @@ function Chat() {
     let lastErr = "";
     let aiReply = "";
 
-    // Fast initial connect timeout: 7s for text streaming (fails fast to next endpoint if sluggish), 90s for images
-    const timeoutMs = imageToBeSent ? 90000 : 7000;
+    // Fast initial connect timeout: 4s for text streaming (fails fast to next endpoint if sluggish), 90s for images
+    const timeoutMs = imageToBeSent ? 90000 : 4000;
 
     for (const endpoint of endpoints) {
       try {

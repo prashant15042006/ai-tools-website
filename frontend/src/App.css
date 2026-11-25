@@ -538,13 +538,13 @@ body {
 /* ── Chat Message Rows ── */
 .chat-message-row {
   display: flex;
-  padding: 18px 20px;
+  padding: 13px 18px;
   max-width: 100%;
-  margin: 10px 0;
-  gap: 14px;
+  margin: 6px 0;
+  gap: 12px;
   align-items: flex-start;
   transition: all 0.3s ease;
-  border-radius: 18px;
+  border-radius: 16px;
   animation: msgFadeIn 0.25s ease both;
 }
 
@@ -613,7 +613,7 @@ body {
 .message-sender {
   font-size: 11.5px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--text-primary);
   letter-spacing: 0.5px;
   display: flex;
@@ -644,7 +644,7 @@ body {
 
 .message-content {
   font-size: 15px;
-  line-height: 1.75;
+  line-height: 1.55;
   color: var(--text-primary);
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -653,11 +653,11 @@ body {
 }
 
 .message-content.user-text {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 500;
   white-space: pre-wrap;
   color: #e0e7ff;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .message-divider {
@@ -879,31 +879,30 @@ body {
    7. MARKDOWN STYLES (in .message-content)
 ================================================================ */
 .message-content h1 {
-  font-size: 21px; margin-top: 1.4em; margin-bottom: 0.5em;
+  font-size: 19px; margin-top: 0.9em; margin-bottom: 0.35em;
   font-weight: 800; color: #818cf8; letter-spacing: -0.3px;
-  border-bottom: 1px solid rgba(129, 140, 248, 0.2); padding-bottom: 6px;
+  border-bottom: 1px solid rgba(129, 140, 248, 0.2); padding-bottom: 4px;
 }
 .message-content h2 {
-  font-size: 17.5px; margin-top: 1.3em; margin-bottom: 0.45em;
+  font-size: 16.5px; margin-top: 0.8em; margin-bottom: 0.3em;
   font-weight: 700; color: #c7d2fe;
-  border-left: 3px solid #818cf8; padding-left: 10px;
+  border-left: 3px solid #818cf8; padding-left: 8px;
 }
 .message-content h3 {
-  font-size: 16px; margin-top: 1.1em; margin-bottom: 0.35em;
+  font-size: 15.5px; margin-top: 0.7em; margin-bottom: 0.25em;
   font-weight: 650; color: #34d399;
 }
 .message-content h4 {
-  font-size: 15px; margin-top: 0.9em; margin-bottom: 0.3em;
+  font-size: 14.5px; margin-top: 0.6em; margin-bottom: 0.2em;
   font-weight: 600; color: #fbbf24;
 }
 .message-content h5, .message-content h6 {
-  font-size: 14px; margin-top: 0.8em; margin-bottom: 0.3em;
+  font-size: 13.5px; margin-top: 0.5em; margin-bottom: 0.2em;
   font-weight: 600; color: var(--text-secondary);
 }
 .message-content p {
-  margin-bottom: 0.9em; font-size: 15px; line-height: 1.78;
+  margin-bottom: 0.5em; font-size: 15px; line-height: 1.55;
   color: var(--text-primary);
-  white-space: pre-line;
 }
 .message-content p:last-child { margin-bottom: 0; }
 .message-content strong {
@@ -913,29 +912,45 @@ body {
 .message-content em { color: #c084fc; font-style: italic; }
 .message-content ul, .message-content ol {
   margin-left: 20px;
-  margin-top: 0.6em;
-  margin-bottom: 1.1em;
+  margin-top: 0.3em;
+  margin-bottom: 0.5em;
   font-size: 15px;
   padding-left: 4px;
 }
 .message-content li {
-  margin-bottom: 8px;
-  line-height: 1.72;
+  margin-bottom: 3px;
+  line-height: 1.5;
   color: var(--text-primary);
-  white-space: pre-line;
+}
+.message-content li:last-child {
+  margin-bottom: 0;
+}
+.message-content li p {
+  margin-bottom: 0.2em;
+  line-height: 1.5;
+}
+.message-content li p:last-child {
+  margin-bottom: 0;
 }
 .message-content li::marker { color: #818cf8; font-weight: 700; }
-.message-content hr { border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 1.3em 0; }
+.message-content hr { border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 0.9em 0; }
 .message-content blockquote {
-  border-left: 4px solid #6366f1;
-  padding: 12px 18px;
+  border-left: 3px solid #6366f1;
+  padding: 8px 14px;
   color: #e2e8f0;
-  margin: 14px 0;
+  margin: 8px 0;
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.04) 100%);
-  border-radius: 0 10px 10px 0;
-  font-size: 14.5px;
-  line-height: 1.72;
+  border-radius: 0 8px 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.message-content blockquote p {
+  margin-bottom: 0.25em;
+  line-height: 1.5;
+}
+.message-content blockquote p:last-child {
+  margin-bottom: 0;
 }
 .message-content code {
   background: rgba(99, 102, 241, 0.12);
@@ -2201,20 +2216,22 @@ body {
   .chat-container { height: calc(100dvh - 56px); }
   .chat-history-scroll { padding: 16px; padding-bottom: 120px; }
 
-  .chat-message-row { padding: 12px 16px; margin: 6px 0; border-radius: 14px; }
+  .chat-message-row { padding: 10px 14px; margin: 4px 0; border-radius: 14px; }
   .chat-message-row { gap: 0 !important; }
   .message-avatar   { display: none !important; }
 
-  .message-content            { font-size: 15px !important; line-height: 1.65 !important; letter-spacing: -0.01em; }
-  .message-content.user-text  { font-size: 15.5px !important; font-weight: 500; line-height: 1.55 !important; }
-  .message-content p          { font-size: 15px !important; line-height: 1.65 !important; margin-bottom: 0.7rem !important; }
+  .message-content            { font-size: 14.5px !important; line-height: 1.5 !important; letter-spacing: -0.01em; }
+  .message-content.user-text  { font-size: 15px !important; font-weight: 500; line-height: 1.45 !important; }
+  .message-content p          { font-size: 14.5px !important; line-height: 1.5 !important; margin-bottom: 0.4rem !important; }
   .message-content p:last-child { margin-bottom: 0 !important; }
-  .message-content h1 { font-size: 18px !important; margin: 16px 0 8px !important; font-weight: 700 !important; }
-  .message-content h2 { font-size: 17px !important; margin: 14px 0 6px !important; font-weight: 700 !important; }
-  .message-content h3 { font-size: 16px !important; margin: 12px 0 6px !important; font-weight: 600 !important; }
+  .message-content h1 { font-size: 17.5px !important; margin: 12px 0 6px !important; font-weight: 700 !important; }
+  .message-content h2 { font-size: 16px !important; margin: 10px 0 5px !important; font-weight: 700 !important; }
+  .message-content h3 { font-size: 15px !important; margin: 8px 0 4px !important; font-weight: 600 !important; }
   .message-content ul,
-  .message-content ol { font-size: 15px !important; line-height: 1.65 !important; padding-left: 20px !important; margin-bottom: 0.7rem !important; }
-  .message-content li { margin-bottom: 4px !important; }
+  .message-content ol { font-size: 14.5px !important; line-height: 1.5 !important; padding-left: 18px !important; margin-top: 0.25rem !important; margin-bottom: 0.45rem !important; }
+  .message-content li { margin-bottom: 2.5px !important; line-height: 1.5 !important; }
+  .message-content li:last-child { margin-bottom: 0 !important; }
+  .message-content li p { margin-bottom: 0.15rem !important; line-height: 1.5 !important; }
   .message-content pre {
     margin: 10px 0 !important; padding: 12px !important; border-radius: 12px !important;
     font-size: 13.5px !important; line-height: 1.5 !important;
