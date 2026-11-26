@@ -818,15 +818,15 @@ function Chat() {
                   ) : msg.text ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkRenderer, pre: PreRenderer, ...tableComponents }}>{formatStructuredMarkdown(msg.text)}</ReactMarkdown>
                   ) : (webSearchState?.status === "searching" || thinkingSeconds >= 5) ? (
-                    /* ── Grok-style Web Search Globe (triggers on search or >5s) ── */
+                    /* ── Grok-style 3D Square-Cube Sphere (Web Searching) ── */
                     <div className="nexuss-search-wrap">
                       <div className="nexuss-search-label">
-                        <div className="nexuss-globe">
-                          <div className="nexuss-globe-circle">
-                            <div className="nexuss-globe-sweep" />
+                        <div className="grok-cube-loader searching" aria-hidden="true">
+                          <div className="grok-cube-sphere">
+                            {Array.from({ length: 14 }).map((_, idx) => (
+                              <span key={idx} className="grok-cube-dot" />
+                            ))}
                           </div>
-                          <div className="nexuss-globe-ping" />
-                          <div className="nexuss-globe-ping" style={{ animationDelay: "0.6s" }} />
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -845,14 +845,15 @@ function Chat() {
                       </div>
                     </div>
                   ) : (
-                    /* ── Grok-style Thinking Orb (shows live timer after 3s) ── */
+                    /* ── Grok-style 3D Square-Cube Sphere (Thinking + 3s Timer) ── */
                     <div className="nexuss-thinking-wrap">
                       <div className="nexuss-thinking-label">
-                        <div className="nexuss-orb">
-                          <div className="nexuss-orb-ring" />
-                          <div className="nexuss-orb-ring" />
-                          <div className="nexuss-orb-ring" />
-                          <div className="nexuss-orb-core" />
+                        <div className="grok-cube-loader" aria-hidden="true">
+                          <div className="grok-cube-sphere">
+                            {Array.from({ length: 14 }).map((_, idx) => (
+                              <span key={idx} className="grok-cube-dot" />
+                            ))}
+                          </div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <span className="nexuss-thinking-text">Thinking...</span>
@@ -860,12 +861,6 @@ function Chat() {
                             <span className="nexuss-timer-badge">{thinkingSeconds}s</span>
                           )}
                         </div>
-                      </div>
-                      <div className="nexuss-think-dots">
-                        <div className="nexuss-think-dot" />
-                        <div className="nexuss-think-dot" />
-                        <div className="nexuss-think-dot" />
-                        <div className="nexuss-think-dot" />
                       </div>
                     </div>
                   )}

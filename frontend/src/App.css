@@ -2471,83 +2471,80 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Globe spinner ── */
-.nexuss-globe {
+/* ── Grok-style 3D Square-Cube Particle Sphere Loader ── */
+.grok-cube-loader {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
+  perspective: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.nexuss-globe-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 38% 35%,
-    #60a5fa 0%, #3b82f6 40%, #1d4ed8 70%, #1e3a8a 100%);
-  box-shadow:
-    inset -4px -4px 8px rgba(0,0,0,0.35),
-    inset 2px 2px 6px rgba(255,255,255,0.15),
-    0 0 14px rgba(59,130,246,0.5);
-  animation: nexussGlobeRotate 3s linear infinite;
-  overflow: hidden;
+.grok-cube-sphere {
   position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: grokSphereSpin 3.2s linear infinite;
 }
 
-/* Latitude lines on globe */
-.nexuss-globe-circle::before,
-.nexuss-globe-circle::after {
-  content: "";
+.grok-cube-loader.searching .grok-cube-sphere {
+  animation-duration: 2.2s;
+}
+
+.grok-cube-dot {
   position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  width: 120%;
-  border-top: 1px solid rgba(255,255,255,0.2);
+  width: 4.5px;
+  height: 4.5px;
+  margin: -2.25px 0 0 -2.25px;
+  border-radius: 1.5px;
+  background: rgba(241, 245, 249, 0.92);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
 }
 
-.nexuss-globe-circle::before { top: 30%; }
-.nexuss-globe-circle::after  { top: 60%; }
-
-/* Longitude sweep line */
-.nexuss-globe-sweep {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: linear-gradient(90deg,
-    transparent 40%,
-    rgba(255,255,255,0.12) 60%,
-    transparent 70%);
-  animation: nexussGlobeSweep 3s linear infinite;
+.grok-cube-loader.searching .grok-cube-dot {
+  background: rgba(186, 230, 253, 0.95);
+  box-shadow: 0 0 7px rgba(96, 165, 250, 0.65);
 }
 
-@keyframes nexussGlobeRotate {
-  from { box-shadow: inset -4px -4px 8px rgba(0,0,0,0.35), inset 2px 2px 6px rgba(255,255,255,0.15), 0 0 14px rgba(59,130,246,0.5); }
-  50%  { box-shadow: inset 4px -4px 8px rgba(0,0,0,0.3), inset -2px 2px 6px rgba(255,255,255,0.1), 0 0 20px rgba(59,130,246,0.7); }
-  to   { box-shadow: inset -4px -4px 8px rgba(0,0,0,0.35), inset 2px 2px 6px rgba(255,255,255,0.15), 0 0 14px rgba(59,130,246,0.5); }
+/* 14 square-cube particles distributed across a 3D sphere */
+.grok-cube-dot:nth-child(1)  { transform: rotateY(0deg)   rotateX(0deg)   translateZ(13px); }
+.grok-cube-dot:nth-child(2)  { transform: rotateY(60deg)  rotateX(0deg)   translateZ(13px); opacity: 0.85; }
+.grok-cube-dot:nth-child(3)  { transform: rotateY(120deg) rotateX(0deg)   translateZ(13px); opacity: 0.7; }
+.grok-cube-dot:nth-child(4)  { transform: rotateY(180deg) rotateX(0deg)   translateZ(13px); opacity: 0.6; }
+.grok-cube-dot:nth-child(5)  { transform: rotateY(240deg) rotateX(0deg)   translateZ(13px); opacity: 0.7; }
+.grok-cube-dot:nth-child(6)  { transform: rotateY(300deg) rotateX(0deg)   translateZ(13px); opacity: 0.85; }
+
+.grok-cube-dot:nth-child(7)  { transform: rotateY(30deg)  rotateX(48deg)  translateZ(13px); }
+.grok-cube-dot:nth-child(8)  { transform: rotateY(150deg) rotateX(48deg)  translateZ(13px); opacity: 0.75; }
+.grok-cube-dot:nth-child(9)  { transform: rotateY(270deg) rotateX(48deg)  translateZ(13px); opacity: 0.85; }
+
+.grok-cube-dot:nth-child(10) { transform: rotateY(90deg)  rotateX(-48deg) translateZ(13px); opacity: 0.85; }
+.grok-cube-dot:nth-child(11) { transform: rotateY(210deg) rotateX(-48deg) translateZ(13px); opacity: 0.65; }
+.grok-cube-dot:nth-child(12) { transform: rotateY(330deg) rotateX(-48deg) translateZ(13px); }
+
+.grok-cube-dot:nth-child(13) { transform: rotateX(85deg)  translateZ(13px); opacity: 0.9; }
+.grok-cube-dot:nth-child(14) { transform: rotateX(-85deg) translateZ(13px); opacity: 0.75; }
+
+@keyframes grokSphereSpin {
+  0%   { transform: rotateX(18deg)  rotateY(0deg)   rotateZ(0deg); }
+  50%  { transform: rotateX(-18deg) rotateY(180deg) rotateZ(25deg); }
+  100% { transform: rotateX(18deg)  rotateY(360deg) rotateZ(0deg); }
 }
 
-@keyframes nexussGlobeSweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+.light-mode .grok-cube-dot {
+  background: rgba(51, 65, 85, 0.9);
+  box-shadow: 0 0 5px rgba(79, 70, 229, 0.3);
 }
 
-/* Ping rings around globe */
-.nexuss-globe-ping {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(59,130,246,0.5);
-  animation: nexussGlobePing 1.8s ease-out infinite;
-}
-
-.nexuss-globe-ping:nth-child(2) {
-  animation-delay: 0.6s;
-  border-color: rgba(99,102,241,0.4);
-}
-
-@keyframes nexussGlobePing {
-  0%   { transform: scale(1);   opacity: 0.8; }
-  100% { transform: scale(1.6); opacity: 0; }
+.light-mode .grok-cube-loader.searching .grok-cube-dot {
+  background: rgba(37, 99, 235, 0.92);
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.45);
 }
 
 /* ── Search label row ── */
